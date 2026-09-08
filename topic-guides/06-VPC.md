@@ -127,6 +127,287 @@ Quick chooser: **2–3 VPCs, full network access → Peering. Many VPCs + VPN/DX
 - **SSM Session Manager** = the modern answer: shell access through the Systems Manager agent — **no open port 22, no public IP, no bastion, every session logged** (CloudTrail/S3). THE tie-breaker: *"MOST secure way to administer private instances"* → **Session Manager**, not a bastion.
 - **VPC Sharing (via RAM)**: one account owns the VPC, other accounts launch resources into its subnets — **many accounts, one network**, no peering needed. *"Central network team, application accounts deploy into shared subnets"* → VPC sharing.
 
+# Hybrid Networking & Connectivity — SAA
+
+## 1. Core idea
+
+Hybrid connectivity means connecting an **on-premises network** to AWS.
+
+Main services/concepts:
+
+- **AWS Direct Connect (DX)** — dedicated private network connection from on-premises to AWS.
+- **Site-to-Site VPN** — encrypted connection over the public Internet.
+- **VPC Peering** — private connectivity between two VPCs.
+- **VPN CloudHub** — connects multiple remote networks/sites using VPN gateways.
+- **Fault tolerance** — use independent connections so one failure does not isolate the VPC.
+
+## 2. Direct Connect and Virtual Interfaces (VIF)
+
+Direct Connect has two layers:
+
+```text
+On-premises
+    |
+    | Physical Direct Connect connection
+    v
+ AWS Direct Connect
+    |
+    | Private VIF (logical interface)
+    v
+   VPC
+```
+
+- **Direct Connect connection (DX)** = the physical/dedicated network connection between on-premises and AWS.
+- **Virtual Interface (VIF)** = a logical interface configured on top of the Direct Connect connection. It uses **BGP** to exchange routes.
+- **Private VIF** = used to access VPC resources using private connectivity.
+
+Mental model:
+
+> **Direct Connect = physical cable; VIF = logical lane on that cable.**
+
+A VIF alone does not remove a physical single point of failure:
+
+```text
+DX #1
+  |
+ VIF #1
+ VIF #2
+  |
+ VPC
+```
+
+For fault tolerance, use independent Direct Connect connections with VIFs:
+
+```text
+                DX #1
+On-premises ---------------\
+                            > VPC-1
+On-premises ---------------//
+                DX #2
+```
+
+Each Direct Connect connection can have its own VIF(s).
+
+## 2. Direct Connect redundancy
+
+A single Direct Connect connection is a **single point of failure**.
+
+Example:
+
+```text
+On-premises
+     |
+     | DX #1
+     v
+   VPC-1
+```
+
+If DX #1 fails, on-premises cannot reach VPC-1 through that path.
+
+A redundant design can use another independent connection:
+
+```text
+              DX #1
+On-premises -----------\\
+                        > VPC-1
+On-premises -----------//
+              DX #2
+```
+
+For an SAA question asking how to increase fault tolerance to **VPC-1**, another Direct Connect connection/private virtual interface connected to **VPC-1** is a strong answer.
+
+## 2.1 Why the Private VIF targets the VPC's Region
+
+A **private VIF connects to a Virtual Private Gateway (VGW)**, and the VGW belongs to a VPC in a specific AWS Region.
+
+Mental model:
+
+```text
+On-premises
+     |
+     | Direct Connect
+     v
+Private VIF
+     |
+     v
+VGW in the VPC's Region
+     |
+     v
+VPC-1
+```
+
+If **VPC-1 is in `us-east-1`**, the private VIF used for direct connectivity to VPC-1 must target the **VGW associated with VPC-1 in `us-east-1`**.
+
+```text
+On-premises
+     |
+     | DX
+     v
+Private VIF
+     |
+     v
+VGW (us-east-1)
+     |
+     v
+VPC-1 (us-east-1)
+```
+
+Why this matters in SAA questions:
+
+- A **VPC is regional**.
+- A **VGW belongs to a specific VPC/Region**.
+- A **private VIF is configured to provide connectivity to that VGW**.
+- Therefore, when the answer says **"establish another Direct Connect connection and private virtual interface in the same AWS Region as VPC-1,"** it means the new private VIF must provide connectivity to **VPC-1's VGW**.
+- Connecting the new DX/VIF only to **VPC-2** does not create a redundant path to VPC-1 because **VPC Peering is not transitive**.
+
+> **Exam memory:** For redundancy to a specific VPC, the new DX + private VIF must actually reach that VPC's VGW in its Region.
+
+**Important nuance:** Direct Connect is not simply a physical cable that must be geographically located in the same AWS Region. The key point is that the **private VIF's AWS-side target (such as the VGW) must serve the target VPC in its Region**.
+
+## 3. VPN as a backup
+
+You can also use a Site-to-Site VPN as an independent backup path:
+
+```text
+                Direct Connect
+On-premises --------------------> VPC-1
+     \
+      \\ Internet VPN
+       -------------------------> VPC-1
+```
+
+If Direct Connect fails, the VPN can still provide connectivity.
+
+### Mental model
+
+**DX + VPN = two different connectivity paths.**
+
+## 4. VPC Peering
+
+VPC peering provides private connectivity between two VPCs.
+
+```text
+VPC-1 <--------> VPC-2
+```
+
+However, **VPC peering is not transitive**.
+
+That means you cannot use VPC-2 as a transit router to reach VPC-1 from another network.
+
+For example:
+
+```text
+On-premises
+     |
+     | VPN / DX
+     v
+   VPC-2
+     |
+     | VPC Peering
+     v
+   VPC-1
+```
+
+You should **not** assume this gives:
+
+```text
+On-premises -> VPC-2 -> VPC-1
+```
+
+as a transit path.
+
+### Exam memory
+
+> **VPC Peering is not transitive.**
+
+## 5. Exam question pattern
+
+### Scenario
+
+```text
+VPC-1: private subnets
+VPC-2: public subnets
+
+VPC-1 <---- VPC Peering ----> VPC-2
+
+On-premises ---- Direct Connect ----> VPC-1
+```
+
+Question:
+
+> Which options increase the fault tolerance of the connection to VPC-1?
+
+### Correct choices
+
+**1. Site-to-Site VPN directly between VPC-1 and on-premises**
+
+```text
+On-premises
+   |\\
+   | \\ VPN
+   |  \\----> VPC-1
+   |
+   \-------> DX ----> VPC-1
+```
+
+**2. Another Direct Connect connection/private virtual interface to VPC-1**
+
+```text
+On-premises
+    |\\
+ DX#1| \\ DX#2
+    |  \\
+    +---> VPC-1
+```
+
+### Incorrect reasoning
+
+A new VPN or Direct Connect connection to **VPC-2** does not automatically provide transit connectivity to VPC-1 through the peering connection.
+
+```text
+On-premises -> VPC-2 -> VPC-1
+                    X
+             Not transitive
+```
+
+## 6. Direct Connect vs VPN
+
+| Feature | Direct Connect | Site-to-Site VPN |
+|---|---|---|
+| Connection | Dedicated network connection | Internet-based |
+| Encryption | Not inherently encrypted | Encrypted with IPsec |
+| Reliability | Can be highly reliable with redundancy | Depends partly on Internet path |
+| Main use | Consistent private hybrid connectivity | Secure connectivity / backup path |
+| Redundancy | Use multiple DX connections/locations | Use redundant VPN tunnels/connections |
+
+## 7. VPC Peering vs Transit Gateway
+
+| | VPC Peering | Transit Gateway |
+|---|---|---|
+| VPC-to-VPC connectivity | Yes | Yes |
+| Transitive routing | **No** | **Yes** |
+| Scale | Many point-to-point connections can become complex | Centralized hub model |
+| Typical mental model | Direct connection | Network hub |
+
+## 8. Exam memory
+
+- **Single DX = possible single point of failure.**
+- **DX + VPN = redundant paths.**
+- **Another DX to the same target VPC = redundancy.**
+- **VPC Peering is not transitive.**
+- A connection to **VPC-2** does not become a connection to **VPC-1** merely because VPC-1 and VPC-2 are peered.
+- When a question asks for **fault tolerance to a specific VPC**, look for an additional independent path that actually reaches that VPC.
+
+## 9. One-line mental model
+
+```text
+Hybrid connectivity = On-premises <-> AWS
+
+DX   = dedicated private path
+VPN  = encrypted Internet path
+Peering = direct VPC-to-VPC path, NOT a transit path
+``` 
+
 ## Question patterns
 
 > *"Block all traffic from a specific IP address"* → **NACL deny rule** (security groups can't deny)
