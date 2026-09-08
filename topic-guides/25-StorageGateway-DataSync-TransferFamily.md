@@ -6,10 +6,23 @@ Here's the hybrid-storage problem: your on-prem servers speak the old languages 
 
 The analogy: your office has a cramped filing room, and you've rented an infinite warehouse across town (S3). Three different companies help you use it:
 
-- **Storage Gateway** = a **magic filing cabinet** installed in your office. It looks and behaves like a normal cabinet, but its drawers secretly extend into the warehouse — frequently used folders stay in the drawer (**local cache**), everything else lives across town. This is an **ONGOING bridge** — it stays forever.
-- **DataSync** = a **professional moving company**. They show up, load the truck, move your files to the warehouse fast and carefully (labels and permissions intact), and leave. **Migration**, one-time or on a schedule.
-- **Transfer Family** = a **staffed loading dock** on the warehouse itself, so outside partners can keep delivering packages the old way (**SFTP**) while everything lands directly in S3.
+- **Storage Gateway **connects your on-premises environment to AWS storage.
+Mental model:
+🖥️ Local server ↔ Storage Gateway ↔ ☁️ AWS
+| Type               | Simple meaning                      | AWS storage            |
+| ------------------ | ----------------------------------- | ---------------------- |
+| **File Gateway**   | Your applications use normal files  | **S3**                 |
+| **Volume Gateway** | Your applications see virtual disks | **S3 + EBS snapshots** |
+| **Tape Gateway**   | Replace physical backup tapes       | **S3 / Glacier**       |
 
+- **DataSync** = fast, automated data transfer between storage systems
+- **Transfer Family** = managed file-transfer server.
+It allows people/applications to upload and download files using familiar protocols such as:
+SFTP
+FTPS
+FTP
+AS2
+The files can be stored in services such as S3 or EFS.
 Jargon check: **NFS** (Network File System, the Linux share protocol), **SMB** (Server Message Block, the Windows share protocol), **iSCSI** (block storage — raw disk — over the network), **SFTP/FTPS/FTP** (classic file-transfer protocols).
 
 ### Storage Gateway — the ongoing hybrid bridge
