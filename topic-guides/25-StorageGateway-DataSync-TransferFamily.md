@@ -9,6 +9,7 @@ The analogy: your office has a cramped filing room, and you've rented an infinit
 - **Storage Gateway** connects your on-premises environment to AWS storage.
 Mental model:
 🖥️ Local server ↔ Storage Gateway ↔ ☁️ AWS
+
 | Type               | Simple meaning                      | AWS storage            |
 | ------------------ | ----------------------------------- | ---------------------- |
 | **File Gateway**   | Your applications use normal files  | **S3**                 |
