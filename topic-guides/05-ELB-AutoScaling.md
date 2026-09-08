@@ -92,12 +92,13 @@ An ASG is a rule that says: "keep a fleet of instances alive, sized between thes
 
 ### Scaling policies — match the keyword
 
-| Policy | What it does | Exam keyword |
-|---|---|---|
-| **Target Tracking** | "Keep this metric at this value" (e.g., CPU at 40%) — AWS does the math | **Simplest**, "maintain X%" |
-| **Step Scaling** | Add/remove N instances at metric thresholds you define | Fine-grained thresholds |
-| **Scheduled** | Scale at known times | "**every Monday 9am**", "month-end batch", predictable |
-| **Predictive** | Machine learning forecasts load and scales **ahead** of it | Recurring patterns, "proactively" |
+| Policy              | What it does                                                                    | Exam keyword                                       |
+| ------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **Target Tracking** | “Keep this metric at this value” (e.g., CPU at 40%) — AWS does the math         | **Simplest**, “maintain X%”                        |
+| **Step Scaling**    | Add/remove different numbers of instances based on metric thresholds you define | **Fine-grained thresholds**                        |
+| **Simple Scaling**  | Add/remove a **fixed number** of instances when one alarm triggers              | **Basic / fixed adjustment**                       |
+| **Scheduled**       | Scale at known times                                                            | **Every Monday 9am**, month-end batch, predictable |
+| **Predictive**      | ML forecasts load and scales **ahead of it**                                    | Recurring patterns, **proactively**                |
 
 - **Warm-up / cooldown** (default **300 seconds**): after a scaling action, the ASG waits before acting on metrics again — so it doesn't count a booting instance as "still overloaded" and over-scale. *"ASG launches too many instances in bursts"* → cooldown/warm-up.
 
