@@ -10,12 +10,6 @@ The analogy: your office has a cramped filing room, and you've rented an infinit
 Mental model:
 🖥️ Local server ↔ Storage Gateway ↔ ☁️ AWS
 
-| Type               | Simple meaning                      | AWS storage            |
-| ------------------ | ----------------------------------- | ---------------------- |
-| **File Gateway**   | Your applications use normal files  | **S3**                 |
-| **Volume Gateway** | Your applications see virtual disks | **S3 + EBS snapshots** |
-| **Tape Gateway**   | Replace physical backup tapes       | **S3 / Glacier**       |
-
 - **DataSync** = fast, automated data transfer between storage systems
 - **Transfer Family** = managed file-transfer server.
 It allows people/applications to upload and download files using familiar protocols such as:
