@@ -24,10 +24,11 @@ Snow device
 Ship it to AWS
    ↓
 S3
-
+```
 So the basic idea is:
 
 Instead of sending the data through the internet, physically send the storage device to AWS.
+
 
 ## The device lineup
 
