@@ -2,14 +2,15 @@
 
 ## The idea
 
-AWS Snow Family = physical AWS devices that help you move or process huge amounts of data when using the internet is too slow or impractical.
+**AWS Snow Family = physical AWS devices that help you move or process huge amounts of data when using the internet is too slow or impractical.**
 
-Why do we need it?
+## Why do we need it?
 
-Imagine your company has 500 TB of data on-premises.
+Imagine your company has **500 TB of data** on-premises.
 
 You could upload it:
 
+```text
 Company → Internet → S3
 
 But with a slow connection, this could take a very long time.
