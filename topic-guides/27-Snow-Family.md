@@ -2,11 +2,31 @@
 
 ## The idea
 
-Here's a physics problem AWS can't engineer away: **bandwidth**. Try to upload 100 TB over a 100 Mbps connection and the math says roughly **100+ days** — and that's if nobody else touches the network. Amazon's solution is delightfully low-tech: *never underestimate the bandwidth of a truck full of hard drives*. AWS ships you a ruggedized, encrypted storage box; you copy your data onto it locally at LAN speed; you ship it back; AWS loads it into S3.
+AWS Snow Family = physical AWS devices that help you move or process huge amounts of data when using the internet is too slow or impractical.
 
-**Rule of thumb the exam loves:** if transferring over the network would take **more than about a week**, use a Snow device instead.
+Why do we need it?
 
-The second superpower: Snow devices carry **compute**. They can run EC2 instances and Lambda functions on-board, which means you can process data at places with no internet at all — ships at sea, mines, military bases, remote research stations. That's "edge computing."
+Imagine your company has 500 TB of data on-premises.
+
+You could upload it:
+
+Company → Internet → S3
+
+But with a slow connection, this could take a very long time.
+
+Instead, AWS can send you a Snow device:
+
+Company
+   ↓
+Snow device
+   ↓
+Ship it to AWS
+   ↓
+S3
+
+So the basic idea is:
+
+Instead of sending the data through the internet, physically send the storage device to AWS.
 
 ## The device lineup
 
