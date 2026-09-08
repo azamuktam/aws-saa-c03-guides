@@ -6,7 +6,7 @@ Here's the hybrid-storage problem: your on-prem servers speak the old languages 
 
 The analogy: your office has a cramped filing room, and you've rented an infinite warehouse across town (S3). Three different companies help you use it:
 
-- **Storage Gateway **connects your on-premises environment to AWS storage.
+- **Storage Gateway** connects your on-premises environment to AWS storage.
 Mental model:
 🖥️ Local server ↔ Storage Gateway ↔ ☁️ AWS
 | Type               | Simple meaning                      | AWS storage            |
