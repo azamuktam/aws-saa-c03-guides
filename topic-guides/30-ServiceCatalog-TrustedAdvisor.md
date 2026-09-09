@@ -2,13 +2,20 @@
 
 ## The idea
 
-Two small services, one shared theme: keeping humans out of trouble.
+This section is about **controlling what users can deploy** and **checking whether an AWS environment follows best practices**.
 
-**AWS Service Catalog** is a **vending machine of pre-approved infrastructure**. The cloud team stocks the machine; everyone else just presses a button and gets a compliant, working stack — no keys to the kitchen required. Concretely: administrators define **products** (which are really **CloudFormation templates**) and group them into **portfolios**, then grant end users access to launch them. The magic trick: users can launch these stacks **without holding broad IAM permissions themselves** — Service Catalog launches on their behalf using its own constrained role. So a data scientist can spin up "the approved EMR cluster" without ever having permission to create EMR clusters directly.
+The key idea:
 
-Signal phrase: "allow teams to deploy **only approved, standardized, compliant configurations** via self-service" → **Service Catalog**.
+**AWS Service Catalog** = let organizations create and offer a **catalog of approved AWS products/resources** that users can deploy themselves.
 
-**Trusted Advisor** is your **automated AWS consultant** — a robot auditor that continuously scans your account and nags you about the exact things a human consultant would bill you for.
+**AWS Trusted Advisor** = analyze your AWS environment and give **recommendations** for improving cost, performance, security, fault tolerance, and service limits.
+
+## Core concepts
+
+**Service Catalog** — the company controls *what can be deployed*, while developers/users can deploy approved configurations without building them from scratch.
+
+**Products** are approved IT resources/templates made available to users. A product can be based on an **AWS CloudFormation template**.
+
 
 ## Trusted Advisor's five pillars
 
