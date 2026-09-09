@@ -7,6 +7,7 @@ This section is about managing many AWS accounts centrally.
 The key idea:
 
 **AWS Organizations** = create, group, govern, and centrally manage AWS accounts.
+
 **AWS Control Tower** = use Organizations plus automation/guardrails to quickly build and govern a multi-account AWS environment.
 
 ## Core concepts
