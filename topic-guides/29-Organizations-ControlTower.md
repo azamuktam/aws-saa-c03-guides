@@ -2,9 +2,12 @@
 
 ## The idea
 
-Real companies don't run one AWS account — they run dozens: one per team, per environment, per project, because accounts are the strongest isolation boundary AWS offers. **AWS Organizations** is how you herd them: one **management account** at the top, and every other account (a **member account**) hangs off a tree: **Root → OUs (Organizational Units) → accounts**.
+This section is about managing many AWS accounts centrally.
 
-Think of it as an office building. The management account is the building owner. Each OU is a floor (Production floor, Sandbox floor), each account is an office on that floor. The owner can post rules on any floor — "no open flames on floor 3" — and every office on that floor must obey, *no matter what their own office policy says*. Those building rules are **SCPs**.
+The key idea:
+
+**AWS Organizations** = create, group, govern, and centrally manage AWS accounts.
+**AWS Control Tower** = use Organizations plus automation/guardrails to quickly build and govern a multi-account AWS environment.
 
 ## Core concepts
 
