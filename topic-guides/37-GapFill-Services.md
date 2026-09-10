@@ -53,7 +53,7 @@ Read each entry as: *signal keyword → service*. That's genuinely how the quest
 | **MSK** | Managed **Apache Kafka** | the word "**Kafka**" — that's it |
 | **Athena** | SQL queries directly on S3, pay per query (you know this one) | "query S3 with SQL" |
 | **QuickSight** | **BI dashboards** and visualizations | "business dashboards for management" |
-| **Lake Formation** | Build a **data lake** fast + **fine-grained (row/column) access control** | "central data lake with granular permissions" |
+| **Lake Formation** | Build a **data lake** fast + **fine-grained (row/column) access control**. A data lake is a central place where an organization stores large amounts of raw data, usually in its original format, so it can be analyzed later.Data lake = huge storage pool for all kinds of data. | "central data lake with granular permissions" |
 | **AppFlow** | Move data from **SaaS apps (Salesforce, Slack) → S3/Redshift**, no code | "Salesforce data into S3" |
 
 THE trap: "streaming" alone → Kinesis; but "**Kafka**" named explicitly → **MSK**. AWS respects the proper noun.
