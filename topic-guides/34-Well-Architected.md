@@ -2,7 +2,7 @@
 
 ## The idea
 
-The Well-Architected Framework is AWS's answer to "what does *good* look like in the cloud?" Think of it as a **building inspector's checklist**: a house can stand up and still fail inspection — bad wiring, no fire exits, a heating bill that eats you alive. The framework's **six pillars** are the six things the inspector checks, and on the exam they don't appear as their own questions so much as the *lens* a question forces you to look through.
+The **AWS Well-Architected Framework** is a way to evaluate whether your cloud architecture is properly designed.
 
 ## The six pillars
 
