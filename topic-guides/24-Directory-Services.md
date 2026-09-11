@@ -2,14 +2,21 @@
 
 ## The idea
 
-First, what *is* Active Directory? If you've never worked in a Windows shop: **Active Directory (AD)** is Microsoft's on-premises system that acts as the **corporate phonebook plus the master keyring**. It stores every **user, computer, and group** in the company, and when Alice logs into her laptop, AD is what checks her password and decides which shared drives and printers she can use. Users log into a **domain** (like `corp.example.com`), and nearly every large enterprise on Earth runs it. Related jargon: **LDAP** is the standard protocol for talking to directories like AD; **domain join** means enrolling a machine into the AD domain so it obeys its rules.
+First, what *is* Active Directory? **Active Directory (AD)** is Microsoft's system for centrally managing **users, computers, groups, passwords, and access** inside an organization. A company can have an AD domain such as `corp.example.com`, and Windows computers can join that domain and authenticate users against AD. **LDAP** is a protocol commonly used to communicate with directory services, and **domain join** means connecting a machine to the AD domain.
 
-Now the cloud problem: your company moves workloads to AWS, but the phonebook still lives in the on-prem server room. Windows services in AWS — **FSx for Windows File Server, Amazon WorkSpaces (virtual desktops), RDS for SQL Server** — all *need* a directory to authenticate against. AWS gives you **three options**, and the exam tests whether you can pick the right one from a scenario.
+Now the AWS problem: a company has workloads in AWS, but some services still need **Microsoft AD** for authentication. Examples include **FSx for Windows File Server, Amazon WorkSpaces, RDS for SQL Server, Windows EC2 instances**, and applications that use LDAP or Kerberos.
 
-The analogy: your on-prem AD is the head office's filing room.
-- **AWS Managed Microsoft AD** = build a **full branch-office filing room** in AWS, and optionally connect it to head office with a trusted courier route.
-- **AD Connector** = install only a **phone line**: every lookup rings head office; nothing is stored in the branch.
-- **Simple AD** = a **budget photocopy** of a filing room — works for small stuff, but it's not the real Microsoft thing.
+AWS gives you **three main options**:
+
+- **AWS Managed Microsoft AD** = AWS provides a **real Microsoft Active Directory** in AWS. It supports features such as domain joining, Group Policy, LDAP, and Kerberos. It can also establish a trust relationship with an existing on-premises AD.
+- **AD Connector** = connects AWS services to an **existing on-premises Microsoft AD**. It does not create or store a separate directory in AWS; authentication requests are forwarded to the existing AD.
+- **Simple AD** = a **basic directory service** based on Samba. It provides simpler directory functionality but does not provide the full feature set of Microsoft AD.
+
+The key distinction:
+
+**Managed Microsoft AD** → full Microsoft AD in AWS  
+**AD Connector** → use existing on-premises AD from AWS  
+**Simple AD** → basic directory for simpler workloads
 
 ### The three options (the table to memorize)
 
