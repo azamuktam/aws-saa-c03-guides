@@ -112,7 +112,7 @@ The AWS directory and on-premises directory can remain separate while a trust re
 
 ## 2. AD Connector
 
-**AD Connector does not create another Active Directory.**
+**AD Connector does not create another Active Directory.** AD Connector acts as a bridge between AWS and the existing AD.
 
 It is a **directory gateway/proxy** that connects AWS services to your existing on-premises AD.
 
