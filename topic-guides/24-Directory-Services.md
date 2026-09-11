@@ -426,17 +426,24 @@ AWS account & resources
 ```
 The roles are on the AWS side, not inside Active Directory.
 
-AD → Who is the user?
-Federation → Connects the corporate identity to AWS
-IAM Role / IAM Identity Center → What can the user do in AWS?
-AWS account/resources → What they ultimately access
-Important
+**AD** → Who is the user?
+
+**Federation** → Connects the corporate identity to AWS
+
+**IAM Role** / IAM Identity Center → What can the user do in AWS?
+
+**AWS account/resources** → What they ultimately access
+
+**Important**
 
 AD users are not AWS accounts.
 
-Alice → corporate AD user
-AWS account → separate AWS environment
-IAM role → AWS permissions
+**Alice** → corporate AD user
+
+**AWS account** → separate AWS environment
+
+**IAM role** → AWS permissions
+
 ### Exam clue
 
 > Existing corporate AD + federation + role-based AWS Console access
