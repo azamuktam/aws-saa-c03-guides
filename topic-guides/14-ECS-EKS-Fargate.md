@@ -72,6 +72,23 @@ Hook: **Execution = getting the container up. Task Role = what the app does once
 - **Service Auto Scaling**: scale task count on **CPU, memory, or SQS queue depth**.
 - **Fargate Spot**: discounted Fargate for **interruption-tolerant** workloads.
 
+# EKS Secrets Encryption with AWS KMS
+
+Amazon EKS stores Kubernetes objects, including **Kubernetes Secrets**, in the cluster's **etcd** datastore.
+
+By default, Kubernetes Secrets are not protected with customer-managed KMS encryption at the etcd layer.
+
+EKS supports **envelope encryption** to encrypt Kubernetes Secrets using an **AWS KMS key**.
+
+```text
+Kubernetes Secret
+      ↓
+      EKS
+      ↓
+AWS KMS encryption
+      ↓
+Encrypted in etcd
+
 ## The compute ladder (which service for which job)
 
 | Signal in question | Answer |
