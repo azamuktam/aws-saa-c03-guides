@@ -62,7 +62,7 @@ Think of a route table as:
 
 ## Public vs private: it's all about the route
 
-A subnet is **public** when its route table has a route to an **Internet Gateway (IGW)**.
+A subnet is **public** when its route table has a route to an ** (IGW)**.
 
 ```text
 0.0.0.0/0 → Internet Gateway
@@ -90,6 +90,14 @@ Internet → EC2
 ```
 
 assuming the required routing and security rules allow it.
+### Internet access components
+
+| VPC component | IP version | Traffic | Main purpose |
+|---|---|---|---|
+| **Internet Gateway (IGW)** | IPv4 + IPv6 | Two-way | Internet access for public resources |
+| **NAT Gateway** | IPv4 | Outbound only | Private IPv4 resources → Internet |
+| **Egress-Only Internet Gateway** | IPv6 | Outbound only | Private IPv6 resources → Internet |
+| **VPC Endpoint** | IPv4/IPv6 | Private | Access AWS services without the public internet |
 
 ### Most important rule
 
