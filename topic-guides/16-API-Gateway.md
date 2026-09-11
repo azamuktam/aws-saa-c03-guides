@@ -1,96 +1,689 @@
 # Section 16: API Gateway
 
-## The idea
+## Big picture
 
-API Gateway is the **front desk of a busy office building**. Nobody wanders straight to your engineers' desks (your Lambda functions, your backends). Everyone checks in at the front desk first, where the receptionist **routes** them to the right floor, **checks their ID** (authentication), **turns away crowds** when the lobby is full (throttling), and **writes every visit in the logbook** (logging) — all *before* your code runs a single line.
+**API Gateway = the entry point for HTTP APIs.**
 
-That's API Gateway: a fully managed service that sits in front of your backend and handles routing, auth, rate limiting, caching, and monitoring.
+It sits between the client and your backend.
 
-Burn in the canonical serverless chain — the exam's favorite architecture:
-
-```
-Client --> CloudFront --> API Gateway --> Lambda --> DynamoDB
-```
-
-The reflex: **"no servers to manage, pay per request"** → this chain. When a question describes a REST API with zero server management, this is the answer skeleton.
-
-## Three API types
-
-| Type | Personality | Features | Trigger phrase |
-|---|---|---|---|
-| **REST API** | Full-featured flagship | **API keys, usage plans, caching, WAF, request validation** | Needs any of those features |
-| **HTTP API** | Minimalist, **~70% cheaper** | Simple proxy to Lambda/HTTP, built-in **JWT** auth, low latency | **"Lowest cost"** simple Lambda proxy |
-| **WebSocket API** | **Persistent two-way** connection | Server can push to clients | **"Real-time chat"**, "live push", live dashboards |
-
-THE trap: usage plans, API keys, and caching are **REST API only**. If the question needs them, HTTP API is a distractor no matter how cheap it is.
-
-## Endpoint types (where does it live?)
-
-| Endpoint | For | Note |
-|---|---|---|
-| **Edge-Optimized** | **Globally distributed clients** | Routed through CloudFront's edge network automatically (default) |
-| **Regional** | Clients in the **same region** | Or when you want to bolt on **your own CloudFront** distribution |
-| **Private** | **VPC-only** access | Reached via an **Interface VPC Endpoint** — never touches the internet |
-
-## The auth trio (guaranteed question)
-
-Three ways to answer "who's calling?" — the exam WILL make you pick one:
-
-| Authorizer | Use when the caller is... | Mechanism |
-|---|---|---|
-| **IAM / SigV4** | **AWS-native**: internal services, EC2 roles, IAM users | Requests signed with AWS credentials (Signature Version 4) |
-| **Cognito User Pool authorizer** | **App users who sign in** (mobile/web app accounts) | Cognito issues a **JWT** (JSON Web Token); gateway validates it, zero custom code |
-| **Lambda Authorizer** | **Custom logic**: third-party identity provider, legacy/**bespoke tokens**, weird rules | Your Lambda inspects the token and returns an IAM policy |
-
-Hook: **IAM = machines, Cognito = your users, Lambda Authorizer = anything weird.**
-
-## Traffic control & performance
-
-- **Default throttle: 10,000 requests/second** per account per region. Exceed it and clients get **HTTP 429 Too Many Requests** — "clients receiving 429" → you're being throttled.
-- **Usage Plans + API Keys** (REST only): per-customer request quotas and rate tiers. Trigger: **"SaaS company sells API access in Basic/Pro tiers"** → usage plans with API keys.
-- **Caching**: gateway caches responses (**default TTL 300 seconds**), reducing backend load and latency. "Reduce calls hitting the backend for repeated requests" → enable API Gateway caching.
-
-## Two mechanical facts (free points)
-
-1. **THE 29-second timeout.** API Gateway waits a **maximum of 29 seconds** for the backend. Lambda can run 15 minutes — **but not behind API Gateway**. This limit is **hard; "increase the timeout" is impossible past 29s** — any answer suggesting it is wrong. Long-running jobs go **asynchronous**: return **202 Accepted** immediately, hand the work to **SQS or Step Functions**, let the client poll or get notified.
-
-```
-Client --> API GW --202--> (immediately)
-              |
-              +--> SQS --> Lambda/worker (takes 2 min, nobody's waiting)
+```text
+Client
+  ↓
+API Gateway
+  ↓
+Backend
 ```
 
-2. **CORS (Cross-Origin Resource Sharing).** When **browser JavaScript on one domain** calls your API on another domain and gets blocked with cross-origin errors → **enable CORS** on API Gateway. Browser + cross-domain + JS error = CORS, every time.
+The backend could be:
 
-## Question patterns
+* Lambda
+* an HTTP application
+* another AWS service
 
-> *"Build a REST API with no servers to manage, pay only per request"* → **API Gateway + Lambda + DynamoDB** (the canonical serverless chain)
-> *"SaaS company wants to offer customers different API request limits per pricing tier"* → **Usage Plans + API Keys** (REST API only — per-customer tiers)
-> *"Mobile app users must sign in before calling the API"* → **Cognito User Pool authorizer** (app users = Cognito JWTs)
-> *"Company has an existing custom/third-party token system for API auth"* → **Lambda Authorizer** (custom logic = your Lambda decides)
-> *"Cheapest way to expose a simple Lambda function over HTTP with JWT auth"* → **HTTP API** (~70% cheaper, minimal features)
-> *"Push live updates to a real-time dashboard / chat application"* → **WebSocket API** (persistent two-way connection)
-> *"API must be accessible only from within the VPC, never the internet"* → **Private endpoint + Interface VPC Endpoint**
-> *"Backend process takes 2 minutes; API Gateway requests keep timing out — fix it"* → **Go async: return 202, queue to SQS/Step Functions** (29s is a hard limit; you cannot raise it)
-> *"Browser JavaScript from another domain gets blocked calling the API"* → **Enable CORS** on API Gateway
-> *"Clients suddenly receive HTTP 429 errors"* → **Throttling** — raise the limit or add caching/usage plans
+API Gateway can handle things such as:
 
-## Pocket card
+* authentication
+* throttling
+* routing
+* caching
+* request validation
+* monitoring
 
-| Keyword | Answer |
-|---|---|
-| Serverless REST API | API GW + Lambda + DynamoDB |
-| API keys / usage plans / caching / WAF | REST API (only) |
-| Lowest cost, simple proxy, JWT | HTTP API |
-| Real-time / chat / live push | WebSocket API |
-| Global clients | Edge-Optimized endpoint |
-| VPC-only API | Private endpoint (Interface Endpoint) |
-| AWS-service callers | IAM / SigV4 auth |
-| App users sign in | Cognito User Pool authorizer |
-| Custom/third-party tokens | Lambda Authorizer |
-| 429 errors | Throttling (default 10,000 req/s) |
-| Backend > 29 seconds | Async: 202 + SQS/Step Functions |
-| Cache TTL default | 300 seconds |
-| Browser cross-domain error | Enable CORS |
+### Common serverless architecture
 
-You just saw the fix for slow backends is "drop the work into a queue and walk away" — that queue, and the whole messaging toolbox around it, is the next section.
+```text
+Client
+  ↓
+API Gateway
+  ↓
+Lambda
+  ↓
+DynamoDB
+```
+
+Use this pattern when you need a **serverless HTTP API** without managing servers.
+
+---
+
+# 1. API Gateway API Types
+
+There are three important types:
+
+| Type              | Main purpose                    | Remember                   |
+| ----------------- | ------------------------------- | -------------------------- |
+| **REST API**      | Full-featured API               | More features              |
+| **HTTP API**      | Simple, cheaper API             | Lower cost, fewer features |
+| **WebSocket API** | Real-time two-way communication | Persistent connection      |
+
+---
+
+## REST API
+
+REST API has the most features.
+
+Important features include:
+
+* API keys
+* Usage plans
+* Caching
+* WAF integration
+* Request validation
+
+### Use REST API when
+
+The question specifically needs one of these features.
+
+Example:
+
+> "Customers have Basic, Pro, and Enterprise API plans with different request limits."
+
+→ **REST API + API Keys + Usage Plans**
+
+### Remember
+
+> **Need advanced API Gateway features → REST API**
+
+---
+
+## HTTP API
+
+HTTP API is simpler and cheaper.
+
+It is good for:
+
+* simple HTTP APIs
+* Lambda integrations
+* HTTP backend integrations
+* JWT authentication
+
+### Use it when
+
+> "Expose a Lambda function through HTTP at the lowest cost."
+
+→ **HTTP API**
+
+### Important limitation
+
+HTTP API does **not** have all the advanced REST API features.
+
+For example, questions requiring:
+
+* API keys
+* usage plans
+* API Gateway caching
+
+→ use **REST API**, not HTTP API.
+
+### Remember
+
+> **Simple + cheap → HTTP API**
+
+---
+
+## WebSocket API
+
+WebSocket API provides a **persistent connection** between the client and server.
+
+Unlike normal HTTP requests, the server can send data to the client when needed.
+
+```text
+Client ←────────→ Server
+       persistent
+       connection
+```
+
+### Use it for
+
+* real-time chat
+* live notifications
+* live dashboards
+* real-time updates
+
+### Remember
+
+> **Real-time two-way communication → WebSocket API**
+
+---
+
+# REST vs HTTP vs WebSocket
+
+| Requirement                      | Answer            |
+| -------------------------------- | ----------------- |
+| Advanced API Gateway features    | **REST API**      |
+| Cheapest simple HTTP API         | **HTTP API**      |
+| Simple Lambda + JWT              | **HTTP API**      |
+| API keys / usage plans           | **REST API**      |
+| API Gateway caching              | **REST API**      |
+| Real-time chat                   | **WebSocket API** |
+| Server pushes updates to clients | **WebSocket API** |
+
+---
+
+# 2. API Gateway Endpoint Types
+
+This tells you **where the API is accessed from**.
+
+| Endpoint           | Use when                               |
+| ------------------ | -------------------------------------- |
+| **Edge-Optimized** | Clients are globally distributed       |
+| **Regional**       | Clients are mainly in one region       |
+| **Private**        | API must only be accessible from a VPC |
+
+---
+
+## Edge-Optimized
+
+Use when clients are distributed around the world.
+
+```text
+Users around the world
+        ↓
+Edge-Optimized API
+        ↓
+AWS Region
+```
+
+The API uses CloudFront's edge network.
+
+### Remember
+
+> **Global clients → Edge-Optimized**
+
+---
+
+## Regional
+
+The API is accessed directly in its AWS Region.
+
+Use it when:
+
+* clients are mainly in the same region
+* you want to use your **own CloudFront distribution**
+
+### Remember
+
+> **Same region / own CloudFront → Regional**
+
+---
+
+## Private
+
+The API is accessible only from inside a VPC.
+
+```text
+VPC
+ ↓
+Interface VPC Endpoint
+ ↓
+Private API Gateway
+```
+
+It does not need to be publicly accessible over the internet.
+
+### Remember
+
+> **VPC-only API → Private endpoint**
+
+---
+
+# 3. API Authentication
+
+The exam commonly gives you three choices:
+
+* IAM
+* Cognito
+* Lambda Authorizer
+
+The easiest way to remember them:
+
+> **IAM = AWS callers**
+> **Cognito = application users**
+> **Lambda Authorizer = custom authentication**
+
+---
+
+## IAM Authorization
+
+Use IAM when the caller is an AWS identity.
+
+Examples:
+
+* EC2
+* Lambda
+* AWS users
+* AWS services
+
+Requests are signed using **AWS Signature Version 4 (SigV4)**.
+
+### Example
+
+> "An EC2 instance needs to securely call an API."
+
+→ **IAM authentication**
+
+### Remember
+
+> **AWS identity → IAM**
+
+---
+
+## Cognito User Pool Authorizer
+
+Use Cognito when **real application users sign in**.
+
+Example:
+
+```text
+User
+ ↓
+Cognito User Pool
+ ↓
+JWT token
+ ↓
+API Gateway
+```
+
+The application user gets a JWT, and API Gateway can validate it.
+
+### Example
+
+> "Users of a mobile application must log in before accessing the API."
+
+→ **Cognito User Pool**
+
+### Remember
+
+> **App users → Cognito**
+
+---
+
+## Lambda Authorizer
+
+Use this when authentication requires **custom logic**.
+
+For example:
+
+* custom tokens
+* third-party identity systems
+* legacy authentication
+* unusual authorization rules
+
+```text
+Client
+ ↓
+API Gateway
+ ↓
+Lambda Authorizer
+ ↓
+Allow / Deny
+```
+
+### Example
+
+> "The company already uses a custom token format that API Gateway must validate."
+
+→ **Lambda Authorizer**
+
+### Remember
+
+> **Custom authentication logic → Lambda Authorizer**
+
+---
+
+# 4. Throttling
+
+API Gateway can limit how many requests clients can send.
+
+If clients send too many requests, API Gateway can return:
+
+```text
+HTTP 429
+Too Many Requests
+```
+
+### Remember
+
+> **429 → throttling**
+
+The commonly tested account-level default is **10,000 requests/second per Region**, though AWS can change quotas and account limits can be adjusted.
+
+---
+
+# 5. API Keys and Usage Plans
+
+These are mainly an **API customer management** feature.
+
+Imagine a company sells an API:
+
+```text
+Basic
+→ 100 requests/minute
+
+Pro
+→ 1,000 requests/minute
+
+Enterprise
+→ higher limit
+```
+
+You can use:
+
+**API Keys + Usage Plans**
+
+These are associated with **REST APIs**.
+
+### Example
+
+> "A SaaS company wants different API request limits for different customers."
+
+→ **REST API + API Keys + Usage Plans**
+
+### Remember
+
+> **Customer API tiers → Usage Plans**
+
+---
+
+# 6. API Gateway Caching
+
+API Gateway can cache responses.
+
+Suppose many users request the same data:
+
+```text
+Client
+  ↓
+API Gateway
+  ↓
+Cache
+```
+
+If the response is already cached, API Gateway can return it without calling the backend again.
+
+### Benefits
+
+* fewer backend requests
+* lower latency
+* reduced backend load
+
+The default API Gateway cache TTL commonly tested is **300 seconds**.
+
+### Example
+
+> "Repeated requests are hitting the backend unnecessarily."
+
+→ **Enable API Gateway caching**
+
+---
+
+# 7. API Gateway Timeout
+
+This is an important exam limit.
+
+API Gateway has a **29-second integration timeout**.
+
+That means:
+
+```text
+Client
+  ↓
+API Gateway
+  ↓
+Backend
+```
+
+The backend cannot simply take several minutes while the client waits through API Gateway.
+
+### Example
+
+Your backend job takes:
+
+```text
+2 minutes
+```
+
+You cannot solve this by simply increasing API Gateway's timeout beyond its limit.
+
+Instead, make the operation **asynchronous**.
+
+```text
+Client
+  ↓
+API Gateway
+  ↓
+202 Accepted
+  ↓
+SQS / Step Functions
+  ↓
+Worker
+  ↓
+Long-running job
+```
+
+The API responds quickly, while the actual work happens in the background.
+
+### Remember
+
+> **Long job → asynchronous processing**
+
+Common pattern:
+
+**API Gateway → SQS → Lambda**
+
+or
+
+**API Gateway → Step Functions**
+
+---
+
+# 8. CORS
+
+CORS matters mainly when a **browser** calls an API from a different domain.
+
+Example:
+
+```text
+Frontend:
+https://example.com
+
+API:
+https://api.example.com
+```
+
+The browser may block the request unless the API allows the cross-origin request.
+
+### Example
+
+> "Browser JavaScript is getting a cross-origin error when calling the API."
+
+→ **Configure CORS**
+
+### Remember
+
+> **Browser + different origin + blocked request → CORS**
+
+---
+
+# 9. Common Exam Questions
+
+### "Build a serverless REST API"
+
+Typical architecture:
+
+```text
+API Gateway
+    ↓
+Lambda
+    ↓
+DynamoDB
+```
+
+---
+
+### "Customers have different API request limits"
+
+→ **REST API + API Keys + Usage Plans**
+
+---
+
+### "Users of a mobile/web application must log in"
+
+→ **Cognito User Pool**
+
+---
+
+### "AWS resources need to call the API"
+
+→ **IAM / SigV4**
+
+---
+
+### "Company uses a custom authentication system"
+
+→ **Lambda Authorizer**
+
+---
+
+### "Expose a simple Lambda API at the lowest cost"
+
+→ **HTTP API**
+
+---
+
+### "Real-time chat application"
+
+→ **WebSocket API**
+
+---
+
+### "API must only be accessible from inside the VPC"
+
+→ **Private API Gateway endpoint + Interface VPC Endpoint**
+
+---
+
+### "Clients are receiving HTTP 429"
+
+→ **Throttling**
+
+---
+
+### "Repeated requests are unnecessarily hitting the backend"
+
+→ **API Gateway caching**
+
+---
+
+### "Backend takes 2 minutes and API Gateway times out"
+
+→ **Asynchronous processing**
+
+For example:
+
+```text
+API Gateway
+    ↓
+SQS
+    ↓
+Lambda
+```
+
+Do not try to make the API Gateway request wait 2 minutes.
+
+---
+
+### "Browser gets a cross-origin error"
+
+→ **CORS**
+
+---
+
+# Final Memory Card
+
+## API types
+
+```text
+REST
+= Full features
+
+HTTP
+= Simple + cheap
+
+WebSocket
+= Real-time two-way communication
+```
+
+## Endpoint types
+
+```text
+Global clients
+→ Edge-Optimized
+
+Regional clients / own CloudFront
+→ Regional
+
+VPC only
+→ Private
+```
+
+## Authentication
+
+```text
+AWS callers
+→ IAM
+
+Application users
+→ Cognito
+
+Custom authentication
+→ Lambda Authorizer
+```
+
+## Other important keywords
+
+```text
+API keys / Usage Plans
+→ REST API
+
+429
+→ Throttling
+
+Repeated requests / reduce backend calls
+→ Caching
+
+Browser cross-origin error
+→ CORS
+
+Long-running backend job
+→ Async processing
+
+Real-time communication
+→ WebSocket
+```
+
+## The simplest way to think about API Gateway
+
+```text
+API Gateway
+│
+├── What type?
+│   ├── REST
+│   ├── HTTP
+│   └── WebSocket
+│
+├── Where?
+│   ├── Edge-Optimized
+│   ├── Regional
+│   └── Private
+│
+├── Who can call?
+│   ├── IAM
+│   ├── Cognito
+│   └── Lambda Authorizer
+│
+└── What traffic/features?
+    ├── Throttling
+    ├── API Keys / Usage Plans
+    ├── Caching
+    └── CORS
+```
