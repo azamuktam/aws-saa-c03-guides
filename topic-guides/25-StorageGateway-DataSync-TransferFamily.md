@@ -1,109 +1,469 @@
 # Section 25: Storage Gateway, DataSync & Transfer Family
 
-## The idea
+## Big picture
 
-Here's the hybrid-storage problem: your on-prem servers speak the old languages — **NFS and SMB file shares** (network drives), **iSCSI block volumes** (raw disks over the network), **tape backups**. Meanwhile the cheap, infinite storage lives in AWS. The servers can't be rewritten overnight, so you need cloud storage that **looks local** to them.
+These services solve **different problems**:
 
-The analogy: your office has a cramped filing room, and you've rented an infinite warehouse across town (S3). Three different companies help you use it:
+* **Storage Gateway** → on-premises systems **access AWS storage**
+* **DataSync** → **move/copy data** between storage systems
+* **Transfer Family** → people or companies **upload/download files** using SFTP/FTP/FTPS/AS2
 
-- **Storage Gateway** connects your on-premises environment to AWS storage.
-Mental model:
-🖥️ Local server ↔ Storage Gateway ↔ ☁️ AWS
+The easiest memory trick:
 
-- **DataSync** = fast, automated data transfer between storage systems
-- **Transfer Family** = managed file-transfer server.
-It allows people/applications to upload and download files using familiar protocols such as:
+> **Gateway = ACCESS**
+> **DataSync = COPY**
+> **Transfer Family = FILE TRANSFER**
+
+---
+
+# 1. Storage Gateway
+
+Storage Gateway connects your **on-premises environment** to AWS storage.
+
+```text
+On-premises
+   ↓
+Storage Gateway
+   ↓
+AWS
+```
+
+The important point:
+
+> Your existing on-premises applications can keep using familiar storage protocols.
+
+Storage Gateway has several types.
+
+---
+
+## S3 File Gateway
+
+Your application uses a normal **file share** using:
+
+* NFS
+* SMB
+
+But the actual files are stored in **Amazon S3**.
+
+```text
+Application
+    ↓
+NFS / SMB
+    ↓
+S3 File Gateway
+    ↓
+S3
+```
+
+### Use it when
+
+> "We have applications that need normal file access, but we want the files stored in S3."
+
+### Exam keywords
+
+* NFS or SMB
+* files
+* S3
+* on-premises file share
+* replace NAS
+
+### Remember
+
+**S3 File Gateway = file access to S3**
+
+---
+
+## FSx File Gateway
+
+This is similar to S3 File Gateway, but the backend is:
+
+**Amazon FSx for Windows File Server**
+
+It provides on-premises access to FSx using **SMB**.
+
+```text
+On-premises
+    ↓
+SMB
+    ↓
+FSx File Gateway
+    ↓
+FSx for Windows
+```
+
+### Use it when
+
+> "On-premises users need low-latency access to an FSx for Windows file share."
+
+### Remember
+
+**FSx File Gateway = SMB + FSx for Windows**
+
+---
+
+# Volume Gateway
+
+Volume Gateway provides **block storage** to on-premises applications using:
+
+**iSCSI**
+
+There are two types:
+
+* Cached
+* Stored
+
+The important question is:
+
+> **Where is the main/full dataset?**
+
+---
+
+## Volume Gateway — Cached
+
+The **main data is in AWS/S3**.
+
+Only frequently used data is kept locally for fast access.
+
+```text
+S3
+= main/full dataset
+
+Local
+= frequently used data
+```
+
+### Use it when
+
+> "Our on-premises storage is running out of space and we want to expand capacity using AWS."
+
+### Remember
+
+**Cached = cloud is primary**
+
+---
+
+## Volume Gateway — Stored
+
+The **main/full dataset stays on-premises**.
+
+AWS S3 stores **snapshots** for backup and disaster recovery.
+
+```text
+Local
+= full dataset
+
+S3
+= snapshots / backup
+```
+
+### Use it when
+
+> "The entire dataset must be available locally with low latency, but we also want AWS backup."
+
+### Remember
+
+**Stored = local is primary**
+
+---
+
+## Cached vs Stored
+
+|              | Cached               | Stored                     |
+| ------------ | -------------------- | -------------------------- |
+| Main dataset | **S3**               | **On-premises**            |
+| Local data   | Frequently used data | **Entire dataset**         |
+| Main use     | Increase capacity    | Fast local access + backup |
+| AWS role     | Primary storage      | Backup/snapshots           |
+
+### Important exam trap
+
+> "Low-latency access to the **entire dataset**"
+
+→ **Volume Gateway — Stored**
+
+Why?
+
+Because with Cached, only frequently used data is local.
+
+---
+
+# Tape Gateway
+
+Tape Gateway is for companies that use **physical tape backups**.
+
+It provides a **Virtual Tape Library (VTL)** so existing backup software can continue working.
+
+The data is stored in AWS instead of physical tapes.
+
+```text
+Backup software
+      ↓
+Tape Gateway
+      ↓
+S3 / Glacier
+```
+
+### Use it when
+
+> "Replace physical tape infrastructure but keep the existing backup software."
+
+### Exam keyword
+
+**Tape → Tape Gateway**
+
+---
+
+# 2. DataSync
+
+## The main idea
+
+**DataSync = move/copy data**
+
+It is used for:
+
+* migrations
+* scheduled transfers
+* synchronization
+* large data transfers
+
+Examples:
+
+```text
+On-premises NFS → S3
+On-premises SMB → EFS
+
+S3 → EFS
+EFS → FSx
+```
+
+For on-premises storage, DataSync commonly uses an **agent**.
+
+DataSync can also preserve things such as:
+
+* file metadata
+* permissions
+
+It supports **bandwidth throttling** so you can control how much network bandwidth the transfer uses.
+
+---
+
+## Example
+
+> "Copy 50 TB from an on-premises NAS to S3 while preserving file metadata."
+
+→ **DataSync**
+
+Why?
+
+Because the requirement is to **move the data**.
+
+---
+
+## DataSync vs Storage Gateway
+
+This is one of the most important differences.
+
+### DataSync
+
+> **I need to copy/move the data.**
+
+```text
+Old storage
+    ↓
+DataSync
+    ↓
+New storage
+```
+
+### Storage Gateway
+
+> **I still need my on-premises applications to access AWS storage.**
+
+```text
+On-premises application
+        ↓
+Storage Gateway
+        ↓
+AWS storage
+```
+
+### Easy rule
+
+> **Move the data → DataSync**
+> **Keep using the storage → Storage Gateway**
+
+---
+
+# 3. Transfer Family
+
+Transfer Family provides a **managed file-transfer server**.
+
+Supported protocols include:
+
+* SFTP
+* FTPS
+* FTP
+* AS2
+
+The files can be stored in:
+
+* S3
+* EFS
+
+---
+
+## Example
+
+A company has business partners that already upload files using SFTP.
+
+They don't want to change their existing process.
+
+```text
+Partner
+   ↓
 SFTP
-FTPS
-FTP
-AS2
-The files can be stored in services such as S3 or EFS.
-Jargon check: **NFS** (Network File System, the Linux share protocol), **SMB** (Server Message Block, the Windows share protocol), **iSCSI** (block storage — raw disk — over the network), **SFTP/FTPS/FTP** (classic file-transfer protocols).
-
-### Storage Gateway — the ongoing hybrid bridge
-
-Deployed as a **VM (or hardware appliance) on-premises**, backed by cloud storage, with a **local cache** for low-latency access to hot data. Four flavors — the exam tests which flavor fits:
-
-| Type | Protocol | Backed by | The exam phrase |
-|---|---|---|---|
-| **S3 File Gateway** | NFS / SMB | **S3** (real objects!) | *"Replace the NAS; files in S3; keep local file access"* |
-| **FSx File Gateway** | SMB | **FSx for Windows** | Low-latency on-prem access to FSx Windows shares |
-| **Volume Gateway — Cached** | iSCSI | **Primary data in S3**, hot cache local | *"Expand on-prem storage capacity"* — the disk is bigger than your building |
-| **Volume Gateway — Stored** | iSCSI | **Primary data LOCAL**, async **snapshots to S3** | *"Low-latency access to the ENTIRE dataset"* + cloud backup / DR |
-| **Tape Gateway** | iSCSI VTL | S3 → **Glacier** | *"Replace physical tape backup infrastructure"* — near-verbatim question |
-
-```
- Volume Gateway, the two minds:
-
- CACHED: cloud is primary          STORED: local is primary
- ┌──────────┐                      ┌──────────────┐
- │ S3 (ALL) │◀── everything        │ Local (ALL)  │◀── everything
- └────▲─────┘                      └──────┬───────┘
-      │ hot cache                         │ async snapshots
- ┌────┴─────┐                      ┌──────▼───────┐
- │local cache│  → grow capacity    │  S3 (backup) │  → DR, full-speed local
- └──────────┘                      └──────────────┘
+   ↓
+Transfer Family
+   ↓
+S3 / EFS
 ```
 
-**Memory hook:** Cached = **capacity** (cloud holds it all); Stored = **speed + safety** (local holds it all, cloud holds the backup).
+Answer:
 
-THE trap: *"low-latency access to the FULL dataset"* → **Stored**, not Cached — a cache only keeps the hot slice; if latency must be low for *everything*, everything must live locally.
+**AWS Transfer Family**
 
-Also worth a point: **Tape Gateway** presents a **Virtual Tape Library (VTL)** so existing backup software (Veeam, NetBackup) keeps working unchanged — the tapes are just... S3 and Glacier now. Any scenario with the word **"tape"** ends at Tape Gateway.
+You do **not** need to build and manage your own SFTP server on EC2.
 
-### DataSync — the moving company
+---
 
-**AWS DataSync** is the **migration / scheduled-transfer engine**: **one-time or scheduled** sync from on-prem **NFS/SMB** into **S3, EFS, or FSx**. You install an **agent** on-prem, and DataSync moves data fast (it's built for TB-scale over the network) while **preserving file metadata and permissions**, with **bandwidth throttling** so you don't flatten the office internet during business hours. Bonus fact the exam likes: DataSync also moves data **between AWS storage services** — S3 ↔ EFS ↔ FSx — no agent needed for that.
+# Storage Gateway vs DataSync vs Transfer Family
 
-**THE distinction of this whole section:**
+| Service             | Main purpose                                  | Example                            |
+| ------------------- | --------------------------------------------- | ---------------------------------- |
+| **Storage Gateway** | Access AWS storage from on-premises           | On-prem app accesses files in S3   |
+| **DataSync**        | Move/copy data                                | Migrate 50 TB from NAS to S3       |
+| **Transfer Family** | File upload/download using transfer protocols | Partner uploads files through SFTP |
 
-- **DataSync = MOVE the data** (one-time migration or scheduled copy — the truck leaves).
-- **Storage Gateway = ongoing hybrid ACCESS** (the bridge stays; on-prem apps keep reading/writing after — or instead of — migrating).
+---
 
-THE trap: *"migrate 50 TB from on-prem NAS to S3, preserving permissions"* offers "S3 File Gateway" as a shiny wrong answer. A gateway is for *continuing access*, not bulk moves — a **migration** with **metadata preserved** is **DataSync**, every time. Flip side: *"keep using on-prem apps against files that must live in S3"* → gateway, not DataSync.
+# Storage Gateway types
 
-### Transfer Family — the managed SFTP dock
+| Requirement                                     | Answer                      |
+| ----------------------------------------------- | --------------------------- |
+| Files in S3, accessed using NFS/SMB             | **S3 File Gateway**         |
+| SMB access to FSx for Windows                   | **FSx File Gateway**        |
+| Increase on-premises capacity, cloud is primary | **Volume Gateway – Cached** |
+| Entire dataset local + AWS backup               | **Volume Gateway – Stored** |
+| Replace physical tape backups                   | **Tape Gateway**            |
 
-**AWS Transfer Family** = a fully managed **SFTP / FTPS / FTP endpoint** in front of **S3 or EFS**. Your partners keep their crusty-but-beloved SFTP scripts; the files land straight in your bucket. *"Partners upload via SFTP, must keep their existing workflow"* → **Transfer Family** — and **never** the distractor "run an SFTP server on EC2" (that's undifferentiated heavy lifting the exam always wants you to reject).
+---
 
-### One pointer
+# Common Exam Questions
 
-Everything above assumes a network path. If the scenario is **offline, or the data is so huge the network math doesn't work** (weeks of transfer time, remote sites, limited bandwidth), that's the **Snow Family** — Section 27's story.
+### "Replace physical tape backups"
 
-## Question patterns
+→ **Tape Gateway**
 
-> *"Company wants to eliminate its physical tape backup infrastructure but keep existing backup software"* → **Tape Gateway** (virtual tape library → S3/Glacier; software sees tapes).
+---
 
-> *"Replace an aging NAS; store files in S3 but keep low-latency local access over SMB/NFS"* → **S3 File Gateway** (cloud-backed share with local cache).
+### "Applications use NFS/SMB but files should be stored in S3"
 
-> *"Migrate 50 TB from an on-prem NAS to S3, preserving file permissions and metadata, minimal effort"* → **DataSync** (migration engine; preserves metadata; gateway is for ongoing access, not moves).
+→ **S3 File Gateway**
 
-> *"Business partners upload files via SFTP and cannot change their workflow; files must land in S3"* → **Transfer Family** (managed SFTP endpoint — never build SFTP on EC2).
+---
 
-> *"On-prem app needs low-latency access to the ENTIRE dataset, with backups to AWS for DR"* → **Volume Gateway — Stored** (full data local, async snapshots to S3).
+### "On-premises applications need SMB access to FSx for Windows"
 
-> *"On-prem storage is running out of space; extend capacity while keeping frequently used data fast"* → **Volume Gateway — Cached** (primary in S3, hot cache local).
+→ **FSx File Gateway**
 
-> *"Copy files nightly from on-prem SMB shares to EFS, with bandwidth throttling"* → **DataSync** (scheduled transfers + throttling are its signature features).
+---
 
-> *"Low-latency on-prem access to file shares stored on FSx for Windows File Server"* → **FSx File Gateway**.
+### "On-premises storage is running out of space"
 
-> *"Transfer data between S3 and EFS within AWS"* → **DataSync** (works AWS-to-AWS too, agentless).
+→ **Volume Gateway – Cached**
 
-## Pocket card
+Because the main data is stored in AWS.
 
-| Keyword | Answer |
-|---|---|
-| Replace tape backups | Tape Gateway (VTL → S3/Glacier) |
-| NAS replacement, files in S3, local access | S3 File Gateway |
-| SMB cache for FSx Windows | FSx File Gateway |
-| Extend on-prem capacity, primary in cloud | Volume Gateway — Cached |
-| Full dataset local + snapshots to cloud | Volume Gateway — Stored |
-| Migrate / scheduled sync, preserve permissions | DataSync |
-| Bandwidth throttling, on-prem agent | DataSync |
-| S3 ↔ EFS ↔ FSx transfers | DataSync |
-| Partners upload via SFTP/FTPS/FTP | Transfer Family (never SFTP-on-EC2) |
-| Ongoing hybrid access vs. one-time move | Storage Gateway vs. DataSync |
-| Offline / massive data, no bandwidth | Snow Family (Section 27) |
+---
 
-That's the online bridge to the cloud sorted — when the pipe is too small for the payload, you put the data on a truck, and that's where the Snow Family rolls in.
+### "Entire dataset must remain local for low-latency access, but backups should go to AWS"
+
+→ **Volume Gateway – Stored**
+
+---
+
+### "Migrate 50 TB from an on-premises NAS to S3"
+
+→ **DataSync**
+
+---
+
+### "Copy files every night from an on-premises SMB server to EFS"
+
+→ **DataSync**
+
+Scheduled transfer = DataSync.
+
+---
+
+### "Transfer data between S3 and EFS"
+
+→ **DataSync**
+
+DataSync can also move data between AWS storage services.
+
+---
+
+### "Business partners upload files using SFTP"
+
+→ **Transfer Family**
+
+---
+
+# Final memory card
+
+```text
+Storage Gateway
+= ACCESS AWS storage from on-premises
+
+DataSync
+= MOVE / COPY data
+
+Transfer Family
+= SFTP / FTPS / FTP / AS2
+  for file transfer
+```
+
+### Storage Gateway
+
+```text
+S3 files       → S3 File Gateway
+FSx Windows    → FSx File Gateway
+Cloud primary  → Volume Gateway Cached
+Local primary  → Volume Gateway Stored
+Tape backups   → Tape Gateway
+```
+
+### The most important distinction
+
+```text
+"I need to MOVE the data"
+        ↓
+     DataSync
+
+"I need to KEEP USING the storage"
+        ↓
+  Storage Gateway
+
+"Someone needs to UPLOAD FILES using SFTP"
+        ↓
+  Transfer Family
+```
+
+### One more service to remember
+
+If the question says:
+
+> **No network / extremely large data / offline transfer**
+
+→ **Snow Family**
