@@ -88,7 +88,7 @@ Kubernetes Secret
 AWS KMS encryption
       ↓
 Encrypted in etcd
-
+```
 ## The compute ladder (which service for which job)
 
 | Signal in question | Answer |
