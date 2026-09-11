@@ -403,6 +403,40 @@ Do not confuse:
 - **IAM roles** = AWS permissions
 - **IAM groups** = groups for IAM users, not the normal solution for federated corporate identities
 
+## Corporate users accessing AWS
+
+Corporate users such as Alice and Bob are stored in the company's **Active Directory**, not as IAM users.
+
+Federation allows those corporate identities to access AWS without creating a separate IAM user for each person.
+
+```text
+Corporate AD
+├── Alice
+├── Bob
+└── Developers
+        ↓
+   Federation
+        ↓
+       AWS
+        ↓
+IAM Role / IAM Identity Center
+        ↓
+AWS account & resources
+
+```
+The roles are on the AWS side, not inside Active Directory.
+
+AD → Who is the user?
+Federation → Connects the corporate identity to AWS
+IAM Role / IAM Identity Center → What can the user do in AWS?
+AWS account/resources → What they ultimately access
+Important
+
+AD users are not AWS accounts.
+
+Alice → corporate AD user
+AWS account → separate AWS environment
+IAM role → AWS permissions
 ### Exam clue
 
 > Existing corporate AD + federation + role-based AWS Console access
