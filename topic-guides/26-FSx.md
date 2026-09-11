@@ -2,73 +2,415 @@
 
 ## The idea
 
-You already know EFS: the generic, elastic, shared filesystem for Linux. But some workloads don't want "generic" — they were born and raised on a *specific* filesystem technology, and they refuse to run on anything else. A .NET app expects Windows file shares. A supercomputing cluster expects Lustre. A company that spent ten years on NetApp hardware expects NetApp.
+**Amazon FSx provides managed file systems for specific use cases and file-system technologies.**
 
-FSx is AWS's answer: **fully managed versions of famous third-party filesystems**. Think of it like a food court. EFS is the everyday cafeteria — fine for everyone eating plain Linux food. FSx is the row of specialty restaurants next to it: one only serves Windows, one only serves high-performance computing, one only serves NetApp loyalists, one only serves ZFS fans. You don't pick a restaurant by taste — you pick it because **the exam question names the technology**, and you match the name.
+There are four important FSx types:
 
-**Key vocab spelled out:** SMB = Server Message Block (the Windows file-sharing protocol). NFS = Network File System (the Linux one). HPC = High-Performance Computing. NTFS = the Windows filesystem format.
+* **FSx for Windows File Server** → Windows workloads
+* **FSx for Lustre** → high-performance computing and S3-based workloads
+* **FSx for NetApp ONTAP** → NetApp workloads and multi-protocol access
+* **FSx for OpenZFS** → ZFS workloads and Linux/NFS workloads
+
+The easiest way to choose:
+
+> **Look for the technology or workload in the question.**
+
+```text
+Windows / SMB / AD
+→ FSx for Windows
+
+HPC / ML / S3 high-performance processing
+→ FSx for Lustre
+
+NetApp / SnapMirror / NFS + SMB + iSCSI
+→ FSx for NetApp ONTAP
+
+ZFS
+→ FSx for OpenZFS
+```
+
+### Key vocabulary
+
+* **SMB** = Windows file-sharing protocol
+* **NFS** = common Linux/Unix file-sharing protocol
+* **HPC** = High-Performance Computing
+* **NTFS** = Windows file system
+
+---
 
 ## The four specialists
 
-| FSx flavor | Trigger words | What it is |
-|---|---|---|
-| **FSx for Windows File Server** | Windows, SMB, NTFS, Active Directory, .NET, "user home directories" | Managed Windows file share |
-| **FSx for Lustre** | HPC, ML training, video rendering, financial simulation, "process S3 data fast" | Parallel filesystem, hundreds of GB/s throughput |
-| **FSx for NetApp ONTAP** | NetApp, SnapMirror, multi-protocol | Managed NetApp; speaks NFS + SMB + iSCSI at once |
-| **FSx for OpenZFS** | ZFS, "Linux NFS file server migration" | Managed ZFS with snapshots/clones |
+| FSx type                        | Main keywords                              | Main use                          |
+| ------------------------------- | ------------------------------------------ | --------------------------------- |
+| **FSx for Windows File Server** | Windows, SMB, NTFS, Active Directory, .NET | Windows file shares               |
+| **FSx for Lustre**              | HPC, ML, rendering, high throughput, S3    | High-performance workloads        |
+| **FSx for NetApp ONTAP**        | NetApp, SnapMirror, NFS, SMB, iSCSI        | NetApp and multi-protocol storage |
+| **FSx for OpenZFS**             | ZFS, NFS, Linux file server migration      | ZFS/Linux workloads               |
 
-### FSx for Windows File Server
-- Native **SMB protocol and NTFS**, integrates with **Active Directory** (both AWS Managed AD and your on-prem AD).
-- Supports **Multi-AZ** deployment for high availability.
-- THE trap: **EFS is Linux-only — it cannot serve Windows/SMB clients.** The moment you see "Windows," EFS is eliminated.
+---
 
-### FSx for Lustre
-- "Lustre" = Linux + cluster. Built for **massively parallel access**: machine learning training, video rendering farms, genomics, financial modeling. Scales to **hundreds of GB/s** and millions of IOPS.
-- **Unique superpower: native S3 integration.** Point Lustre at an S3 bucket and it presents the objects as files; results can be written back to S3. "Process data *in S3* with a high-performance filesystem" → Lustre, every time.
-- Two deployment types:
+## FSx for Windows File Server
 
-| Type | Use | Durability |
-|---|---|---|
-| **Scratch** | Short-term, temporary processing | No replication — cheap, data lost if hardware fails |
-| **Persistent** | Long-term storage | Replicated within AZ |
+This is a **managed Windows file system**.
 
-### FSx for NetApp ONTAP
-- The migration landing pad for on-prem **NetApp** appliances. Supports **SnapMirror** replication, so you can mirror on-prem NetApp straight into AWS.
-- **Multi-protocol**: NFS, SMB, *and* iSCSI from one filesystem — the only FSx that serves Linux and Windows clients simultaneously.
+It uses:
 
-### FSx for OpenZFS
-- For migrating **ZFS-based** or generic NFS Linux file servers, with ZFS goodies: instant **snapshots and clones**, low-latency performance.
+* **SMB**
+* **NTFS**
+* **Active Directory**
 
-**The decision algorithm:** scan the question for a named technology. Windows/SMB/AD → FSx for Windows. HPC or S3-as-a-filesystem → Lustre. NetApp → ONTAP. ZFS → OpenZFS. No named tech, just "shared storage for Linux EC2 instances" → plain EFS.
+Applications and users can access it as a Windows file share.
+
+```text
+Windows application
+       ↓
+      SMB
+       ↓
+FSx for Windows
+```
+
+It can integrate with:
+
+* AWS Managed Microsoft AD
+* On-premises Active Directory
+
+It supports **Multi-AZ deployment** for high availability.
+
+### Use it when
+
+> "Windows applications need shared storage."
+
+or:
+
+> "The application uses SMB and Active Directory."
+
+### Important exam distinction
+
+**EFS is designed for Linux/NFS workloads.**
+
+If the question specifically requires:
+
+* Windows
+* SMB
+* Windows file shares
+* Active Directory
+
+→ **FSx for Windows File Server**
+
+### Remember
+
+> **Windows → FSx for Windows**
+
+---
+
+## FSx for Lustre
+
+FSx for Lustre is designed for **very high-performance workloads**.
+
+Typical workloads:
+
+* HPC
+* machine learning training
+* video rendering
+* financial simulations
+* genomics
+* other workloads requiring very high throughput
+
+It supports **very high throughput and large numbers of IOPS**.
+
+### Important feature: S3 integration
+
+FSx for Lustre can work directly with data stored in **S3**.
+
+```text
+S3
+ ↓
+FSx for Lustre
+ ↓
+HPC / ML workload
+```
+
+This is especially useful when the data is already stored in S3 but the application needs a **high-performance file system** to process it.
+
+### Use it when
+
+> "An ML training job needs very fast access to a dataset stored in S3."
+
+→ **FSx for Lustre**
+
+### Remember
+
+> **HPC + high performance + S3 → Lustre**
+
+---
+
+## FSx for Lustre deployment types
+
+There are two important deployment types:
+
+| Type           | Main use                           | Data protection                  |
+| -------------- | ---------------------------------- | -------------------------------- |
+| **Scratch**    | Temporary or short-term processing | No replication                   |
+| **Persistent** | Longer-term workloads              | Data is replicated within the AZ |
+
+### Scratch
+
+Use Scratch when:
+
+* the data is temporary
+* the workload is short-term
+* maximum performance is important
+* lower cost is preferred
+
+If the file system fails, data on the scratch file system can be lost.
+
+### Persistent
+
+Use Persistent when:
+
+* the workload lasts longer
+* the data needs more protection
+* the file system is not simply temporary processing storage
+
+### Remember
+
+> **Temporary → Scratch**
+> **Longer-term → Persistent**
+
+---
+
+## FSx for NetApp ONTAP
+
+FSx for NetApp ONTAP is a **managed NetApp file system**.
+
+It is especially useful when a company already uses **NetApp** on-premises and wants to move to AWS without changing everything.
+
+It supports:
+
+* **NFS**
+* **SMB**
+* **iSCSI**
+
+This makes it a **multi-protocol** file system.
+
+### Important feature: SnapMirror
+
+NetApp **SnapMirror** can replicate data between NetApp systems.
+
+This makes FSx for NetApp ONTAP useful for:
+
+* migration
+* replication
+* disaster recovery
+
+### Example
+
+> "The company uses NetApp on-premises and wants to migrate to AWS with minimal changes."
+
+→ **FSx for NetApp ONTAP**
+
+### Important exam distinction
+
+If the question says:
+
+> "Linux and Windows clients both need access to the same file system."
+
+Then:
+
+* Linux → NFS
+* Windows → SMB
+
+→ **FSx for NetApp ONTAP**
+
+### Remember
+
+> **NetApp → ONTAP**
+> **NFS + SMB + iSCSI → ONTAP**
+
+---
+
+## FSx for OpenZFS
+
+FSx for OpenZFS is a **managed OpenZFS file system**.
+
+It is useful for workloads using:
+
+* ZFS
+* NFS
+* Linux/Unix file servers
+
+It supports features such as:
+
+* snapshots
+* clones
+* low-latency file access
+
+### Example
+
+> "Migrate an on-premises ZFS file server to AWS."
+
+→ **FSx for OpenZFS**
+
+### Remember
+
+> **ZFS → OpenZFS**
+
+---
+
+## FSx for Windows vs EFS
+
+This is an important exam comparison.
+
+|                  | FSx for Windows     | EFS                       |
+| ---------------- | ------------------- | ------------------------- |
+| Main OS          | **Windows**         | Linux                     |
+| Protocol         | **SMB**             | **NFS**                   |
+| Active Directory | **Yes**             | No Windows AD integration |
+| Main use         | Windows file shares | Linux shared file system  |
+
+### Exam rule
+
+```text
+Windows + SMB
+→ FSx for Windows
+
+Linux + NFS
+→ EFS
+```
+
+---
+
+## FSx for Lustre vs EFS
+
+Both can provide shared file storage, but their purposes are different.
+
+|                   | FSx for Lustre                 | EFS                                       |
+| ----------------- | ------------------------------ | ----------------------------------------- |
+| Main purpose      | **High-performance workloads** | General Linux shared storage              |
+| Typical workloads | HPC, ML, rendering             | Web/app servers                           |
+| Performance       | Very high                      | General-purpose                           |
+| S3 integration    | **Yes**                        | No direct filesystem-style S3 integration |
+| Protocol          | Lustre                         | NFS                                       |
+
+### Exam rule
+
+> **Normal Linux shared storage → EFS**
+
+> **HPC / ML / very high-performance → FSx for Lustre**
+
+---
+
+## FSx for NetApp ONTAP vs OpenZFS
+
+|                 | ONTAP                             | OpenZFS              |
+| --------------- | --------------------------------- | -------------------- |
+| Main keyword    | **NetApp**                        | **ZFS**              |
+| Protocols       | NFS, SMB, iSCSI                   | NFS                  |
+| Main use        | NetApp migration / multi-protocol | ZFS workloads        |
+| Special feature | SnapMirror                        | ZFS snapshots/clones |
+
+### Exam rule
+
+> **NetApp → ONTAP**
+
+> **ZFS → OpenZFS**
+
+---
+
+## The decision algorithm
+
+When you see an FSx question, first look for the **technology or workload**.
+
+```text
+Windows / SMB / AD / .NET
+→ FSx for Windows
+
+HPC / ML / rendering / very high throughput
+→ FSx for Lustre
+
+S3 data needs high-performance file processing
+→ FSx for Lustre
+
+NetApp / SnapMirror
+→ FSx for NetApp ONTAP
+
+NFS + SMB + iSCSI
+→ FSx for NetApp ONTAP
+
+ZFS
+→ FSx for OpenZFS
+
+Normal Linux shared file storage
+→ EFS
+```
+
+---
 
 ## Question patterns
 
-> *"Windows applications need shared storage with Active Directory authentication"* → **FSx for Windows File Server** (SMB + AD = Windows FSx; EFS can't do Windows)
+> *"Windows applications need shared storage with Active Directory authentication"* → **FSx for Windows File Server**
 
-> *"ML training job needs high-throughput access to a dataset stored in S3"* → **FSx for Lustre** (only Lustre mounts S3 as a filesystem at HPC speed)
+> *"Application uses SMB and must integrate with Active Directory"* → **FSx for Windows File Server**
 
-> *"Migrate on-premises NetApp storage to AWS with minimal changes"* → **FSx for NetApp ONTAP** (the word "NetApp" is the whole answer)
+> *"ML training requires very high-throughput access to data stored in S3"* → **FSx for Lustre**
 
-> *"Short-term, cost-optimized high-performance storage for a batch processing job"* → **FSx for Lustre Scratch** (temporary + cheap + no replication = Scratch)
+> *"HPC workload needs a high-performance parallel file system"* → **FSx for Lustre**
 
-> *"File share accessed by both Linux (NFS) and Windows (SMB) clients"* → **FSx for NetApp ONTAP** (the only multi-protocol option)
+> *"Short-term, temporary high-performance storage for a processing job"* → **FSx for Lustre Scratch**
 
-> *".NET application storing user home directories, must survive AZ failure"* → **FSx for Windows, Multi-AZ** (Windows workload + HA = Multi-AZ Windows FSx)
+> *"Long-running Lustre workload needs more data protection"* → **FSx for Lustre Persistent**
 
-> *"Replace an on-prem ZFS file server serving NFS to Linux clients"* → **FSx for OpenZFS** (ZFS named → OpenZFS)
+> *"Migrate on-premises NetApp storage to AWS"* → **FSx for NetApp ONTAP**
+
+> *"Existing NetApp environment uses SnapMirror"* → **FSx for NetApp ONTAP**
+
+> *"Linux and Windows clients need access to the same file system using NFS and SMB"* → **FSx for NetApp ONTAP**
+
+> *"Migrate an on-premises ZFS file server to AWS"* → **FSx for OpenZFS**
+
+> *"Linux EC2 instances just need a general shared file system"* → **EFS**
+
+---
 
 ## Pocket card
 
-| Keyword | Answer |
-|---|---|
-| Windows / SMB / NTFS / AD / .NET | FSx for Windows File Server |
-| HPC / ML training / rendering / GB/s | FSx for Lustre |
-| Process S3 data as files | FSx for Lustre (S3 integration) |
-| Temporary + cheapest Lustre | Scratch deployment |
-| Long-term Lustre | Persistent deployment |
-| NetApp / SnapMirror | FSx for NetApp ONTAP |
-| NFS + SMB + iSCSI together | FSx for NetApp ONTAP |
-| ZFS | FSx for OpenZFS |
-| Plain Linux shared storage | EFS (not FSx at all) |
+| Keyword                                              | Answer                                         |
+| ---------------------------------------------------- | ---------------------------------------------- |
+| Windows / SMB / NTFS / AD / .NET                     | **FSx for Windows File Server**                |
+| HPC / ML / rendering / very high throughput          | **FSx for Lustre**                             |
+| Process S3 data using a high-performance file system | **FSx for Lustre**                             |
+| Temporary Lustre workload                            | **Lustre Scratch**                             |
+| Longer-term Lustre workload                          | **Lustre Persistent**                          |
+| NetApp / SnapMirror                                  | **FSx for NetApp ONTAP**                       |
+| NFS + SMB + iSCSI                                    | **FSx for NetApp ONTAP**                       |
+| ZFS                                                  | **FSx for OpenZFS**                            |
+| Normal Linux shared storage                          | **EFS**                                        |
+| Linux + NFS                                          | **EFS / OpenZFS depending on the requirement** |
+| Windows + SMB                                        | **FSx for Windows**                            |
 
-FSx moves files at specialty speed — but when the data is too big to move over a wire at all, you put it on a truck, which is exactly where the Snow Family comes in.
+### Final memory
+
+```text
+Windows
+→ FSx for Windows
+
+HPC / ML / S3 + high performance
+→ FSx for Lustre
+
+NetApp
+→ FSx for NetApp ONTAP
+
+ZFS
+→ FSx for OpenZFS
+
+Normal Linux shared storage
+→ EFS
+```
+
+> **The easiest FSx question strategy: find the named technology first.**
+
+Windows? → **Windows FSx**
+Lustre/HPC? → **Lustre**
+NetApp? → **ONTAP**
+ZFS? → **OpenZFS**
+Nothing special, just Linux shared storage? → **EFS**
