@@ -2,473 +2,867 @@
 
 ## The idea
 
-Running your own database server means patching the OS, applying engine updates, taking backups, and rebuilding everything when the hardware fails. **RDS (Relational Database Service) = AWS runs the database for you.** You pick an engine — **MySQL, PostgreSQL, MariaDB, Oracle, or SQL Server** — and AWS manages the underlying infrastructure.
+**Amazon RDS (Relational Database Service)** is a managed relational database service. AWS manages the underlying infrastructure, operating system maintenance, backups, patching, and database setup.
 
-The price of that convenience: **you get NO OS access**. You can't SSH into the database host or install arbitrary OS-level software. If a question requires **full OS/server control or custom database software**, consider **database on EC2** or, for supported Oracle/SQL Server use cases, **RDS Custom**.
+Supported engines include:
 
-Now for **THE core distinction — one of the most-tested database facts on the exam.** RDS has two features that both involve extra database copies, but they solve different problems.
+* MySQL
+* PostgreSQL
+* MariaDB
+* Oracle
+* SQL Server
 
-- **Multi-AZ = high availability.** It provides a standby for failure and automatic failover.
-- **Read Replicas = read scaling.** They provide additional read capacity for applications, reporting, and analytics.
+RDS does **not** give you normal OS-level access to the database server.
 
-| | **Multi-AZ** (availability) | **Read Replicas** (performance) |
-|---|---|---|
-| Replication | **Synchronous** | **Asynchronous** |
-| Main purpose | High availability / failover | Read scaling |
-| Where | Standby in **another AZ** | Same AZ, cross-AZ, or cross-Region depending on engine |
-| Can you read from it? | **NO — standby is not for normal read traffic** | **Yes** |
-| Failover | **Automatic** | **No automatic failover as a normal read replica** — promotion is a separate action |
-| Solves | AZ / infrastructure failure | Read-heavy workloads, reporting |
+If the question requires:
 
-**THE trap:** *"Use the Multi-AZ standby to serve read traffic."* → **No.** A standby is for high availability, not read scaling.
+* Full OS/server control
+* Custom database software
+* OS-level configuration
 
-**THE trap:** *"A read replica automatically replaces the primary when it fails."* → **No.** A read replica can be promoted, but it is not the same automatic HA mechanism as Multi-AZ.
+→ consider **EC2** or, for supported Oracle/SQL Server scenarios, **RDS Custom**.
 
-And note: **production systems can use BOTH** — Multi-AZ for high availability and read replicas for read scaling.
+---
 
-## Backups & encryption
+# Multi-AZ vs Read Replicas
 
-- **Automated backups** → provide **PITR (Point-In-Time Recovery)**. Retention can be **0–35 days** for standard RDS DB instances; the maximum is **35 days**. 
-- **Manual snapshots** → remain until you delete them. **"Keep backups for years / compliance" → manual snapshots.**
+This is one of the most important RDS distinctions for SAA.
 
-**Encryption is a creation-time decision.** To encrypt an existing unencrypted RDS database:
+|                            | **Multi-AZ**                         | **Read Replica**                                               |
+| -------------------------- | ------------------------------------ | -------------------------------------------------------------- |
+| Main purpose               | High availability                    | Read scaling                                                   |
+| Replication                | Synchronous for standard Multi-AZ    | Asynchronous                                                   |
+| Read from standby/replica? | **No**                               | **Yes**                                                        |
+| Automatic failover         | **Yes**                              | **No** as a normal read-replica feature                        |
+| Location                   | Another AZ / depending on deployment | Same Region, another AZ, or another Region depending on engine |
+| Main problem solved        | Infrastructure/AZ failure            | Read-heavy workloads / DR copy                                 |
+
+### Multi-AZ
+
+Multi-AZ creates a standby that can be used automatically if the primary fails.
 
 ```text
-unencrypted DB
-      ↓
-snapshot
-      ↓
-copy snapshot with encryption enabled
-      ↓
-restore DB from encrypted snapshot
+Primary
+   │
+   └── synchronous replication ──► Standby
+                                      ↓
+                                   Failover
 ```
 
-You cannot simply switch encryption on for an existing unencrypted DB instance.
+The standby is **not for normal read traffic**.
 
-## RDS Proxy
+### Read Replica
 
-RDS Proxy is a **managed connection pool** in front of RDS.
+A read replica receives changes asynchronously from the primary.
 
-This is especially useful when Lambda creates many concurrent connections:
+```text
+Primary
+   │
+   ├──► Read Replica
+   ├──► Read Replica
+   └──► Read Replica
+```
+
+Applications can send read traffic to the replicas.
+
+### Exam patterns
+
+> "Database must survive an AZ failure with automatic failover."
+
+→ **Multi-AZ**
+
+> "Production database is overloaded by reporting queries."
+
+→ **Read Replica**
+
+> "Use the Multi-AZ standby to serve read traffic."
+
+→ **Wrong**
+
+> "Read replica automatically replaces the primary."
+
+→ **Wrong as a normal read-replica feature; promotion is a separate action.**
+
+A real production architecture can use both:
+
+```text
+Multi-AZ
+→ availability
+
+Read Replicas
+→ read scaling
+```
+
+---
+
+# Backups and recovery
+
+## Automated backups
+
+Automated backups provide **Point-in-Time Recovery (PITR)**.
+
+They are designed for restoring the database to a specific point within the configured backup-retention period.
+
+For standard RDS DB instances, the retention period is:
+
+**0–35 days**
+
+### Exam signal
+
+> "Restore the database to a specific point in time."
+
+→ **Automated backups / PITR**
+
+---
+
+## Manual snapshots
+
+Manual snapshots remain until you delete them.
+
+They are useful when you need:
+
+* Long-term retention
+* Compliance retention
+* Backup kept for months or years
+
+### Exam signal
+
+> "Keep a database backup for 10 years."
+
+→ **Manual snapshot**
+
+---
+
+# Encrypting RDS
+
+Encryption should be enabled when the database is created.
+
+For an existing unencrypted RDS DB instance, the usual process is:
+
+```text
+Unencrypted DB
+      ↓
+Create snapshot
+      ↓
+Copy snapshot with encryption enabled
+      ↓
+Restore encrypted DB
+```
+
+You cannot simply turn on encryption for an existing unencrypted RDS DB instance.
+
+---
+
+# RDS Proxy
+
+**RDS Proxy** is a managed database connection pool.
+
+It is particularly useful when many short-lived applications create large numbers of database connections.
+
+Common example:
 
 ```text
 Lambda
   ↓
-many connections
+many concurrent connections
   ↓
 RDS Proxy
   ↓
 RDS
 ```
 
-RDS Proxy lets many application connections share a smaller number of database connections.
+RDS Proxy:
 
-- **Lambda + RDS + too many connections → RDS Proxy.**
-- It can also make database failover easier for applications by keeping connections at the proxy layer.
+* pools database connections
+* reduces connection overhead
+* helps protect the database from connection storms
+* is especially useful with Lambda
 
-Also worth one neuron: **storage autoscaling** — RDS can automatically increase storage when the database approaches its configured storage limit.
+### Exam signal
 
-## Oracle on RDS
+> "Lambda creates too many connections to RDS."
 
-Amazon RDS supports **Oracle Database**, so you can keep Oracle as the database engine while AWS manages the database infrastructure.
+→ **RDS Proxy**
+
+Do not confuse this with read scaling:
+
+```text
+RDS Proxy
+→ connection management
+
+Read Replica
+→ read scaling
+```
+
+---
+
+# RDS Storage Auto Scaling
+
+RDS can automatically increase allocated storage when the database approaches its storage threshold.
+
+### Exam signal
+
+> "Database storage is growing unpredictably and administrators don't want to manually increase storage."
+
+→ **RDS Storage Auto Scaling**
+
+---
+
+# Oracle on RDS
+
+Amazon RDS supports Oracle Database.
+
+Example:
 
 ```text
 On-premises Oracle
         ↓
       AWS DMS
         ↓
-  Amazon RDS for Oracle
+  RDS for Oracle
 ```
 
-### Oracle migration — DMS vs SCT vs RMAN
+RDS for Oracle gives you a managed Oracle database without requiring you to manage the underlying server yourself.
 
-These three are easy to confuse, so keep their jobs separate:
+---
 
-| Tool | What it does |
-|---|---|
-| **AWS DMS (Database Migration Service)** | **Moves / replicates database data** |
-| **AWS SCT (Schema Conversion Tool)** | **Converts schema/code when changing database engines** |
-| **Oracle RMAN (Recovery Manager)** | **Oracle backup and recovery** |
+## Oracle migration: DMS vs SCT vs RMAN
 
-### AWS DMS
+These are easy to confuse.
 
-Use **AWS DMS** to migrate or continuously replicate database data.
+| Tool            | Main purpose                                       |
+| --------------- | -------------------------------------------------- |
+| **AWS DMS**     | Migrate/replicate database data                    |
+| **AWS SCT**     | Convert schema/code when changing database engines |
+| **Oracle RMAN** | Oracle backup and recovery                         |
 
-Example:
+### Same engine
 
 ```text
 Oracle
-  ↓ DMS
+  ↓
+DMS
+  ↓
 RDS for Oracle
 ```
 
-The database engine stays **Oracle**.
+> **Oracle → RDS for Oracle** → **DMS**
 
-> *"Migrate an on-premises Oracle database to RDS for Oracle."* → **AWS DMS**
-
-### AWS SCT
-
-Use **AWS SCT** when changing the database engine.
-
-Example:
-
-```text
-Oracle
-  ↓ SCT
-PostgreSQL
-```
-
-SCT converts supported schema and database code. DMS then moves the actual data.
+### Different engine
 
 ```text
 Oracle
    ↓
-SCT → convert schema/code
+SCT
    ↓
-DMS → migrate data
+PostgreSQL schema/code
+   ↓
+DMS
    ↓
 PostgreSQL
 ```
 
-> **Same engine → DMS**  
-> **Different engine → SCT + DMS**
+> **Oracle → PostgreSQL** → **SCT + DMS**
 
 ### RMAN
 
-**RMAN (Recovery Manager)** is Oracle's backup and recovery tool.
+RMAN is for:
 
-Use it for:
+* Oracle backup
+* Oracle recovery
 
-- Oracle database backups
-- Oracle database recovery
-- restoring Oracle databases
+Not for general database migration.
 
-Do not confuse it with migration or high availability:
-
-```text
-DMS
-= migration
-
-SCT
-= schema conversion
-
-RMAN
-= backup / recovery
-
-Multi-AZ
-= high availability / failover
-```
-
-### Oracle Multi-AZ
-
-If the Oracle database must remain available when the primary database or AZ fails:
-
-→ **RDS for Oracle Multi-AZ**
+### Easy rule
 
 ```text
-        RDS for Oracle
-         /          \
-        ↓            ↓
-    Primary       Standby
-      AZ-A           AZ-B
-```
-
-> *"Oracle database must survive an AZ failure with automatic failover."* → **RDS for Oracle Multi-AZ**
-
-### Oracle licensing
-
-Two important choices:
-
-- **License Included** → AWS provides the Oracle license under the supported RDS licensing model.
-- **BYOL (Bring Your Own License)** → use eligible Oracle licenses you already own.
-
-> *"The company already owns eligible Oracle licenses."* → **BYOL**
-
-### Oracle control
-
-RDS for Oracle is managed, so you do **not** get full operating-system access.
-
-If the question requires:
-
-- OS-level access
-- full control over the Oracle server
-- custom software that requires server-level access
-
-→ **Oracle on EC2** or **RDS Custom for Oracle**, depending on the requirement.
-
-### Oracle exam rule
-
-```text
-Oracle → RDS for Oracle
+Same engine
 → DMS
 
-Oracle → different database engine
+Different engine
 → SCT + DMS
 
 Oracle backup/recovery
 → RMAN
-
-Oracle high availability
-→ RDS for Oracle Multi-AZ
-
-Oracle needs OS-level control
-→ EC2 / RDS Custom
 ```
 
-## Aurora
+---
 
-Aurora is AWS's managed relational database service, **compatible with MySQL and PostgreSQL**.
+# Oracle High Availability
 
-The important architectural idea is:
+For an Oracle database that must survive an AZ failure with automatic failover:
 
-> **Aurora separates database compute from shared cluster storage.**
-
-An Aurora DB cluster contains:
-
-- **1 primary (writer) DB instance**
-- **0–15 Aurora Replicas (reader DB instances)**
-- **shared cluster storage**
+→ **RDS for Oracle Multi-AZ**
 
 ```text
-Aurora DB Cluster
+AZ-A
+Primary
+  │
+  │ synchronous replication
+  ▼
+AZ-B
+Standby
+```
+
+### Exam signal
+
+> "Oracle database must remain available after an AZ failure."
+
+→ **RDS for Oracle Multi-AZ**
+
+---
+
+# Oracle licensing
+
+Two important models:
+
+### License Included
+
+AWS provides the Oracle license under the supported RDS licensing model.
+
+### BYOL
+
+**Bring Your Own License**
+
+Use this when the organization already owns eligible Oracle licenses.
+
+### Exam signal
+
+> "The company already owns eligible Oracle licenses."
+
+→ **BYOL**
+
+---
+
+# Oracle and OS control
+
+RDS for Oracle is managed.
+
+If the question requires:
+
+* OS-level access
+* Custom Oracle configuration requiring server access
+* Full control of the underlying server
+
+→ **EC2** or **RDS Custom for Oracle**, depending on the scenario.
+
+---
+
+# Aurora
+
+**Amazon Aurora** is AWS's managed relational database engine compatible with:
+
+* MySQL
+* PostgreSQL
+
+The major architectural difference from standard RDS is Aurora's shared cluster storage.
+
+An Aurora cluster contains:
+
+```text
+Aurora Cluster
 │
 ├── Primary / Writer
-│
-├── Reader / Aurora Replica
-├── Reader / Aurora Replica
-└── Reader / Aurora Replica
+├── Aurora Replica
+├── Aurora Replica
+└── Aurora Replica
         │
-        ↓
+        ▼
    Shared cluster storage
 ```
 
-Aurora's cluster storage spans multiple Availability Zones. Aurora can have up to **15 Aurora Replicas** in addition to the primary. 
+Aurora storage is automatically replicated across multiple Availability Zones.
 
-Because the writer and readers use the same underlying cluster storage, Aurora can fail over to an available reader without copying the whole database.
+Aurora supports:
 
-### Aurora endpoints
+**1 primary + up to 15 Aurora Replicas**
 
-Aurora provides different endpoints for different connection patterns:
+---
 
-| Endpoint | What it does |
-|---|---|
-| **Cluster / Writer endpoint** | Connects to the **current primary/writer**; handles reads and writes |
-| **Reader endpoint** | Load-balances **read connections** across Aurora Replicas |
-| **Instance endpoint** | Connects to **one specific DB instance** |
-| **Custom endpoint** | Connects to a **specific group of Aurora DB instances** |
+# Aurora endpoints
 
-The built-in reader endpoint balances **connections** among Aurora Replicas; it does not balance individual queries. 
+Aurora has several important endpoints.
 
-### Aurora Custom Endpoints
+| Endpoint                      | Purpose                                            |
+| ----------------------------- | -------------------------------------------------- |
+| **Cluster / Writer endpoint** | Connect to the current primary/writer              |
+| **Reader endpoint**           | Distribute read connections across Aurora Replicas |
+| **Instance endpoint**         | Connect to one specific DB instance                |
+| **Custom endpoint**           | Connect to a selected group of Aurora instances    |
 
-A **custom endpoint** lets you group specific Aurora DB instances and give that group its own endpoint.
+---
 
-This is useful when different instances have different capacities or purposes.
+## Cluster / Writer endpoint
+
+Use it for normal read/write traffic that should go to the current writer.
+
+The endpoint follows the writer after failover.
+
+### Exam signal
+
+> "Application must always connect to the current Aurora writer."
+
+→ **Cluster / Writer endpoint**
+
+---
+
+## Reader endpoint
+
+The reader endpoint distributes **read connections** among Aurora Replicas.
+
+### Exam signal
+
+> "Distribute read traffic across Aurora Replicas."
+
+→ **Reader endpoint**
+
+Important:
+
+> It balances **connections**, not individual SQL queries.
+
+---
+
+## Instance endpoint
+
+Connects directly to one specific Aurora DB instance.
+
+### Exam signal
+
+> "Connect to a specific Aurora DB instance."
+
+→ **Instance endpoint**
+
+---
+
+## Custom endpoints
+
+Custom endpoints allow you to group selected Aurora DB instances behind a dedicated endpoint.
 
 Example:
 
 ```text
 Aurora Cluster
 │
-├── Writer        - high capacity
-├── Reader A      - high capacity
-├── Reader B      - high capacity
-├── Reader C      - low capacity
-└── Reader D      - low capacity
+├── Writer
+├── Reader A  ← high capacity
+├── Reader B  ← high capacity
+├── Reader C  ← low capacity
+└── Reader D  ← low capacity
 ```
 
-Create:
+You could create:
 
 ```text
 Production endpoint
-→ high-capacity instances
+→ Reader A + Reader B
 
 Reporting endpoint
-→ low-capacity instances
+→ Reader C + Reader D
 ```
 
-Then:
+This allows different workloads to use different groups of Aurora instances.
 
-```text
-Production application
-        ↓
-Production custom endpoint
-        ↓
-High-capacity instances
+### Exam signal
 
-Internal reporting
-        ↓
-Reporting custom endpoint
-        ↓
-Low-capacity instances
-```
+> "Production uses high-capacity instances while reporting uses low-capacity instances."
 
-This is exactly what custom endpoints are designed for: routing different workloads to different subsets of Aurora instances.
+→ **Aurora Custom Endpoint**
 
-A provisioned Aurora cluster can have up to **five custom endpoints**.
+---
 
-### Endpoint exam traps
+# Aurora Serverless v2
 
-> *"Send all read traffic to every Aurora Replica."* → **Reader endpoint**
-
-> *"Send reporting traffic only to low-capacity Aurora instances, while production uses high-capacity instances."* → **Custom endpoints**
-
-> *"Connect to one specific Aurora DB instance."* → **Instance endpoint**
-
-> *"Send writes to the current writer, even after failover."* → **Cluster / writer endpoint**
-
-### Aurora availability and replicas
-
-Aurora can automatically fail over to one of the available Aurora Replicas when the primary fails. Aurora Replicas also improve availability and read capacity. 
-
-### Aurora storage
-
-Aurora's cluster volume is replicated across **three Availability Zones** and is self-healing. The current maximum cluster volume is **256 TiB**. 
-
-Do not confuse this with an older **128 TiB** figure found in older study material.
-
-**Aurora's special features — feature → scenario:**
-
-| Feature | The scenario it answers |
-|---|---|
-| **Serverless v2** | **Spiky, unpredictable, or intermittently used** workloads |
-| **Global Database** | **Cross-Region DR** plus low-latency reads in other Regions |
-| **Cloning** | **Copy-on-write copy** of a production database for staging/testing |
-| **Backtrack** | **Rewind Aurora MySQL** after an accidental change without restoring a separate database |
-
-### Aurora Serverless v2
-
-Use it when database capacity changes significantly over time.
-
-Example:
-
-> "A development database is heavily used during working hours and mostly idle at night."
-
-→ **Aurora Serverless v2**
-
-### Aurora Global Database
+Aurora Serverless v2 automatically adjusts database capacity as workload changes.
 
 Use it for:
 
-- cross-Region disaster recovery
-- low-latency reads in other Regions
+* Unpredictable workloads
+* Spiky workloads
+* Intermittent workloads
+* Applications that don't need fixed capacity all the time
 
-Aurora Global Database uses storage-based replication with typical cross-Region replication latency of less than one second, and a secondary Region can be promoted in less than one minute in a Regional failure scenario. 
+### Exam signal
 
-### Aurora Cloning
+> "The database has unpredictable traffic and sometimes sits mostly idle."
 
-Aurora cloning uses **copy-on-write** so you can create a database copy for testing or staging without immediately duplicating all underlying data.
+→ **Aurora Serverless v2**
 
-> *"Create a quick copy of production for testing."* → **Aurora Cloning**
+---
 
-### Aurora Backtrack
+# Aurora Global Database
 
-Aurora MySQL **Backtrack** lets you rewind a database to an earlier point in time.
+Aurora Global Database is designed for **cross-Region architectures**.
 
-> *"Developer accidentally deleted data and wants to undo the change quickly without restoring a new database."* → **Aurora Backtrack**
+Use it when you need:
 
-## Question patterns
+* Cross-Region disaster recovery
+* Very low cross-Region replication lag
+* Fast recovery after a Regional failure
+* Low-latency reads from multiple Regions
 
-> *"Database must survive an AZ failure with no manual intervention."* → **Multi-AZ**
-
-> *"Reporting/analytics queries are slowing down the production database."* → **Read Replica** (offload reads — but if the same data is repeatedly requested, **ElastiCache** may be better)
-
-> *"Lambda functions are exhausting database connections."* → **RDS Proxy**
-
-> *"Migrate an Oracle database to RDS for Oracle."* → **AWS DMS**
-
-> *"Convert Oracle to PostgreSQL."* → **AWS SCT + DMS**
-
-> *"Perform Oracle database backup/recovery."* → **RMAN**
-
-> *"Oracle database must remain available after an AZ failure."* → **RDS for Oracle Multi-AZ**
-
-> *"The company already owns eligible Oracle licenses."* → **RDS for Oracle BYOL**
-
-> *"Encrypt an existing unencrypted RDS database."* → **snapshot → copy with encryption → restore**
-
-> *"Production traffic should use high-capacity Aurora instances while reporting uses low-capacity instances."* → **Aurora Custom Endpoints**
-
-> *"Read-only traffic should be automatically distributed across Aurora Replicas."* → **Aurora Reader Endpoint**
-
-> *"Connect directly to one specific Aurora instance."* → **Aurora Instance Endpoint**
-
-> *"Writes must always go to whichever Aurora instance is currently the writer."* → **Aurora Cluster/Writer Endpoint**
-
-> *"Global application needs cross-Region DR and low-latency reads."* → **Aurora Global Database**
-
-> *"Development database has unpredictable or intermittent usage."* → **Aurora Serverless v2**
-
-> *"Need a quick copy of production for testing."* → **Aurora Cloning**
-
-> *"Developer accidentally changed/deleted data and wants to rewind Aurora MySQL quickly."* → **Aurora Backtrack**
-
-> *"Compliance requires database backups kept for years."* → **Manual snapshots**
-
-> *"Application needs OS-level access / a custom database engine."* → **EC2** (or **RDS Custom for Oracle/SQL Server**)
-
-## Pocket card
-
-| Keyword in question | Answer |
-|---|---|
-| survive AZ failure, auto-failover | **Multi-AZ** |
-| standby serves reads | **TRAP — no** |
-| scale reads, offload reporting | **Read Replica** |
-| replica automatically fails over | **TRAP — promotion is separate** |
-| same data queried repeatedly | **ElastiCache** |
-| Lambda + RDS connections | **RDS Proxy** |
-| backups > 35 days / retain for years | **Manual snapshot** |
-| restore to a point in time | **Automated backups / PITR** |
-| encrypt existing DB | **Snapshot → copy encrypted → restore** |
-| Oracle → RDS for Oracle | **DMS** |
-| Oracle → different database engine | **SCT + DMS** |
-| Oracle schema conversion | **SCT** |
-| Oracle backup/recovery | **RMAN** |
-| Oracle high availability | **RDS for Oracle Multi-AZ** |
-| Oracle licenses already owned | **BYOL** |
-| Oracle needs OS-level control | **EC2 / RDS Custom** |
-| Aurora current writer | **Cluster / Writer endpoint** |
-| Aurora read balancing | **Reader endpoint** |
-| One specific Aurora instance | **Instance endpoint** |
-| Different workloads → different Aurora instance groups | **Custom endpoints** |
-| Custom Aurora endpoint limit | **5 per cluster** |
-| Aurora replicas | **Up to 15 + 1 primary** |
-| Aurora cluster storage | **Up to 256 TiB** |
-| spiky / intermittent load | **Aurora Serverless v2** |
-| cross-Region DR / low-latency global reads | **Aurora Global Database** |
-| quick production copy for staging | **Aurora Cloning** |
-| rewind Aurora MySQL after a mistake | **Aurora Backtrack** |
-
-The key Aurora memory is:
+Architecture:
 
 ```text
-Aurora Cluster
-│
-├── Writer endpoint
-│   → current writer
-│
-├── Reader endpoint
-│   → balances read connections across readers
-│
-├── Instance endpoint
-│   → one specific DB instance
-│
-└── Custom endpoint
-    → specific group of DB instances
+Primary Region
+      │
+      ▼
+Aurora Global Database
+      │
+      ▼
+Secondary Region
 ```
 
-And the key RDS memory is:
+The secondary Region can also serve read traffic.
+
+### Important SAA distinction
+
+```text
+RDS Multi-AZ
+→ high availability within a Region
+
+Aurora Global Database
+→ disaster recovery across Regions
+```
+
+### Exam signal
+
+> "Aurora application needs cross-Region DR with very low RPO and rapid recovery."
+
+→ **Aurora Global Database**
+
+---
+
+# RDS cross-Region Read Replicas
+
+Standard RDS engines can also use **cross-Region Read Replicas** for disaster recovery.
+
+Example:
+
+```text
+Primary Region
+      │
+      ▼
+RDS PostgreSQL
+      │
+      │ asynchronous replication
+      ▼
+Secondary Region
+RDS PostgreSQL Read Replica
+```
+
+Use this when:
+
+* You need a cross-Region copy of an RDS database.
+* The database engine is a supported RDS engine.
+* You need disaster recovery.
+* You may also use the replica for read scaling.
+
+### Important
+
+Replication is **asynchronous**, so there can be replication lag.
+
+A cross-Region read replica is not equivalent to Multi-AZ:
 
 ```text
 Multi-AZ
-= HIGH AVAILABILITY
+→ regional high availability
 
-Read Replica
-= READ SCALING
-
-RDS Proxy
-= CONNECTION MANAGEMENT
-
-Aurora Custom Endpoint
-= ROUTE DIFFERENT WORKLOADS TO DIFFERENT AURORA INSTANCES
+Cross-Region Read Replica
+→ cross-Region DR / read scaling
 ```
+
+---
+
+# Cross-Region DR: RDS Read Replica vs Aurora Global Database
+
+Both can provide cross-Region disaster recovery for relational databases, but the exam wording matters.
+
+| Solution                          | Database                | Main use                                                  |
+| --------------------------------- | ----------------------- | --------------------------------------------------------- |
+| **RDS cross-Region Read Replica** | RDS relational engines  | Cross-Region DR / read scaling                            |
+| **Aurora Global Database**        | Aurora MySQL/PostgreSQL | Cross-Region DR + very low replication lag + global reads |
+
+### SAA decision rule
+
+> **Cross-Region DR for an RDS database**
+> → **Cross-Region Read Replica**
+
+> **Aurora + very low RPO + very fast cross-Region recovery**
+> → **Aurora Global Database**
+
+### Typical exam scenario
+
+> "A relational database requires an RPO of around one second and an RTO of less than one minute after a Regional failure."
+
+→ **Aurora Global Database**
+
+This is stronger than simply choosing a generic cross-Region RDS read replica when the question emphasizes **very low RPO and very fast recovery**.
+
+---
+
+# Don't confuse relational and non-relational global databases
+
+Some SAA questions deliberately put different database types together.
+
+| Service                    | Database type | Typical clue                |
+| -------------------------- | ------------- | --------------------------- |
+| **RDS**                    | Relational    | SQL database                |
+| **Aurora**                 | Relational    | MySQL/PostgreSQL-compatible |
+| **DynamoDB Global Tables** | NoSQL         | Multi-Region NoSQL          |
+| **Timestream**             | Time-series   | Time-series / IoT / metrics |
+
+### Exam elimination
+
+> "The database must be relational."
+
+Eliminate:
+
+* DynamoDB Global Tables
+* Timestream
+
+Then compare:
+
+* RDS cross-Region Read Replica
+* Aurora Global Database
+
+---
+
+# Aurora Cloning
+
+Aurora cloning creates a database copy using **copy-on-write**.
+
+It is useful when you need a quick copy of a production database for:
+
+* Testing
+* Development
+* Staging
+
+### Exam signal
+
+> "Create a fast copy of production for testing without immediately duplicating all the storage."
+
+→ **Aurora Cloning**
+
+---
+
+# Aurora Backtrack
+
+Aurora Backtrack allows an **Aurora MySQL** database to be rewound to an earlier point in time without performing a traditional restore to a new database.
+
+Typical scenario:
+
+```text
+10:00 → good data
+10:15 → accidental DELETE
+10:20 → discover mistake
+
+Backtrack
+    ↓
+Return database to earlier point
+```
+
+### Exam signal
+
+> "An application accidentally changed/deleted data and needs to quickly rewind the Aurora MySQL database."
+
+→ **Aurora Backtrack**
+
+---
+
+# Aurora storage
+
+Aurora uses a distributed cluster volume rather than traditional database-local storage.
+
+The storage is:
+
+* Automatically replicated across multiple AZs
+* Self-healing
+* Shared by the Aurora DB instances
+
+### Important SAA idea
+
+Aurora readers do **not** need independent full copies of the database.
+
+They use the shared Aurora cluster storage.
+
+This helps Aurora fail over quickly to another DB instance.
+
+---
+
+# Question patterns
+
+> **"Database must survive an AZ failure with automatic failover."**
+> → **RDS Multi-AZ**
+
+> **"Reporting queries are consuming too much capacity on the primary."**
+> → **Read Replica**
+
+> **"Lambda is exhausting database connections."**
+> → **RDS Proxy**
+
+> **"Database storage is growing unpredictably."**
+> → **RDS Storage Auto Scaling**
+
+> **"Restore the RDS database to a specific point in time."**
+> → **Automated backups / PITR**
+
+> **"Keep RDS backups for years."**
+> → **Manual snapshots**
+
+> **"Encrypt an existing unencrypted RDS database."**
+> → **Snapshot → copy with encryption → restore**
+
+> **"Migrate Oracle to RDS for Oracle."**
+> → **AWS DMS**
+
+> **"Convert Oracle to PostgreSQL."**
+> → **AWS SCT + DMS**
+
+> **"Back up or recover an Oracle database."**
+> → **RMAN**
+
+> **"Oracle needs automatic failover after an AZ failure."**
+> → **RDS for Oracle Multi-AZ**
+
+> **"Company already owns eligible Oracle licenses."**
+> → **BYOL**
+
+> **"Application requires OS-level access to the Oracle server."**
+> → **EC2 / RDS Custom**
+
+> **"Distribute Aurora read connections across replicas."**
+> → **Reader endpoint**
+
+> **"Always connect to the current Aurora writer."**
+> → **Cluster / Writer endpoint**
+
+> **"Connect directly to one Aurora instance."**
+> → **Instance endpoint**
+
+> **"Production and reporting should use different groups of Aurora instances."**
+> → **Custom endpoint**
+
+> **"Aurora workload is unpredictable or intermittent."**
+> → **Aurora Serverless v2**
+
+> **"Aurora needs cross-Region disaster recovery and fast recovery."**
+> → **Aurora Global Database**
+
+> **"RDS PostgreSQL needs a copy in another Region for DR."**
+> → **Cross-Region Read Replica**
+
+> **"Relational database requires very low RPO and very fast cross-Region recovery."**
+> → **Aurora Global Database**
+
+> **"Multi-Region NoSQL database."**
+> → **DynamoDB Global Tables**
+
+> **"Time-series / IoT metrics database."**
+> → **Amazon Timestream**
+
+> **"Quick copy of Aurora production database for testing."**
+> → **Aurora Cloning**
+
+> **"Quickly rewind Aurora MySQL after an accidental change."**
+> → **Aurora Backtrack**
+
+---
+
+# Pocket card
+
+| Keyword                                          | Answer                                  |
+| ------------------------------------------------ | --------------------------------------- |
+| AZ failure                                       | **Multi-AZ**                            |
+| Automatic regional failover                      | **Multi-AZ**                            |
+| Scale database reads                             | **Read Replica**                        |
+| Cross-Region RDS DR                              | **Cross-Region Read Replica**           |
+| Aurora cross-Region DR                           | **Aurora Global Database**              |
+| Very low RPO + fast cross-Region recovery        | **Aurora Global Database**              |
+| Lambda + too many DB connections                 | **RDS Proxy**                           |
+| Restore to point in time                         | **Automated backup / PITR**             |
+| Keep backup for years                            | **Manual snapshot**                     |
+| Existing unencrypted RDS → encrypted             | **Snapshot → encrypted copy → restore** |
+| Oracle → RDS Oracle                              | **DMS**                                 |
+| Oracle → different DB engine                     | **SCT + DMS**                           |
+| Oracle backup/recovery                           | **RMAN**                                |
+| Oracle AZ HA                                     | **RDS Multi-AZ**                        |
+| Existing Oracle license                          | **BYOL**                                |
+| Need OS-level DB control                         | **EC2 / RDS Custom**                    |
+| Aurora current writer                            | **Writer/Cluster endpoint**             |
+| Aurora read balancing                            | **Reader endpoint**                     |
+| One specific Aurora instance                     | **Instance endpoint**                   |
+| Different workloads → different Aurora instances | **Custom endpoint**                     |
+| Spiky/unpredictable Aurora workload              | **Serverless v2**                       |
+| Cross-Region Aurora DR                           | **Global Database**                     |
+| Quick Aurora copy                                | **Cloning**                             |
+| Rewind Aurora MySQL                              | **Backtrack**                           |
+| Multi-Region NoSQL                               | **DynamoDB Global Tables**              |
+| Time-series database                             | **Timestream**                          |
+
+---
+
+# Core mental model
+
+When an RDS/Aurora question appears, first identify **what problem the question is solving**.
+
+```text
+AZ failure
+    ↓
+Multi-AZ
+
+Need more read capacity
+    ↓
+Read Replica
+
+Too many application connections
+    ↓
+RDS Proxy
+
+Cross-Region RDS DR
+    ↓
+Cross-Region Read Replica
+
+Aurora + cross-Region DR
+    ↓
+Aurora Global Database
+
+Spiky Aurora capacity
+    ↓
+Aurora Serverless v2
+
+Different Aurora workloads → different instance groups
+    ↓
+Custom Endpoint
+
+Quick Aurora copy
+    ↓
+Aurora Clone
+
+Undo Aurora MySQL changes
+    ↓
+Backtrack
+```
+
+And for Question 39-type elimination:
+
+```text
+Relational
+   ↓
+RDS / Aurora
+
+NoSQL
+   ↓
+DynamoDB Global Tables
+
+Time-series
+   ↓
+Timestream
+```
+
+The most important SAA distinction in this entire section is:
+
+**Multi-AZ = high availability within a Region.**
+
+**Read Replica = read scaling and can also be used for DR.**
+
+**Aurora Global Database = Aurora cross-Region DR with very low replication lag and fast recovery.**
