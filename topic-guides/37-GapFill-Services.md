@@ -387,7 +387,7 @@ Use it for:
 
 | Service            | What it does                                              | Signal keyword                   |
 | ------------------ | --------------------------------------------------------- | -------------------------------- |
-| **Glue**           | Serverless ETL + Data Catalog                             | ETL / data preparation / catalog |
+| ****           | Serverless ETL + Data Catalog                             | ETL / data preparation / catalog |
 | **EMR**            | Managed big-data frameworks                               | Spark / Hadoop                   |
 | **MSK**            | Managed Apache Kafka                                      | Kafka                            |
 | **Athena**         | SQL directly on S3                                        | SQL on S3                        |
@@ -395,7 +395,7 @@ Use it for:
 | **Lake Formation** | Build/manage a data lake with fine-grained access control | Data lake + permissions          |
 | **AppFlow**        | Move data between SaaS and AWS services                   | Salesforce → S3                  |
 
-### Glue
+### 
 
 **AWS Glue = serverless ETL and data catalog.**
 
@@ -433,7 +433,8 @@ Glue ETL job
  ↓
 CSV → Parquet
  ↓
-S3  ```
+S3
+```
 ---
 
 ### EMR
