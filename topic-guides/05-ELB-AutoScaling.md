@@ -2,182 +2,795 @@
 
 ## The idea
 
-Imagine a popular restaurant with one front door and a host standing at it. Guests don't wander in and pick their own tables — they walk up to the host, and the host seats them at whichever table is free. If a table breaks (wobbly leg, spilled soup everywhere), the host simply stops seating people there until it's fixed. Guests never know or care which table they got; they just know the restaurant's one address.
+**Elastic Load Balancing (ELB)** puts one entry point in front of multiple servers and distributes incoming traffic between them.
 
-That host is a **load balancer**. Your servers (EC2 instances) are the tables. The load balancer gives clients **one single DNS name** (one front door), **spreads incoming traffic** across many servers, and constantly runs **health checks** — little "are you okay?" pings — so it stops sending traffic to any server that's sick. When the server recovers, traffic flows to it again.
+```text
+Clients
+   ↓
+Load Balancer
+   ↓
+EC2 instances
+```
 
-Auto Scaling is the restaurant manager who watches how busy it is and **adds or removes tables** to match demand. Put them together and you get the classic AWS architecture: an Elastic Load Balancer (ELB) out front, an Auto Scaling Group (ASG) behind it, growing and shrinking with load, healing itself when instances die.
+The load balancer also performs **health checks**.
 
-## OSI layers in 60 seconds (you need this to pick the right LB)
+If an EC2 instance is unhealthy:
 
-Networking is described in "layers" — the OSI model — and the exam expects you to know layers 3, 4, and 7. Think of it as **mail**:
+```text
+Healthy instance   → receives traffic ✅
+Unhealthy instance → stops receiving traffic ❌
+```
 
-- **Layer 3 (Network)** = the **address on the envelope**. Just an IP address — which building does this go to?
-- **Layer 4 (Transport)** = the envelope address **plus the apartment number** — the **port** (like TCP port 443 or UDP port 3000). Which building, AND which door inside it?
-- **Layer 7 (Application)** = the mail carrier **opens the envelope and reads the letter**. Now you can see HTTP details: the URL path (`/api/orders`), headers, cookies, hostnames.
+**Auto Scaling Group (ASG)** manages the number of EC2 instances.
 
-**The layer a load balancer works at = how deep it looks into traffic = what decisions it CAN make.** An L4 balancer never opens the envelope, so it can't route based on URL paths — it's blind to them. But not opening envelopes makes it *fast*. That trade-off is the whole ALB-vs-NLB story.
+```text
+High demand
+   ↓
+ASG adds instances
+
+Low demand
+   ↓
+ASG removes instances
+```
+
+If an instance crashes, the ASG can automatically launch a replacement.
+
+### Together
+
+```text
+Clients
+   ↓
+Load Balancer
+   ↓
+Auto Scaling Group
+   ↓
+EC2 instances
+```
+
+This gives you:
+
+* traffic distribution
+* health checks
+* automatic scaling
+* automatic replacement of failed instances
+
+---
+
+## OSI layers in 60 seconds
+
+For load balancers, remember:
+
+| Layer       | What it sees        | Example                 |
+| ----------- | ------------------- | ----------------------- |
+| **Layer 3** | IP addresses        | `10.0.1.10`             |
+| **Layer 4** | IP + port + TCP/UDP | TCP 443, UDP 5000       |
+| **Layer 7** | HTTP information    | URL path, host, headers |
+
+### Why does this matter?
+
+A Layer 4 load balancer cannot understand:
+
+```text
+/api/orders
+/images/logo.png
+```
+
+because those are **HTTP-level details**.
+
+A Layer 7 load balancer can.
+
+So:
+
+```text
+Need URL/path/host routing
+→ Layer 7 → ALB
+
+Need TCP/UDP + very high performance
+→ Layer 4 → NLB
+```
+
+---
 
 ## The four load balancers
 
-| | Layer | Protocols | Superpower | Exam smell |
-|---|---|---|---|---|
-| **ALB** (Application) | 7 | HTTP, HTTPS, gRPC | Smart routing by path/host/header | "route /api to...", microservices, WAF |
-| **NLB** (Network) | 4 | TCP, UDP, TLS | Speed + **static IP** | "millions of requests", UDP, "whitelist IPs" |
-| **GLB** (Gateway) | 3 | IP packets (GENEVE) | Sends traffic *through* appliance fleets | "third-party firewall/IDS/IPS" |
-| **CLB** (Classic) | 4/7 | Old | None — **legacy** | If CLB is an answer option, it's wrong |
+|          | Layer | Protocols           | Main feature                              | Exam keyword                        |
+| -------- | ----- | ------------------- | ----------------------------------------- | ----------------------------------- |
+| **ALB**  | 7     | HTTP, HTTPS, gRPC   | Content-based routing                     | Path, host, header, web apps        |
+| **NLB**  | 4     | TCP, UDP, TLS       | High performance + static IP              | UDP, millions of requests, fixed IP |
+| **GWLB** | 3     | IP packets / GENEVE | Sends traffic through security appliances | Firewall, IDS, IPS                  |
+| **CLB**  | 4/7   | Legacy              | Older load balancer                       | Usually wrong answer                |
 
-### ALB — the smart host (Layer 7)
+---
 
-The ALB opens every envelope. Because it reads HTTP, it can make **content-based routing** decisions:
+## ALB — Application Load Balancer
 
-- **Path routing**: `/api/*` → the API target group, `/images/*` → the image servers
-- **Host routing**: `app.example.com` → one group, `admin.example.com` → another
-- **Header / query-string routing**: route by a custom header or `?version=beta`
+ALB works at **Layer 7**, so it understands HTTP/HTTPS traffic.
 
-Key facts to lock in:
+This allows routing based on:
 
-- Targets can be **EC2 instances, private IPs, Lambda functions, or containers (ECS)** — grouped into **target groups**.
-- The ALB terminates the client connection and opens a new one to the target, so the target sees the ALB's IP. The real client IP is passed in the **X-Forwarded-For** header. *"App needs the client's IP behind an ALB"* → read X-Forwarded-For.
-- **AWS WAF attaches to ALB** (a web application firewall inspects HTTP — it needs Layer 7, so it can't attach to an NLB).
-- **Sticky sessions**: a cookie pins a user to the same target — for legacy apps that store session state locally. (Better design: externalize session to ElastiCache/DynamoDB, but "sticky sessions" is the quick fix answer.)
-- **Dynamic port mapping** with ECS: multiple containers of the same app on one instance, each on a random port — the ALB tracks and routes to them. This is how you pack containers densely.
-- ALB gives you a **DNS name, not a static IP**. THE trap: *"customers must whitelist a fixed IP"* → ALB **cannot** do this → put an **NLB** in front, or use **Global Accelerator**.
+* URL path
+* hostname
+* HTTP headers
+* query strings
 
-### NLB — the fast, no-questions host (Layer 4)
+### Examples
 
-The NLB never opens envelopes. It sees IP + port and forwards, blazingly fast:
+```text
+/api/*       → API target group
 
-- Handles **millions of requests per second** with **ultra-low latency** — the "extreme performance" keyword answer.
-- Speaks **any TCP or UDP** — gaming servers, IoT, MQTT, custom binary protocols. ALB can't do UDP; NLB can.
-- **One static IP per AZ**, and you can assign your own **Elastic IPs**. This is THE whitelisting answer.
-- **Preserves the client source IP** by default — targets see the real client, no header tricks needed.
-- **Required as the front of a PrivateLink endpoint service** — when you expose your app privately to other VPCs, an NLB (or ALB behind an NLB) sits in front. (More in Section 6.)
+/images/*    → Image target group
+```
 
-### GLB — the security-appliance plumber (Layer 3)
+or:
 
-The Gateway Load Balancer has exactly **one job**: transparently push all traffic **through a fleet of third-party security appliances** — intrusion detection/prevention systems (IDS/IPS), next-gen firewalls, deep packet inspectors — before it reaches your app. It's a "bump in the wire": traffic goes in one side, through the appliances, out the other, and nobody has to change IP addresses.
+```text
+api.example.com
+        ↓
+API servers
 
-- Uses the **GENEVE protocol on port 6081** (a recognizable exam factoid).
-- Keyword mapping is mechanical: *"inspect traffic with third-party / partner security appliances"* → **GLB**. Every time.
+admin.example.com
+        ↓
+Admin servers
+```
 
-### CLB — the retired host
+### Important facts
 
-Classic Load Balancer is the legacy generation. It has no modern superpower. **On the exam, CLB is always the wrong answer.** Done.
+* ALB target groups can contain:
+
+  * EC2 instances
+  * private IP addresses
+  * Lambda functions
+  * containers
+* ALB performs health checks on targets.
+* ALB can integrate with **AWS WAF**.
+* ALB has a **DNS name**, not a fixed static IP.
+
+### Client IP behind ALB
+
+The target normally sees the ALB connection.
+
+The original client IP is normally available in:
+
+```text
+X-Forwarded-For
+```
+
+So:
+
+> **"Application behind ALB needs the original client IP."**
+
+→ **X-Forwarded-For**
+
+### Sticky sessions
+
+Sticky sessions can keep a client connected to the same target.
+
+Example:
+
+```text
+User A
+  ↓
+ALB
+  ↓
+EC2-A
+```
+
+The ALB can continue sending that user to EC2-A.
+
+Use this when the application keeps session state locally on the instance.
+
+A better architecture is often to store session state externally, for example in ElastiCache or DynamoDB.
+
+### ECS dynamic port mapping
+
+If several containers run on the same EC2 instance, each container can use a different port.
+
+ALB can discover and route to those ports.
+
+This is useful with ECS.
+
+### Fixed IP requirement
+
+ALB does **not** provide a fixed static IP.
+
+If the requirement is:
+
+> "Customers must whitelist fixed IP addresses."
+
+Think:
+
+→ **NLB**
+
+or:
+
+→ **Global Accelerator**
+
+---
+
+## NLB — Network Load Balancer
+
+NLB works at **Layer 4**.
+
+It mainly looks at:
+
+* IP address
+* port
+* TCP/UDP/TLS connection information
+
+It does not use HTTP URL paths like ALB.
+
+### Main characteristics
+
+* Very high throughput
+* Very low latency
+* Handles very large numbers of connections
+* Supports **TCP**
+* Supports **UDP**
+* Supports **TLS**
+* Provides a **static IP per Availability Zone**
+* Can use **Elastic IP addresses**
+* Preserves the client source IP by default
+
+### Use NLB for
+
+* UDP applications
+* gaming
+* IoT
+* custom TCP protocols
+* extremely high traffic
+* fixed IP requirements
+
+### Example
+
+> "A gaming application uses UDP and requires a fixed IP."
+
+→ **NLB**
+
+---
+
+## GWLB — Gateway Load Balancer
+
+Gateway Load Balancer is used to send network traffic through **security appliances**.
+
+Typical appliances:
+
+* firewalls
+* IDS
+* IPS
+* traffic inspection systems
+
+```text
+Traffic
+   ↓
+GWLB
+   ↓
+Security appliance
+   ↓
+Application
+```
+
+GWLB uses **GENEVE on port 6081**.
+
+### Exam rule
+
+> **Third-party firewall/IDS/IPS → GWLB**
+
+You are not using GWLB to distribute normal web traffic like ALB.
+
+---
+
+## CLB — Classic Load Balancer
+
+Classic Load Balancer is the **older generation**.
+
+For modern architectures, prefer:
+
+* **ALB**
+* **NLB**
+* **GWLB**
+
+If CLB appears as a distractor in a modern architecture question, it is usually not the answer.
+
+---
 
 ## Shared ELB features worth points
 
-- **Cross-zone load balancing**: without it, each LB node only sends traffic to targets in *its own* AZ — if AZ-a has 2 instances and AZ-b has 8, the AZ-a pair gets hammered. Cross-zone spreads evenly across ALL targets in ALL AZs. **ALB: on by default, free. NLB: off by default, inter-AZ data charges apply when enabled.**
-- **Connection draining / deregistration delay**: when a target is removed (or ASG scales in), the LB stops NEW requests but lets in-flight requests **finish gracefully** (default 300s). *"Users get errors during scale-in"* → tune deregistration delay.
-- **SNI (Server Name Indication)**: lets one load balancer host **multiple TLS certificates** — the client says which hostname it wants during the TLS handshake, and the LB serves the matching cert. *"Host many HTTPS domains on one ALB"* → SNI.
-- **TLS termination**: the LB decrypts HTTPS itself (certificate lives on the LB, usually from ACM) and can talk plain HTTP to targets — offloading crypto work from your instances. (TLS = Transport Layer Security, the encryption behind the "s" in https.)
+### Cross-zone load balancing
 
-## Auto Scaling Groups
+Without cross-zone load balancing, a load balancer node normally sends traffic to targets in its own AZ.
 
-An ASG is a rule that says: "keep a fleet of instances alive, sized between these bounds, built from this recipe."
+Example:
 
-```
-   Launch Template  ──►  ┌──────────── ASG ────────────┐
-   (AMI, type, SG,       │  min: 2   desired: 4  max: 10│
-    user data, key)      │  [EC2] [EC2] [EC2] [EC2]     │
-                         │   AZ-a   AZ-a   AZ-b   AZ-b  │
-                         └──────────────┬───────────────┘
-                                        ▲
-                             ELB spreads traffic, health-checks
+```text
+AZ-A
+2 instances
+
+AZ-B
+8 instances
 ```
 
-- **Launch template** = the recipe (AMI, instance type, security group, user data). Launch *configurations* are the legacy version — prefer templates.
-- **min / desired / max**: the ASG always steers actual count toward **desired**, clamped between min and max. Scaling policies work by changing desired.
-- If an instance dies, the ASG **replaces it automatically** — self-healing for free.
+Without cross-zone balancing, traffic can be uneven.
 
-### Scaling policies — match the keyword
+With cross-zone balancing, traffic can be distributed across targets in other AZs.
 
-| Policy              | What it does                                                                    | Exam keyword                                       |
-| ------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------- |
-| **Target Tracking** | “Keep this metric at this value” (e.g., CPU at 40%) — AWS does the math         | **Simplest**, “maintain X%”                        |
-| **Step Scaling**    | Add/remove different numbers of instances based on metric thresholds you define | **Fine-grained thresholds**                        |
-| **Simple Scaling**  | Add/remove a **fixed number** of instances when one alarm triggers              | **Basic / fixed adjustment**                       |
-| **Scheduled**       | Scale at known times                                                            | **Every Monday 9am**, month-end batch, predictable |
-| **Predictive**      | ML forecasts load and scales **ahead of it**                                    | Recurring patterns, **proactively**                |
+### Important defaults
 
-- **Warm-up / cooldown** (default **300 seconds**): after a scaling action, the ASG waits before acting on metrics again — so it doesn't count a booting instance as "still overloaded" and over-scale. *"ASG launches too many instances in bursts"* → cooldown/warm-up.
+* **ALB:** cross-zone load balancing is enabled by default.
+* **NLB:** cross-zone load balancing is disabled by default at the load balancer level.
 
-### THE health-check trap (this WILL be on your exam)
+### Exam pattern
 
-By default, an ASG uses **EC2 status checks only** — is the VM itself running? But an instance can be perfectly *running* while the app on it is crashed, hung, or returning 500s. The ASG shrugs: "VM's alive, looks fine to me."
+> **"Traffic is unevenly distributed between Availability Zones."**
 
-THE trap: *"the load balancer marks instances unhealthy but the ASG never replaces them"* → **enable ELB health checks on the ASG**. Then the ASG trusts the LB's application-level verdict and terminates + replaces app-dead instances.
+→ Check **cross-zone load balancing**.
 
-### The ASG + SQS pattern
+---
 
-Classic decoupling architecture: workers in an ASG consume jobs from an SQS queue. Scale on the queue metric — ideally a **custom metric of backlog per instance** (`ApproximateNumberOfMessagesVisible` ÷ instance count) with target tracking. *"Scale workers based on pending jobs"* → **SQS queue depth drives the ASG**, not CPU.
+### Deregistration delay / connection draining
 
-### Termination policy (scale-in: who dies first?)
+When an instance is being removed, the load balancer should not immediately kill existing connections.
 
-Default behavior: pick the AZ with the most instances (to **keep AZs balanced**), then within it prefer the instance with the **oldest launch template/configuration**, then the one closest to the next billing hour. You mostly just need to know: *default scale-in keeps AZs balanced and retires the oldest config first.*
+Instead:
+
+```text
+New requests
+→ stop sending to target
+
+Existing requests
+→ allowed to finish
+```
+
+This is called:
+
+* **deregistration delay**
+* **connection draining**
+
+Use it when:
+
+> **"Users receive errors when instances are removed during scale-in."**
+
+---
+
+### SNI
+
+**SNI (Server Name Indication)** allows one HTTPS listener to use multiple certificates.
+
+Example:
+
+```text
+example.com
+api.example.com
+admin.example.com
+```
+
+One ALB can serve different certificates based on the requested hostname.
+
+### Exam pattern
+
+> **"Host multiple HTTPS domains with different certificates on one load balancer."**
+
+→ **SNI**
+
+---
+
+### TLS termination
+
+The load balancer can terminate HTTPS.
+
+```text
+Client
+  ↓ HTTPS
+Load Balancer
+  ↓ HTTP or HTTPS
+EC2
+```
+
+The certificate is usually stored on the load balancer through **AWS Certificate Manager (ACM)**.
+
+This removes TLS processing from the EC2 instances.
+
+---
+
+# Auto Scaling Groups
+
+An **Auto Scaling Group (ASG)** manages a group of EC2 instances.
+
+You define:
+
+* minimum number of instances
+* desired number
+* maximum number
+* how new instances should be launched
+
+```text
+Launch Template
+      ↓
+     ASG
+      ↓
+EC2 EC2 EC2 EC2
+```
+
+### Launch Template
+
+A Launch Template contains the configuration for new instances, such as:
+
+* AMI
+* instance type
+* security group
+* user data
+* key pair
+* other launch settings
+
+**Launch Configurations** are the older/legacy mechanism.
+
+Use:
+
+> **Launch Template**
+
+for modern designs.
+
+### Min / Desired / Max
+
+Example:
+
+```text
+min     = 2
+desired = 4
+max     = 10
+```
+
+ASG tries to maintain the desired number of instances.
+
+---
+
+## ASG self-healing
+
+If an EC2 instance fails:
+
+```text
+EC2 instance fails
+       ↓
+ASG detects it
+       ↓
+Instance terminated
+       ↓
+Replacement launched
+```
+
+This is one of the main purposes of an ASG.
+
+---
+
+## Scaling policies
+
+Choose the scaling policy based on the requirement.
+
+| Policy                 | What it does                                         | Exam keyword                       |
+| ---------------------- | ---------------------------------------------------- | ---------------------------------- |
+| **Target Tracking**    | Keeps a metric around a target value                 | "Keep CPU around 40%"              |
+| **Step Scaling**       | Different scaling amounts for different alarm levels | "If CPU > 70%, add 2; >90%, add 4" |
+| **Simple Scaling**     | Fixed adjustment after an alarm                      | Basic scaling                      |
+| **Scheduled Scaling**  | Scales at known times                                | "Every Monday 9 AM"                |
+| **Predictive Scaling** | Uses ML to predict future demand                     | "Scale before expected traffic"    |
+
+### Target Tracking
+
+Example:
+
+> Keep average CPU at **40%**.
+
+→ **Target Tracking**
+
+This is usually the simplest choice when the question asks to maintain a specific metric.
+
+### Step Scaling
+
+Example:
+
+```text
+CPU > 60% → add 1
+CPU > 80% → add 2
+CPU > 90% → add 4
+```
+
+→ **Step Scaling**
+
+### Scheduled Scaling
+
+Use when demand is predictable.
+
+Example:
+
+> Traffic increases every weekday at 9 AM.
+
+→ **Scheduled Scaling**
+
+### Predictive Scaling
+
+Use when traffic follows patterns that can be predicted.
+
+It uses machine learning to anticipate demand and scale **before** the traffic arrives.
+
+---
+
+## Warm-up and cooldown
+
+After launching or terminating instances, ASG may need time before evaluating the system again.
+
+This prevents repeated scaling actions while a new instance is still starting.
+
+### Exam pattern
+
+> **"ASG keeps launching more instances before the previous instances are fully ready."**
+
+→ Check **instance warm-up / cooldown settings**.
+
+---
+
+## THE health-check trap
+
+By default, an ASG uses **EC2 health checks**.
+
+That means it checks whether the EC2 instance itself is healthy.
+
+But this can happen:
+
+```text
+EC2 = running ✅
+Application = broken ❌
+```
+
+The ASG may still consider the instance healthy.
+
+### ELB health checks
+
+You can configure the ASG to use **ELB health checks**.
+
+Then:
+
+```text
+ALB
+ ↓
+Application health check
+ ↓
+Unhealthy instance
+ ↓
+ASG replaces instance
+```
+
+### Exam pattern
+
+> **"The load balancer marks instances unhealthy, but the ASG does not replace them."**
+
+→ **Enable ELB health checks on the ASG**
+
+---
+
+## ASG + SQS pattern
+
+Suppose EC2 workers process jobs from SQS.
+
+```text
+Application
+    ↓
+   SQS
+    ↓
+ASG workers
+```
+
+If the queue grows, you need more workers.
+
+So the ASG can scale based on the queue.
+
+A useful metric is:
+
+> **Backlog per instance**
+
+This is better than simply looking at CPU when the real problem is the number of pending jobs.
+
+### Exam pattern
+
+> **"Scale workers according to the number of unprocessed jobs."**
+
+→ **Scale the ASG using SQS queue metrics**
+
+---
+
+## Termination policy — who is terminated first?
+
+When an ASG needs to scale in, it has to decide **which instance to remove**.
+
+With the default termination policy, the ASG first tries to keep the Availability Zones balanced.
+
+Then it prefers instances using **older launch configurations or launch template versions/configurations**.
+
+The important exam idea is:
+
+> **Default scale-in prefers removing older configurations while maintaining AZ balance.**
+
+This is useful when you have recently updated the Launch Template and want old instances to disappear gradually.
+
+### Important trap
+
+Do not confuse:
+
+> **Oldest configuration**
+
+with:
+
+> **Oldest running instance**
+
+The **`OldestInstance` termination policy** specifically prefers the instance that has been running the longest.
+
+So:
+
+```text
+Default policy
+→ keep AZs balanced + prefer older configuration
+
+OldestInstance policy
+→ terminate the oldest running instance
+```
+
+---
 
 ## The layered HA picture
 
-Two different tools survive two different disasters:
+Different AWS services solve different failure levels.
 
-```
-Route 53 (DNS)  ──►  survives a REGION dying   (DNS failover — minutes, TTL-bound)
-     │
-     ▼
-   ELB          ──►  survives an INSTANCE dying (in-path, near-instant rerouting)
-     │
-     ▼
-   ASG          ──►  REPLACES the dead instance (self-healing capacity)
+```text
+Route 53
+   ↓
+Region-level failover
+   ↓
+Load Balancer
+   ↓
+Instance-level traffic failover
+   ↓
+Auto Scaling Group
+   ↓
+Replace failed instance
 ```
 
-**ELB is fast, in-path, within a region. Route 53 failover is DNS-based, slower, across regions.** Serious architectures use both — that's the layered high-availability answer the exam loves.
+### Route 53
+
+Route 53 can direct users to another Region using DNS-based routing/failover.
+
+### Load Balancer
+
+The load balancer quickly stops sending traffic to unhealthy instances.
+
+### Auto Scaling Group
+
+The ASG replaces failed instances.
+
+So:
+
+```text
+Load Balancer
+= stop sending traffic to bad instance
+
+ASG
+= replace bad instance
+```
+
+These are different jobs.
+
+---
 
 ## Question patterns
 
-> *"Route `/api/*` to one set of servers and `/images/*` to another"* → **ALB path-based routing** (only L7 sees URLs)
+> *"Route `/api/*` to one target group and `/images/*` to another"* → **ALB path-based routing**
 
-> *"UDP-based multiplayer game needs low latency and a static IP"* → **NLB** (ALB can't do UDP or static IPs)
+> *"Route traffic based on hostname"* → **ALB host-based routing**
 
-> *"Inspect all traffic with a third-party firewall/IDS appliance fleet"* → **Gateway Load Balancer** (GENEVE 6081, bump-in-the-wire)
+> *"UDP-based game needs low latency and a static IP"* → **NLB**
 
-> *"LB marks instances unhealthy, but ASG doesn't replace them"* → **enable ELB health checks on the ASG** (default is EC2 status checks only)
+> *"Millions of TCP connections with very low latency"* → **NLB**
 
-> *"Payroll traffic spikes every month-end at a known time"* → **Scheduled scaling** (predictable = scheduled)
+> *"Inspect traffic using third-party firewall/IDS/IPS appliances"* → **Gateway Load Balancer**
 
-> *"Keep average CPU at 40% with minimal configuration"* → **Target Tracking** ("keep metric at value" + "simplest")
+> *"The load balancer marks an instance unhealthy but the ASG doesn't replace it"* → **Enable ELB health checks on the ASG**
 
-> *"Serve many HTTPS domains with different certificates on one ALB"* → **SNI** (multiple TLS certs, one listener)
+> *"Traffic increases every month-end at a predictable time"* → **Scheduled Scaling**
 
-> *"Corporate clients must whitelist fixed IP addresses for your load balancer"* → **NLB with Elastic IPs** (or Global Accelerator in front of an ALB)
+> *"Keep average CPU at 40%"* → **Target Tracking**
 
-> *"App behind ALB needs the original client IP"* → **X-Forwarded-For header** (NLB would preserve it natively)
+> *"Different scaling actions for different metric thresholds"* → **Step Scaling**
 
-> *"Scale workers based on the number of unprocessed jobs"* → **ASG scaling on SQS queue depth** (backlog per instance)
+> *"Predict future traffic and scale before it arrives"* → **Predictive Scaling**
 
-> *"Millions of TCP requests per second, extreme performance"* → **NLB** ("millions" + "ultra-low latency" = L4)
+> *"Many HTTPS domains use different certificates on one ALB"* → **SNI**
+
+> *"Users receive errors when instances are removed during scale-in"* → **Deregistration delay / connection draining**
+
+> *"Application behind ALB needs the original client IP"* → **X-Forwarded-For**
+
+> *"Clients must whitelist fixed load-balancer IP addresses"* → **NLB with Elastic IPs**
+
+> *"Scale workers based on pending SQS jobs"* → **ASG scaling based on SQS queue metrics**
+
+> *"Need to preserve AZ balance during scale-in"* → **Default ASG termination policy**
+
+> *"Terminate the instance that has been running the longest"* → **OldestInstance termination policy**
 
 ## Pocket card
 
-| Keyword | Answer |
-|---|---|
-| Path / host / header routing | ALB |
-| HTTP, microservices, containers, Lambda target | ALB |
-| WAF on a load balancer | ALB (L7 only) |
-| UDP, extreme performance, millions req/s | NLB |
-| Static IP / Elastic IP / whitelisting | NLB (or Global Accelerator) |
-| PrivateLink endpoint service front | NLB |
-| Third-party security appliances, GENEVE 6081 | GLB |
-| Classic Load Balancer | Wrong answer |
-| Multiple TLS certs, one LB | SNI |
-| Errors during scale-in | Deregistration delay (draining) |
-| Uneven traffic across AZs | Cross-zone LB (ALB free/on, NLB paid/off) |
-| Client IP behind ALB | X-Forwarded-For |
-| "Keep CPU at X%" simply | Target Tracking |
-| Known time spikes | Scheduled scaling |
-| ML-forecasted scaling | Predictive scaling |
-| ASG ignores app-level failures | Enable ELB health checks on ASG |
-| Scale on job backlog | SQS queue depth metric |
-| Instance-level failover | ELB (in-path, instant) |
-| Region-level failover | Route 53 (DNS, slower) |
+| Keyword                                         | Answer                                             |
+| ----------------------------------------------- | -------------------------------------------------- |
+| Path / host / header routing                    | **ALB**                                            |
+| HTTP / HTTPS / gRPC                             | **ALB**                                            |
+| WAF on load balancer                            | **ALB**                                            |
+| UDP                                             | **NLB**                                            |
+| Very high performance / millions of connections | **NLB**                                            |
+| Static IP / Elastic IP                          | **NLB**                                            |
+| Preserve client source IP                       | **NLB**                                            |
+| PrivateLink endpoint service                    | **NLB**                                            |
+| Third-party firewall / IDS / IPS                | **GWLB**                                           |
+| GENEVE 6081                                     | **GWLB**                                           |
+| Classic Load Balancer                           | **Legacy / usually wrong**                         |
+| Multiple HTTPS certificates                     | **SNI**                                            |
+| Errors during scale-in                          | **Deregistration delay**                           |
+| Uneven traffic across AZs                       | **Cross-zone load balancing**                      |
+| Client IP behind ALB                            | **X-Forwarded-For**                                |
+| Keep CPU at X%                                  | **Target Tracking**                                |
+| Different scaling steps                         | **Step Scaling**                                   |
+| Known traffic schedule                          | **Scheduled Scaling**                              |
+| Predict future demand                           | **Predictive Scaling**                             |
+| ASG ignores application failure                 | **Enable ELB health checks**                       |
+| Scale workers on jobs                           | **SQS queue metric**                               |
+| Default scale-in                                | **Keep AZs balanced + prefer older configuration** |
+| Oldest running instance                         | **OldestInstance policy**                          |
+| Traffic failover within a Region                | **Load Balancer**                                  |
+| Replace failed EC2                              | **Auto Scaling Group**                             |
+| Cross-Region DNS failover                       | **Route 53**                                       |
 
-One layer down from the load balancer sits the network it all lives in — subnets, gateways, and firewalls — which is exactly where Section 6 (VPC) picks up.
+## Final memory
+
+```text
+ALB
+= HTTP/HTTPS
+= Layer 7
+= path / host / header routing
+
+NLB
+= TCP/UDP/TLS
+= Layer 4
+= high performance + static IP
+
+GWLB
+= security appliances
+= firewall / IDS / IPS
+
+ASG
+= add/remove instances
+= replace failed instances
+
+Target Tracking
+= keep metric at target
+
+Step Scaling
+= different amounts for different thresholds
+
+Scheduled Scaling
+= known schedule
+
+Predictive Scaling
+= forecast future demand
+
+ELB health check
+= detect application failure
+
+ASG
+= replace unhealthy instances
+```
+
+The key distinction to remember is:
+
+```text
+Load Balancer
+= "Which healthy instance should receive this request?"
+
+Auto Scaling Group
+= "How many instances should exist?"
+```
