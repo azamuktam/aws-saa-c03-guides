@@ -92,6 +92,92 @@ Move the analytics workload to something designed for it, such as:
 
 ---
 
+## Database migration tools
+
+These are general database migration tools, not Oracle-only tools.
+
+| Tool                                     | What it does                                            |
+| ---------------------------------------- | ------------------------------------------------------- |
+| **AWS DMS (Database Migration Service)** | **Moves / replicates database data**                    |
+| **AWS SCT (Schema Conversion Tool)**     | **Converts schema/code when changing database engines** |
+
+### DMS
+
+**DMS = move the data.**
+
+Use it for database migrations or ongoing replication.
+
+```text
+Source database
+      ↓
+     DMS
+      ↓
+Target database
+```
+
+Examples:
+
+```text
+Oracle → RDS for Oracle
+MySQL → RDS for MySQL
+On-premises database → AWS
+```
+
+> **Same database engine → usually DMS**
+
+### SCT
+
+**SCT = convert the schema when changing database engines.**
+
+```text
+Oracle
+  ↓
+SCT
+  ↓
+PostgreSQL
+```
+
+SCT can convert things such as:
+
+* tables
+* indexes
+* views
+* stored procedures
+* functions
+
+SCT does **not** primarily move the actual database data.
+
+When changing database engines:
+
+```text
+Source database
+      ↓
+     SCT
+      ↓
+Converted schema
+      ↓
+     DMS
+      ↓
+Target database
+```
+
+> **Different database engine → SCT + DMS**
+
+### Simple memory
+
+```text
+DMS
+= MOVE DATA
+
+SCT
+= CONVERT SCHEMA
+
+RMAN
+= ORACLE BACKUP / RECOVERY
+```
+
+---
+
 ## The database services
 
 | Service                       | The identifying keyword                                    | What it is                                               |
@@ -251,8 +337,6 @@ If the query only needs March, Athena can avoid scanning unrelated partitions.
 > **Athena cost = data scanned**
 
 > **Reduce scanned data = partition + compress + Parquet/ORC**
-
-AWS documents these optimizations and their impact on Athena query cost and performance.
 
 ---
 
@@ -473,8 +557,6 @@ Search queries go to OpenSearch.
 
 Amazon Managed Blockchain provides managed infrastructure and APIs for blockchain networks.
 
-Current AWS documentation describes support for blockchain frameworks including **Hyperledger Fabric and Ethereum**, while AMB Access also provides access to public blockchain networks such as Ethereum and Bitcoin.
-
 The key idea for the exam is:
 
 > **Blockchain is for multiple parties that need shared, verifiable records without relying on one central database owner.**
@@ -495,7 +577,7 @@ Several organizations need to share transaction records but don't want one compa
 
 **Amazon QLDB is no longer a current AWS service.**
 
-AWS ended support for QLDB on **July 31, 2025**. AWS provides migration guidance toward **Aurora PostgreSQL**.
+AWS ended support for QLDB on **July 31, 2025**.
 
 Therefore, for your current SAA notes:
 
