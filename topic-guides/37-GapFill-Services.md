@@ -519,19 +519,54 @@ S3
 
 # ML one-liners
 
-| Service         | What it does                        | Signal                  |
-| --------------- | ----------------------------------- | ----------------------- |
-| **Rekognition** | Image/video analysis                | Faces, objects, video   |
-| **Transcribe**  | Speech → text                       | Call transcripts        |
-| **Polly**       | Text → speech                       | Read text aloud         |
-| **Translate**   | Language translation                | Translate content       |
-| **Comprehend**  | NLP / text analysis                 | Sentiment               |
-| **Textract**    | Extract text/data from documents    | Invoices/forms          |
-| **Kendra**      | Intelligent document search         | Enterprise search       |
-| **Personalize** | Recommendations                     | "Customers also bought" |
-| **Forecast**    | Time-series forecasting             | Demand prediction       |
-| **Lex**         | Conversational chatbots             | Chatbot                 |
-| **SageMaker**   | Build/train/deploy custom ML models | Data scientists         |
+| Service | What it does | Signal |
+|---|---|---|
+| **Rekognition** | Looks at **images and videos** and detects things such as faces, objects, people, and unsafe content | Faces, objects, video |
+| **Transcribe** | Takes **audio/speech** and turns it into **written text** | Call recording → transcript |
+| **Polly** | Takes **written text** and turns it into **spoken audio** | App reads text aloud |
+| **Translate** | Takes **text in one language** and translates it into another language | English → French |
+| **Comprehend** | Takes **text** and analyzes its meaning, such as **sentiment, entities, and key phrases** | "Is this review positive or negative?" |
+| **Textract** | Takes **scanned documents/images** and extracts **text, tables, and form fields** | Invoice/form → structured data |
+| **Kendra** | Searches **company documents** and finds relevant answers using natural-language queries | "Find our vacation policy" |
+| **Personalize** | Uses user/item behavior to generate **personalized recommendations** | "Customers also bought..." |
+| **Forecast** | Uses historical **time-series data** to predict future values | Predict future sales/demand |
+| **Lex** | Lets you build **conversational chatbots** that understand user messages and respond | "Build a customer-service chatbot" |
+| **SageMaker** | Lets data scientists **build, train, tune, and deploy their own ML models** | Train your own ML model |
+
+Picture / video
+→ Rekognition
+
+Audio
+→ Transcribe
+   ↓
+  Text
+
+Text → speech
+→ Polly
+
+Text → another language
+→ Translate
+
+Understand text
+→ Comprehend
+
+Scanned document → text/tables/forms
+→ Textract
+
+Search company documents
+→ Kendra
+
+Recommend products/content
+→ Personalize
+
+Predict future numbers
+→ Forecast
+
+Chat with users
+→ Lex
+
+Build your own ML model
+→ SageMaker
 
 ### The important distinctions
 
