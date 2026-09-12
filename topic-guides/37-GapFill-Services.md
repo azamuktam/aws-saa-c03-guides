@@ -433,7 +433,7 @@ Glue ETL job
  ↓
 CSV → Parquet
  ↓
-S3
+S3  ```
 ---
 
 ### EMR
