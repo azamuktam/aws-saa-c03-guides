@@ -28,7 +28,7 @@ And note: **production systems can use BOTH** — Multi-AZ for high availability
 
 ## Backups & encryption
 
-- **Automated backups** → provide **PITR (Point-In-Time Recovery)**. Retention can be **0–35 days** for standard RDS DB instances; the maximum is **35 days**. citeturn983909search13
+- **Automated backups** → provide **PITR (Point-In-Time Recovery)**. Retention can be **0–35 days** for standard RDS DB instances; the maximum is **35 days**. 
 - **Manual snapshots** → remain until you delete them. **"Keep backups for years / compliance" → manual snapshots.**
 
 **Encryption is a creation-time decision.** To encrypt an existing unencrypted RDS database:
@@ -242,7 +242,7 @@ Aurora DB Cluster
    Shared cluster storage
 ```
 
-Aurora's cluster storage spans multiple Availability Zones. Aurora can have up to **15 Aurora Replicas** in addition to the primary. citeturn983909search11turn983909search8
+Aurora's cluster storage spans multiple Availability Zones. Aurora can have up to **15 Aurora Replicas** in addition to the primary. 
 
 Because the writer and readers use the same underlying cluster storage, Aurora can fail over to an available reader without copying the whole database.
 
@@ -257,7 +257,7 @@ Aurora provides different endpoints for different connection patterns:
 | **Instance endpoint** | Connects to **one specific DB instance** |
 | **Custom endpoint** | Connects to a **specific group of Aurora DB instances** |
 
-The built-in reader endpoint balances **connections** among Aurora Replicas; it does not balance individual queries. citeturn983909search1turn983909search3
+The built-in reader endpoint balances **connections** among Aurora Replicas; it does not balance individual queries. 
 
 ### Aurora Custom Endpoints
 
@@ -303,9 +303,9 @@ Reporting custom endpoint
 Low-capacity instances
 ```
 
-This is exactly what custom endpoints are designed for: routing different workloads to different subsets of Aurora instances. citeturn983909search2
+This is exactly what custom endpoints are designed for: routing different workloads to different subsets of Aurora instances.
 
-A provisioned Aurora cluster can have up to **five custom endpoints**. citeturn983909search2
+A provisioned Aurora cluster can have up to **five custom endpoints**.
 
 ### Endpoint exam traps
 
@@ -319,11 +319,11 @@ A provisioned Aurora cluster can have up to **five custom endpoints**. cite�
 
 ### Aurora availability and replicas
 
-Aurora can automatically fail over to one of the available Aurora Replicas when the primary fails. Aurora Replicas also improve availability and read capacity. citeturn983909search6
+Aurora can automatically fail over to one of the available Aurora Replicas when the primary fails. Aurora Replicas also improve availability and read capacity. 
 
 ### Aurora storage
 
-Aurora's cluster volume is replicated across **three Availability Zones** and is self-healing. The current maximum cluster volume is **256 TiB**. citeturn983909search0turn983909search6
+Aurora's cluster volume is replicated across **three Availability Zones** and is self-healing. The current maximum cluster volume is **256 TiB**. 
 
 Do not confuse this with an older **128 TiB** figure found in older study material.
 
@@ -353,7 +353,7 @@ Use it for:
 - cross-Region disaster recovery
 - low-latency reads in other Regions
 
-Aurora Global Database uses storage-based replication with typical cross-Region replication latency of less than one second, and a secondary Region can be promoted in less than one minute in a Regional failure scenario. citeturn983909search6
+Aurora Global Database uses storage-based replication with typical cross-Region replication latency of less than one second, and a secondary Region can be promoted in less than one minute in a Regional failure scenario. 
 
 ### Aurora Cloning
 
