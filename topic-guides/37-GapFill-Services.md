@@ -418,6 +418,22 @@ Glue can:
 
 > **Serverless ETL / Data Catalog → Glue**
 
+## Glue ETL + S3
+
+Glue is a **serverless ETL service**, so it is a strong choice when data must be transformed without managing servers.
+
+Example:
+
+```text
+S3
+ ↓ Object Created
+EventBridge
+ ↓
+Glue ETL job
+ ↓
+CSV → Parquet
+ ↓
+S3
 ---
 
 ### EMR
