@@ -397,7 +397,7 @@ Use it for:
 
 ### 
 
-**AWS Glue = serverless ETL and data catalog.**
+**AWS  = serverless ETL and data catalog.**
 
 ETL means:
 
@@ -407,7 +407,7 @@ Transform
 Load
 ```
 
-Glue can:
+ can:
 
 * discover data
 * catalog schemas
@@ -416,7 +416,7 @@ Glue can:
 
 ### Signal
 
-> **Serverless ETL / Data Catalog → Glue**
+> **Serverless ETL / Data Catalog → **
 
 ## Glue ETL + S3
 
@@ -435,6 +435,11 @@ CSV → Parquet
  ↓
 S3
 ```
+Glue is preferred over:
+
+EC2 + Spark → requires server/infrastructure management
+Lambda → better for lightweight/event-driven processing, not large ETL workloads
+Glue Crawler → discovers/catalogs data; it does not perform the ETL transformation
 ---
 
 ### EMR
