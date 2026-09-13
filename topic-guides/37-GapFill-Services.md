@@ -250,7 +250,8 @@ So:
 
 ```text
 HTTPS on ALB
-→ ACM
+→ ACM  certificate in the SAME REGION as the ALB
+
 
 HTTPS on CloudFront
 → ACM in us-east-1
