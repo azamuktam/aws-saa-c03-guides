@@ -1063,6 +1063,7 @@ Browser
 AppStream 2.0
      ↓
 Application runs on AWS
+```
 ---
 
 # Question patterns
