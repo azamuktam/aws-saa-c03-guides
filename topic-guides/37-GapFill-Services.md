@@ -38,25 +38,23 @@ Query S3 using SQL
 
 ## Amazon MQ
 
-**Amazon MQ = managed traditional message broker.**
+**Amazon MQ = managed message broker for applications that already use traditional messaging systems.**
 
-It is useful when an existing application already uses a traditional broker and you want to migrate it to AWS with **minimal application changes**.
-
-Supports:
+It supports managed brokers such as:
 
 * ActiveMQ
 * RabbitMQ
 
+It is useful when an existing application already uses traditional messaging protocols or APIs and you want to migrate it to AWS without rewriting the application.
+
 Common keywords:
 
-```text
-RabbitMQ
-ActiveMQ
-JMS
-AMQP
-Existing message broker
-Minimal code changes
-```
+* RabbitMQ
+* ActiveMQ
+* JMS
+* AMQP
+* existing message broker
+* minimal application changes
 
 ### Important distinction
 
@@ -70,39 +68,41 @@ New AWS-native application
 
 ### Example
 
-> An existing application uses RabbitMQ and must migrate to AWS with minimal code changes.
+> "An existing application uses RabbitMQ and the company wants to migrate to AWS with minimal code changes."
 
 → **Amazon MQ**
-
-### Memory
-
-> **Existing RabbitMQ / ActiveMQ → Amazon MQ**
 
 ---
 
 ## AWS Application Migration Service (MGN)
 
-**MGN = rehost / lift-and-shift servers to AWS.**
+**AWS Application Migration Service (MGN) = rehost / lift-and-shift servers to AWS.**
 
-It continuously replicates the source server's **block-level data** to AWS and allows the server to be launched as an EC2 instance.
+The service continuously replicates the source server's **block-level data** to AWS.
 
 ```text
 On-premises server
         ↓
-     MGN agent
+    MGN agent
         ↓
 Continuous replication
         ↓
 AWS staging area
         ↓
-      EC2
+EC2
 ```
 
-Use it when:
+The goal is to move the server to AWS with **minimal changes**.
 
-> "Move existing physical or virtual servers to AWS with minimal changes."
+### Use it when
 
-### Memory
+> "Move existing physical or virtual servers to AWS without redesigning the application."
+
+→ **MGN**
+
+MGN provides continuous data protection with recovery points near seconds and can achieve recovery in minutes in appropriate configurations.
+
+### Remember
 
 > **Rehost / lift-and-shift → MGN**
 
@@ -110,9 +110,9 @@ Use it when:
 
 ## AWS Elastic Disaster Recovery (DRS)
 
-**DRS = disaster recovery for servers.**
+**AWS Elastic Disaster Recovery = disaster recovery for servers.**
 
-It continuously replicates workloads into AWS so that recovery instances can be launched when the source environment fails.
+It continuously replicates workloads into AWS, but the recovery environment is mainly used **when a disaster happens**.
 
 ```text
 Production server
@@ -126,9 +126,11 @@ Disaster
 Launch recovery instances
 ```
 
-Use it when:
+### Use it when
 
-> "We need a disaster recovery solution for physical, virtual, or cloud servers."
+> "We need a cost-effective disaster recovery solution for physical, virtual, or cloud servers."
+
+→ **AWS DRS**
 
 ### MGN vs DRS
 
@@ -137,72 +139,62 @@ MGN
 = migrate to AWS
 
 DRS
-= recover in AWS during a disaster
+= recover in AWS when disaster happens
 ```
 
-Both use continuous replication, but the **purpose** is different.
+Both use continuous replication, but the goal is different.
 
 ---
 
 ## AWS DMS + SCT
 
-### AWS Database Migration Service (DMS)
+**AWS Database Migration Service (DMS) = move or replicate database data.**
 
-**DMS = migrate / replicate database data.**
-
-Use it when moving data between databases.
-
-### AWS Schema Conversion Tool (SCT)
-
-**SCT = convert database schema and code when changing database engines.**
-
-Example:
+**AWS Schema Conversion Tool (SCT) = convert schema/code when changing database engines.**
 
 ```text
 Oracle
    ↓
-SCT
+SCT → convert schema
    ↓
-Converted PostgreSQL schema
-   ↓
-DMS
+DMS → move data
    ↓
 Aurora PostgreSQL
 ```
 
-### Memory
+### Remember
 
 > **DMS = move data**
 
 > **SCT = convert schema**
 
-### Common pattern
+### Important pattern
 
 ```text
-Same engine
+Same database engine
 → DMS
 
-Different engines
+Different database engine
 → SCT + DMS
 ```
 
 ---
 
-# The 7 Rs of Migration
+# The 7 Rs of migration
 
 The 7 Rs describe different migration strategies.
 
-| R                           | Meaning                    | Simple idea               |
-| --------------------------- | -------------------------- | ------------------------- |
-| **Rehost**                  | Move without major changes | Lift and shift            |
-| **Replatform**              | Move with limited changes  | Use a managed AWS service |
-| **Repurchase**              | Replace the application    | Buy SaaS                  |
-| **Refactor / Re-architect** | Redesign the application   | Build cloud-native        |
-| **Relocate**                | Move the whole environment | VMware Cloud on AWS       |
-| **Retain**                  | Keep it where it is        | Don't migrate yet         |
-| **Retire**                  | Stop using it              | Decommission it           |
+| R                           | Meaning                    | Simple idea                            |
+| --------------------------- | -------------------------- | -------------------------------------- |
+| **Rehost**                  | Move without major changes | Lift and shift                         |
+| **Replatform**              | Move with small changes    | Use a managed AWS service              |
+| **Repurchase**              | Replace the application    | Buy a SaaS product                     |
+| **Refactor / Re-architect** | Redesign the application   | Build it for cloud-native architecture |
+| **Relocate**                | Move the whole environment | VMware Cloud on AWS, for example       |
+| **Retain**                  | Keep it where it is        | Don't migrate yet                      |
+| **Retire**                  | Stop using it              | Decommission it                        |
 
-### Examples
+### Easy examples
 
 ```text
 Rehost
@@ -215,27 +207,27 @@ Repurchase
 Self-hosted CRM → SaaS CRM
 
 Refactor
-Monolith → Lambda / containers / serverless
+Monolith → Lambda / containers / serverless architecture
 
 Relocate
 VMware environment → VMware Cloud on AWS
 
 Retain
-Keep workload on-premises
+Keep the workload on-premises for now
 
 Retire
-Delete unused application
+Delete an unused application
 ```
 
 ---
 
-# Certificates & Network Services
+# Certificates & network services
 
 ## ACM — AWS Certificate Manager
 
 **ACM = TLS/SSL certificates for AWS services.**
 
-Use it for HTTPS.
+Use it when you need HTTPS.
 
 Common integrations:
 
@@ -245,14 +237,16 @@ Common integrations:
 
 ### Important facts
 
-* ACM public certificates are provided at no additional charge.
-* ACM can automatically renew eligible certificates.
-* CloudFront certificates must be in **us-east-1**.
-* Regional services such as ALB normally use a certificate in the same Region.
+* Public ACM certificates are provided at no additional charge.
+* ACM can automatically renew certificates that meet the renewal requirements.
+* A CloudFront certificate must be in **us-east-1**.
+* A regional service such as an ALB normally uses a certificate in the same Region.
 
-### Exam trap
+### Important exam trap
 
-You generally cannot export the private key of an **ACM public certificate** for installation on an EC2 server.
+You generally cannot export an **ACM public certificate's private key** for installation on an EC2 server.
+
+So:
 
 ```text
 HTTPS on ALB
@@ -261,10 +255,6 @@ HTTPS on ALB
 HTTPS on CloudFront
 → ACM in us-east-1
 ```
-
-### Memory
-
-> **TLS/HTTPS certificate → ACM**
 
 ---
 
@@ -280,24 +270,26 @@ Egress-Only Internet Gateway
 Internet
 ```
 
-Allows:
+It allows:
 
 ```text
 EC2 → Internet ✅
 Internet → EC2 ❌
 ```
 
-For IPv4 private instances, the equivalent pattern is normally a **NAT Gateway**.
-
-### Memory
+### Remember
 
 > **IPv6 + outbound only → Egress-Only Internet Gateway**
 
+For IPv4 private instances, the equivalent pattern is normally a **NAT Gateway**.
+
 ---
 
-## Route 53 Resolver Endpoints
+## Route 53 Resolver endpoints
 
-These connect **AWS DNS resolution with on-premises DNS**.
+Route 53 Resolver endpoints connect **AWS DNS resolution with on-premises DNS**.
+
+There are two types.
 
 ### Inbound endpoint
 
@@ -308,12 +300,12 @@ On-premises
     ↓
 Inbound Resolver Endpoint
     ↓
-AWS private DNS
+AWS VPC DNS
 ```
 
 Use it when:
 
-> **On-premises systems need to resolve private DNS names in AWS.**
+> **"On-premises servers need to resolve private DNS names in AWS."**
 
 ### Outbound endpoint
 
@@ -329,7 +321,7 @@ On-premises DNS
 
 Use it when:
 
-> **AWS resources need to resolve internal/on-premises DNS names.**
+> **"AWS resources need to resolve internal/on-premises DNS names."**
 
 ### Memory
 
@@ -343,43 +335,45 @@ Outbound
 
 ---
 
-# Edge & Hybrid Infrastructure
+# Edge & hybrid infrastructure
 
-| Service         | What it does                                  | Signal                     |
-| --------------- | --------------------------------------------- | -------------------------- |
-| **Outposts**    | AWS infrastructure in your own data center    | AWS on-premises            |
-| **Local Zones** | AWS infrastructure closer to a specific city  | Very low latency to a city |
-| **Wavelength**  | AWS infrastructure inside telecom 5G networks | 5G / mobile edge           |
+| Service         | What it does                                                       | Signal keyword                 |
+| --------------- | ------------------------------------------------------------------ | ------------------------------ |
+| **Outposts**    | AWS infrastructure installed in your own data center               | AWS services **on-premises**   |
+| **Local Zones** | AWS infrastructure closer to users in a specific metropolitan area | Very low latency to a **city** |
+| **Wavelength**  | AWS infrastructure inside telecom 5G networks                      | **5G / mobile edge**           |
 
 ## Outposts
 
 **AWS Outposts = AWS infrastructure physically installed in your data center.**
 
-Use it when workloads need to remain on-premises while using AWS infrastructure/APIs.
+Use it when:
+
+* data must remain on-premises
+* you need very low latency to local systems
+* local workloads must use AWS APIs/services
 
 ```text
 Your data center
        ↓
    AWS Outposts
        ↓
-AWS infrastructure
+AWS-style infrastructure
 ```
 
 ### Signal
 
-> **AWS infrastructure in your own data center → Outposts**
+> **AWS infrastructure on-premises → Outposts**
 
 ---
 
 ## Local Zones
 
-**Local Zones = AWS infrastructure placed closer to users in a specific metropolitan area.**
+**Local Zones = AWS infrastructure placed closer to users in a metropolitan area.**
 
-Use it when an application needs extremely low latency for users in a particular city.
+Use it when an application needs very low latency for users in a specific city.
 
-### Signal
-
-> **Specific city + very low latency → Local Zones**
+> **City-level low latency → Local Zones**
 
 ---
 
@@ -390,35 +384,41 @@ Use it when an application needs extremely low latency for users in a particular
 Use it for:
 
 * mobile applications
-* 5G workloads
-* ultra-low-latency mobile applications
-
-### Signal
+* 5G applications
+* extremely low-latency mobile workloads
 
 > **5G → Wavelength**
 
 ---
 
-# Analytics Family
+# Analytics family
 
-| Service               | What it does                                 | Signal                     |
-| --------------------- | -------------------------------------------- | -------------------------- |
-| **AWS Glue**          | Serverless ETL + Data Catalog                | ETL / schema / catalog     |
-| **AWS Glue Crawler**  | Discovers data and schema                    | Discover schema            |
-| **Glue Data Catalog** | Stores metadata about datasets               | Metadata / tables / schema |
-| **Glue ETL**          | Performs transformations                     | CSV → Parquet / ETL        |
-| **Amazon EMR**        | Managed big-data processing                  | Spark / Hadoop             |
-| **Amazon MSK**        | Managed Apache Kafka                         | Kafka                      |
-| **Athena**            | SQL directly on S3                           | SQL on S3                  |
-| **QuickSight**        | Business intelligence dashboards             | BI / dashboards            |
-| **Lake Formation**    | Data lake governance and fine-grained access | Data lake permissions      |
-| **AppFlow**           | Transfer data between SaaS and AWS           | Salesforce → S3            |
+| Service               | What it does                                              | Signal keyword                   |
+| --------------------- | --------------------------------------------------------- | -------------------------------- |
+| **AWS Glue**          | Serverless ETL + Data Catalog                             | ETL / data preparation / catalog |
+| **Glue Crawler**      | Automatically discovers data and schema                   | Discover schema                  |
+| **Glue Data Catalog** | Stores metadata about datasets                            | Metadata / tables / schema       |
+| **Glue ETL**          | Performs data transformations                             | CSV → Parquet / ETL              |
+| **EMR**               | Managed big-data processing                               | Spark / Hadoop                   |
+| **MSK**               | Managed Apache Kafka                                      | Kafka                            |
+| **Athena**            | SQL directly on S3                                        | SQL on S3                        |
+| **QuickSight**        | BI dashboards                                             | Business dashboards              |
+| **Lake Formation**    | Build/manage a data lake with fine-grained access control | Data lake + permissions          |
+| **AppFlow**           | Move data between SaaS and AWS services                   | Salesforce → S3                  |
 
 ---
 
 ## AWS Glue
 
-**AWS Glue = serverless data integration / ETL platform.**
+**AWS Glue = serverless ETL and Data Catalog service.**
+
+ETL means:
+
+```text
+Extract
+Transform
+Load
+```
 
 Glue can:
 
@@ -427,11 +427,11 @@ Glue can:
 * transform data
 * prepare data for analytics
 
-### The 3 Glue pieces you should remember
+### The three Glue pieces you should know
 
 ```text
 Glue Crawler
-= discovers data and schema
+= discovers schema
 
 Glue Data Catalog
 = stores metadata
@@ -440,10 +440,12 @@ Glue ETL
 = performs the transformation
 ```
 
-Example:
+### Simple example
+
+Suppose CSV files arrive in S3:
 
 ```text
-CSV files in S3
+S3 source bucket
       ↓
 Glue Crawler
       ↓
@@ -460,81 +462,175 @@ CSV → Parquet
 S3 transformed bucket
 ```
 
-### Important distinction
+### Glue Crawler
 
-**Crawler does NOT perform the transformation.**
+**Glue Crawler automatically discovers the structure/schema of data.**
 
-It discovers the structure of the data and updates the Data Catalog.
+It can inspect sources such as S3 and determine things like:
 
-**Data Catalog does NOT transform data.**
+```text
+customer_id → integer
+name        → string
+price       → decimal
+```
 
-It stores metadata such as:
+It then updates the **Glue Data Catalog**.
+
+### Signal
+
+> **"Automatically discover the schema of files in S3."**
+
+→ **Glue Crawler**
+
+### Important
+
+> **Crawler discovers. It does not perform the ETL transformation.**
+
+---
+
+## Glue Data Catalog
+
+**Glue Data Catalog = centralized metadata store.**
+
+It stores information about datasets such as:
 
 * table definitions
 * columns
 * data types
-* locations
+* data locations
+* schema
 
-**Glue ETL performs the actual transformation.**
+Think:
+
+```text
+Actual data
+→ S3
+
+Information ABOUT the data
+→ Glue Data Catalog
+```
 
 ### Signal
 
-> **Serverless ETL / Data Catalog / schema discovery → Glue**
+> **"Store metadata/schema/table definitions."**
 
-> **Discover schema → Glue Crawler**
+→ **Glue Data Catalog**
 
-> **Store metadata → Glue Data Catalog**
+### Important
 
-> **Transform data → Glue ETL**
+> **Data Catalog stores metadata. It does not transform the actual data.**
 
 ---
 
-## Glue ETL + S3
+## Glue ETL
+
+**Glue ETL = performs the actual data transformation.**
 
 For example:
 
 ```text
-S3
- ↓
 CSV
- ↓
-Glue Crawler
- ↓
-Data Catalog
  ↓
 Glue ETL
  ↓
 Parquet
- ↓
-S3
 ```
 
-Glue is a strong choice when you need **serverless ETL without managing servers or Spark clusters yourself**.
+It can perform common transformations such as:
 
-### Common trap
+* format conversion
+* filtering
+* joining
+* cleaning
+* restructuring
+
+### Signal
+
+> **"Convert CSV files to Parquet."**
+
+→ **Glue ETL**
+
+### Important distinction
 
 ```text
 Glue Crawler
 = discovers schema
 
+Glue Data Catalog
+= stores metadata
+
 Glue ETL
 = transforms data
 ```
 
-Don't choose a crawler when the question asks you to **convert CSV to Parquet**.
+---
+
+## Glue ETL + S3
+
+A typical serverless solution can look like:
+
+```text
+S3
+ ↓ Object Created
+EventBridge
+ ↓
+Glue ETL job
+ ↓
+CSV → Parquet
+ ↓
+S3 transformed bucket
+```
+
+Or the process can use a scheduled Glue job.
+
+Glue is preferred when the requirement is **serverless ETL with low operational overhead**, especially for larger data-processing workloads.
+
+### Common comparison
+
+```text
+EC2 + Spark
+→ You manage the servers
+
+EMR
+→ Managed big-data/Spark infrastructure
+
+Lambda
+→ Better for lightweight event-driven processing
+
+Glue
+→ Serverless ETL
+```
+
+### Common exam trap
+
+> **Glue Crawler discovers/catalogs the data; Glue ETL performs the transformation.**
+
+So:
+
+```text
+CSV → Parquet
+→ Glue ETL
+
+Discover CSV schema
+→ Glue Crawler
+
+Store schema/metadata
+→ Glue Data Catalog
+```
 
 ---
 
 ## EMR
 
-**Amazon EMR = managed big-data processing.**
+**Amazon EMR = managed big-data processing using frameworks such as Apache Spark and Hadoop.**
 
-Common frameworks:
+Use it for:
 
-* Apache Spark
-* Hadoop
+* large-scale data processing
+* Spark jobs
+* Hadoop workloads
 
-Use it for large-scale data processing when you specifically need those frameworks.
+You can use **Spot Instances for suitable EMR task nodes** to reduce cost.
 
 ### Signal
 
@@ -544,7 +640,9 @@ Use it for large-scale data processing when you specifically need those framewor
 
 ## MSK
 
-**Amazon MSK = managed Apache Kafka.**
+**Amazon Managed Streaming for Apache Kafka = managed Kafka.**
+
+You manage Kafka-compatible workloads without managing the Kafka infrastructure yourself.
 
 ### Signal
 
@@ -556,7 +654,9 @@ Don't overthink it.
 
 ## Athena
 
-**Amazon Athena = serverless SQL queries directly against S3.**
+**Athena = SQL directly on S3.**
+
+You already know this from Section 12.
 
 ### Signal
 
@@ -568,24 +668,24 @@ Don't overthink it.
 
 **Amazon QuickSight = business intelligence and dashboards.**
 
-Use it for:
+Use it to create:
 
 * dashboards
 * charts
 * reports
-* business visualization
+* business visualizations
 
 ### Signal
 
-> **Business dashboards → QuickSight**
+> **Business dashboard → QuickSight**
 
 ---
 
 ## Lake Formation
 
-**AWS Lake Formation = build and govern a data lake with centralized, fine-grained access control.**
+**AWS Lake Formation = build and manage a data lake with centralized, fine-grained permissions.**
 
-It can manage permissions at levels such as:
+It can control access to specific:
 
 * tables
 * columns
@@ -599,7 +699,7 @@ It can manage permissions at levels such as:
 
 ## AppFlow
 
-**Amazon AppFlow = transfer data between SaaS applications and AWS services.**
+**Amazon AppFlow = transfer data between SaaS applications and AWS services without writing the integration yourself.**
 
 Example:
 
@@ -613,27 +713,79 @@ S3
 
 ### Signal
 
-> **SaaS → AWS data transfer → AppFlow**
+> **Salesforce/SaaS → S3 or Redshift → AppFlow**
 
 ---
 
-# ML One-Liners
+# ML one-liners
 
-| Service         | What it does                                   | Signal                     |
-| --------------- | ---------------------------------------------- | -------------------------- |
-| **Rekognition** | Analyzes images and videos                     | Faces / objects / video    |
-| **Transcribe**  | Speech → text                                  | Audio → transcript         |
-| **Polly**       | Text → speech                                  | App reads text aloud       |
-| **Translate**   | Text → another language                        | English → French           |
-| **Comprehend**  | Understands text                               | Sentiment / entities       |
-| **Textract**    | Extracts text, tables and forms from documents | Invoice / scanned form     |
-| **Kendra**      | Searches enterprise documents                  | "Find our vacation policy" |
-| **Personalize** | Personalized recommendations                   | Recommended products       |
-| **Forecast**    | Time-series forecasting                        | Predict future demand      |
-| **Lex**         | Conversational chatbot                         | Customer-service bot       |
-| **SageMaker**   | Build/train/deploy custom ML models            | Train your own model       |
+| Service         | What it does                                                                                         | Signal                                 |
+| --------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| **Rekognition** | Looks at **images and videos** and detects things such as faces, objects, people, and unsafe content | Faces, objects, video                  |
+| **Transcribe**  | Takes **audio/speech** and turns it into **written text**                                            | Call recording → transcript            |
+| **Polly**       | Takes **written text** and turns it into **spoken audio**                                            | App reads text aloud                   |
+| **Translate**   | Takes **text in one language** and translates it into another language                               | English → French                       |
+| **Comprehend**  | Takes **text** and analyzes its meaning, such as **sentiment, entities, and key phrases**            | "Is this review positive or negative?" |
+| **Textract**    | Takes **scanned documents/images** and extracts **text, tables, and form fields**                    | Invoice/form → structured data         |
+| **Kendra**      | Searches **company documents** and finds relevant answers using natural-language queries             | "Find our vacation policy"             |
+| **Personalize** | Uses user/item behavior to generate **personalized recommendations**                                 | "Customers also bought..."             |
+| **Forecast**    | Uses historical **time-series data** to predict future values                                        | Predict future sales/demand            |
+| **Lex**         | Lets you build **conversational chatbots** that understand user messages and respond                 | "Build a customer-service chatbot"     |
+| **SageMaker**   | Lets data scientists **build, train, tune, and deploy their own ML models**                          | Train your own ML model                |
 
-### Core distinctions
+### Picture / video
+
+→ **Rekognition**
+
+### Audio
+
+→ **Transcribe**
+
+```text
+Audio
+ ↓
+Transcribe
+ ↓
+Text
+```
+
+### Text → speech
+
+→ **Polly**
+
+### Text → another language
+
+→ **Translate**
+
+### Understand text
+
+→ **Comprehend**
+
+### Scanned document → text/tables/forms
+
+→ **Textract**
+
+### Search company documents
+
+→ **Kendra**
+
+### Recommend products/content
+
+→ **Personalize**
+
+### Predict future numbers
+
+→ **Forecast**
+
+### Chat with users
+
+→ **Lex**
+
+### Build your own ML model
+
+→ **SageMaker**
+
+### The important distinctions
 
 ```text
 Image / video
@@ -645,10 +797,10 @@ Speech → text
 Text → speech
 → Polly
 
-Translate text
+Text → another language
 → Translate
 
-Understand text / sentiment
+Text meaning / sentiment
 → Comprehend
 
 Scanned document → structured information
@@ -660,7 +812,7 @@ Search company documents
 Recommendations
 → Personalize
 
-Predict future values
+Time-series forecasting
 → Forecast
 
 Chatbot
@@ -672,7 +824,7 @@ Build your own ML model
 
 ### Common trap
 
-> "Extract names, fields, tables, and values from scanned invoices."
+> **"Extract names, fields, tables, and values from scanned invoices."**
 
 → **Textract**
 
@@ -688,9 +840,9 @@ Textract
 
 ---
 
-# Systems Manager (SSM) Suite
+# Systems Manager (SSM) suite
 
-Systems Manager contains several tools that solve different operational tasks.
+AWS Systems Manager contains several tools that solve different operational tasks.
 
 ## Session Manager
 
@@ -699,8 +851,8 @@ Systems Manager contains several tools that solve different operational tasks.
 You don't need:
 
 * a bastion host
-* inbound port 22
-* SSH keys for the Session Manager session
+* an open inbound port 22
+* SSH keys for the session itself
 
 ```text
 Admin
@@ -720,12 +872,15 @@ Private EC2
 
 **Run Command = execute commands/scripts on many instances.**
 
+Example:
+
 ```text
 500 EC2 instances
       ↓
-  Run Command
+   Run Command
       ↓
 Run the same script
+on all selected instances
 ```
 
 ### Signal
@@ -740,7 +895,7 @@ Run the same script
 
 Example:
 
-> Apply security patches to hundreds of EC2 instances.
+> "Apply security patches to 500 EC2 instances every month."
 
 → **Patch Manager**
 
@@ -761,19 +916,30 @@ Patch Manager
 
 ## Hybrid Systems Manager
 
-Systems Manager can also manage supported on-premises servers when the SSM Agent and required connectivity are configured.
+Systems Manager can also manage supported **on-premises servers** when the SSM Agent and required connectivity are configured.
 
-### Signal
+### Memory
 
-> **Manage servers across AWS and on-premises → Systems Manager**
+```text
+Session Manager
+= ACCESS instances
+
+Run Command
+= RUN commands
+
+Patch Manager
+= PATCH instances
+```
 
 ---
 
-# Developer & Application Services
+# Developer & app services
 
 ## AWS Batch
 
-**AWS Batch = run batch computing jobs without managing your own job scheduler.**
+**AWS Batch = run large batch jobs without managing the job scheduler yourself.**
+
+It is designed for jobs that may run for a long time.
 
 Example:
 
@@ -782,23 +948,21 @@ Thousands of jobs
       ↓
 AWS Batch
       ↓
-Compute capacity
+EC2 / Spot capacity
 ```
-
-It is suitable for jobs that may run for a long time and need batch scheduling.
 
 ### Signal
 
-> **Long-running batch jobs → AWS Batch**
+> **Long-running batch jobs / containers → AWS Batch**
 
-Comparison:
+A common comparison:
 
 ```text
 Lambda
 = short event-driven functions
 
 AWS Batch
-= batch computing workloads
+= long-running batch workloads
 ```
 
 ---
@@ -807,11 +971,21 @@ AWS Batch
 
 **AWS AppSync = managed GraphQL API service.**
 
-Use it for:
+Use it when the question says:
 
 * GraphQL
 * real-time subscriptions
-* application data synchronization
+* offline synchronization for applications
+
+Example:
+
+```text
+Mobile/Web app
+      ↓
+   AppSync
+      ↓
+Data sources
+```
 
 ### Signal
 
@@ -823,7 +997,7 @@ Use it for:
 
 **AWS Amplify = tools for quickly building and deploying web/mobile applications.**
 
-It helps frontend developers connect applications to AWS backend capabilities.
+It helps developers connect frontend applications with AWS backend services.
 
 ### Signal
 
@@ -833,12 +1007,12 @@ It helps frontend developers connect applications to AWS backend capabilities.
 
 ## SES
 
-**Amazon SES = send application email.**
+**Amazon SES (Simple Email Service) = send application emails.**
 
 Examples:
 
-* verification emails
 * receipts
+* verification emails
 * notifications
 * marketing emails
 
@@ -846,29 +1020,29 @@ Examples:
 
 > **Application needs to send email → SES**
 
-Don't confuse:
+Don't confuse this with SNS:
 
 ```text
 SNS
-= notifications / pub-sub
+= notifications/pub-sub
 
 SES
-= email
+= email sending
 ```
 
 ---
 
 ## S3 Batch Operations
 
-**S3 Batch Operations = perform operations on many existing S3 objects.**
+**S3 Batch Operations = perform an operation on many existing S3 objects.**
 
-Examples:
+For example:
 
 * copy objects
 * restore objects
 * add tags
 * invoke Lambda
-* other supported object operations
+* perform other supported object-level operations
 
 Example:
 
@@ -877,34 +1051,30 @@ Millions of existing objects
         ↓
 S3 Batch Operations
         ↓
-Apply operation
+Apply the operation
 ```
 
 ### Important idea
 
-A bucket's new default-encryption setting does **not retroactively modify old objects**.
+A bucket's default encryption setting does **not retroactively change old objects**.
 
-If you need to perform an operation across huge numbers of existing objects:
+So:
+
+> **"Perform an operation on millions/billions of existing S3 objects."**
 
 → **S3 Batch Operations**
-
-### Signal
-
-> **Mass operation on existing S3 objects → S3 Batch Operations**
 
 ---
 
 ## Aurora Cloning
 
-**Aurora Cloning = quickly create an Aurora database copy using copy-on-write.**
+**Aurora Cloning = quickly create a copy of an Aurora database using copy-on-write.**
 
-Useful for:
+Use it when:
 
-* testing
-* development
-* experiments
+> "Create a production-like database for testing without immediately duplicating all the storage."
 
-You don't immediately need a full independent copy of all the storage.
+This is covered in your Aurora section as well.
 
 ### Signal
 
@@ -916,7 +1086,9 @@ You don't immediately need a full independent copy of all the storage.
 
 **AWS X-Ray = distributed tracing.**
 
-It follows a request across multiple services.
+It follows a request as it moves through different services.
+
+Example:
 
 ```text
 Client
@@ -932,9 +1104,9 @@ Service B
 
 X-Ray helps identify:
 
-* where a request is slow
+* which service is slow
 * where a request failed
-* which service causes latency
+* where latency is coming from
 
 ### Important distinction
 
@@ -943,7 +1115,7 @@ CloudWatch
 = metrics + logs + monitoring
 
 X-Ray
-= distributed request tracing
+= trace one request across services
 ```
 
 ### Signal
@@ -954,203 +1126,200 @@ X-Ray
 
 ## AWS Artifact
 
-**AWS Artifact = access AWS compliance reports and agreements.**
+**AWS Artifact = access AWS compliance documents and reports.**
 
 Examples include AWS compliance documentation such as:
 
-* SOC reports
-* PCI reports
+* SOC
+* PCI
 * ISO-related reports
 
 ### Signal
 
-> **Auditor needs AWS compliance documents → Artifact**
+> **Auditor needs AWS compliance reports → Artifact**
 
-Artifact is a **document portal**, not a monitoring service.
+Artifact is a document portal. It is not a monitoring service.
 
 ---
 
-# Common Question Patterns
+# Question patterns
 
-> **Existing RabbitMQ application + minimal code changes**
+> **"Existing on-premises application uses RabbitMQ and must migrate with minimal code changes."**
 > → **Amazon MQ**
 
-> **Move existing servers to AWS with minimal application changes**
-> → **MGN**
+> **"Move existing servers to AWS with minimal application changes."**
+> → **AWS Transform MGN**
 
-> **Disaster recovery for physical/virtual/cloud servers**
-> → **AWS DRS**
+> **"Need disaster recovery for physical/virtual/cloud servers."**
+> → **AWS Elastic Disaster Recovery (DRS)**
 
-> **Migrate Oracle to Aurora PostgreSQL**
-> → **SCT + DMS**
+> **"Migrate Oracle to Aurora PostgreSQL."**
+> → **AWS SCT + DMS**
 
-> **HTTPS certificate for ALB**
-> → **ACM**
-
-> **HTTPS certificate for CloudFront**
+> **"Need HTTPS certificate for CloudFront."**
 > → **ACM in us-east-1**
 
-> **IPv6 instances need outbound Internet access only**
+> **"IPv6 instances need outbound Internet access but must block unsolicited inbound connections."**
 > → **Egress-Only Internet Gateway**
 
-> **On-premises systems need to resolve private AWS DNS names**
+> **"On-premises servers need to resolve private AWS DNS names."**
 > → **Route 53 Resolver inbound endpoint**
 
-> **AWS resources need to resolve on-premises DNS names**
+> **"AWS resources need to resolve internal corporate DNS names."**
 > → **Route 53 Resolver outbound endpoint**
 
-> **AWS infrastructure must run in the company's own data center**
+> **"Workloads must run in the company's own data center but use AWS infrastructure/services."**
 > → **Outposts**
 
-> **Very low latency for users in a specific metropolitan area**
+> **"Need very low latency for users in a specific metropolitan area."**
 > → **Local Zones**
 
-> **Very low latency through a 5G network**
+> **"Application needs extremely low-latency processing over a 5G network."**
 > → **Wavelength**
 
-> **Serverless ETL + schema discovery + data catalog**
+> **"Serverless ETL and a central data catalog are required."**
 > → **AWS Glue**
 
-> **Discover the schema of files in S3**
+> **"Automatically discover the schema of data files in S3."**
 > → **Glue Crawler**
 
-> **Store dataset/table metadata**
+> **"Store table/schema metadata for analytics."**
 > → **Glue Data Catalog**
 
-> **Transform CSV to Parquet**
+> **"Convert CSV files into Parquet."**
 > → **Glue ETL**
 
-> **Managed Apache Spark processing**
+> **"Managed Apache Spark processing."**
 > → **Amazon EMR**
 
-> **Existing Apache Kafka workload**
+> **"Existing Apache Kafka workload."**
 > → **Amazon MSK**
 
-> **SQL directly on S3**
+> **"Query files in S3 using SQL."**
 > → **Amazon Athena**
 
-> **Business dashboards**
+> **"Business users need dashboards and visual reports."**
 > → **Amazon QuickSight**
 
-> **Data lake + fine-grained permissions**
+> **"Build a data lake with fine-grained table/row/column permissions."**
 > → **Lake Formation**
 
-> **Move Salesforce data to S3 without custom integration**
+> **"Move Salesforce data to S3 without custom integration code."**
 > → **AppFlow**
 
-> **Extract fields/tables from scanned invoices**
+> **"Automatically extract fields and tables from scanned invoices."**
 > → **Textract**
 
-> **Speech recordings → text**
-> → **Transcribe**
-
-> **Application reads text aloud**
-> → **Polly**
-
-> **Sentiment analysis of customer reviews**
-> → **Comprehend**
-
-> **Search internal company documents**
+> **"Search internal company documents using natural-language queries."**
 > → **Kendra**
 
-> **Personalized recommendations**
+> **"Speech recordings need to become text."**
+> → **Transcribe**
+
+> **"Application needs to read text aloud."**
+> → **Polly**
+
+> **"Customer reviews need sentiment analysis."**
+> → **Comprehend**
+
+> **"Product recommendations based on user behavior."**
 > → **Personalize**
 
-> **Predict future demand from historical time-series data**
+> **"Predict future demand based on historical time-series data."**
 > → **Forecast**
 
-> **Build a conversational chatbot**
+> **"Build a conversational chatbot."**
 > → **Lex**
 
-> **Train and deploy a custom ML model**
+> **"Data scientists need to build/train/deploy a custom ML model."**
 > → **SageMaker**
 
-> **Secure shell access to private EC2 without SSH**
+> **"Secure shell access to private EC2 without SSH or a bastion."**
 > → **SSM Session Manager**
 
-> **Run the same command on hundreds of EC2 instances**
+> **"Run the same command on hundreds of EC2 instances."**
 > → **SSM Run Command**
 
-> **Automate OS patching**
+> **"Automatically patch hundreds of EC2 instances."**
 > → **SSM Patch Manager**
 
-> **Long-running batch computing jobs**
+> **"Run long-running batch workloads."**
 > → **AWS Batch**
 
-> **GraphQL API / subscriptions**
+> **"Application needs GraphQL and real-time subscriptions."**
 > → **AppSync**
 
-> **Quick web/mobile application development**
+> **"Quickly build and deploy a web/mobile application."**
 > → **Amplify**
 
-> **Application needs to send email**
+> **"Application needs to send emails."**
 > → **SES**
 
-> **Apply an operation to millions of existing S3 objects**
+> **"Apply an operation to millions of existing S3 objects."**
 > → **S3 Batch Operations**
 
-> **Create a fast Aurora copy for testing**
+> **"Create a fast copy of an Aurora database for testing."**
 > → **Aurora Cloning**
 
-> **Find which microservice causes latency**
+> **"Find which microservice is causing latency in a request."**
 > → **X-Ray**
 
-> **Auditor needs AWS compliance reports**
+> **"Auditors need AWS compliance reports."**
 > → **AWS Artifact**
 
 ---
 
-# Pocket Card
+# Pocket card
 
-| Keyword                                | Answer                           |
-| -------------------------------------- | -------------------------------- |
-| Existing RabbitMQ / ActiveMQ           | **Amazon MQ**                    |
-| Rehost / lift-and-shift servers        | **MGN**                          |
-| Server disaster recovery               | **DRS**                          |
-| Database migration                     | **DMS**                          |
-| Different database engines             | **SCT + DMS**                    |
-| TLS/SSL certificates                   | **ACM**                          |
-| CloudFront certificate                 | **ACM in us-east-1**             |
-| IPv6 outbound-only Internet            | **Egress-Only Internet Gateway** |
-| On-prem → AWS DNS                      | **Resolver inbound endpoint**    |
-| AWS → on-prem DNS                      | **Resolver outbound endpoint**   |
-| AWS infrastructure in your data center | **Outposts**                     |
-| Low latency to a city                  | **Local Zones**                  |
-| 5G edge                                | **Wavelength**                   |
-| Serverless ETL / data catalog          | **Glue**                         |
-| Discover schema                        | **Glue Crawler**                 |
-| Store metadata                         | **Glue Data Catalog**            |
-| Transform data                         | **Glue ETL**                     |
-| Spark / Hadoop                         | **EMR**                          |
-| Kafka                                  | **MSK**                          |
-| SQL on S3                              | **Athena**                       |
-| BI dashboards                          | **QuickSight**                   |
-| Data lake permissions                  | **Lake Formation**               |
-| SaaS → AWS                             | **AppFlow**                      |
-| Images / video                         | **Rekognition**                  |
-| Speech → text                          | **Transcribe**                   |
-| Text → speech                          | **Polly**                        |
-| Translate text                         | **Translate**                    |
-| Text / sentiment analysis              | **Comprehend**                   |
-| Scanned forms / invoices               | **Textract**                     |
-| Enterprise document search             | **Kendra**                       |
-| Recommendations                        | **Personalize**                  |
-| Time-series forecasting                | **Forecast**                     |
-| Chatbot                                | **Lex**                          |
-| Custom ML model                        | **SageMaker**                    |
-| Secure instance access                 | **SSM Session Manager**          |
-| Run commands on many instances         | **SSM Run Command**              |
-| OS patching                            | **SSM Patch Manager**            |
-| Batch computing                        | **AWS Batch**                    |
-| GraphQL                                | **AppSync**                      |
-| Web/mobile app development             | **Amplify**                      |
-| Application email                      | **SES**                          |
-| Bulk S3 object operations              | **S3 Batch Operations**          |
-| Quick Aurora copy                      | **Aurora Cloning**               |
-| Distributed tracing                    | **X-Ray**                        |
-| Compliance documents                   | **AWS Artifact**                 |
+| Keyword                                  | Answer                                  |
+| ---------------------------------------- | --------------------------------------- |
+| Existing RabbitMQ / ActiveMQ application | **Amazon MQ**                           |
+| Minimal-change server migration / rehost | **AWS Transform MGN**                   |
+| Disaster recovery for servers            | **AWS Elastic Disaster Recovery (DRS)** |
+| Database migration                       | **DMS**                                 |
+| Different database engines               | **SCT + DMS**                           |
+| TLS/SSL certificates                     | **ACM**                                 |
+| CloudFront certificate                   | **ACM in us-east-1**                    |
+| IPv6 outbound-only Internet              | **Egress-Only Internet Gateway**        |
+| On-prem → AWS DNS queries                | **Route 53 Resolver inbound endpoint**  |
+| AWS → on-prem DNS queries                | **Route 53 Resolver outbound endpoint** |
+| AWS infrastructure in your data center   | **Outposts**                            |
+| Low latency to a specific city           | **Local Zones**                         |
+| 5G edge                                  | **Wavelength**                          |
+| Serverless ETL / data catalog            | **Glue**                                |
+| Discover schema                          | **Glue Crawler**                        |
+| Store metadata                           | **Glue Data Catalog**                   |
+| Transform data                           | **Glue ETL**                            |
+| Spark / Hadoop                           | **EMR**                                 |
+| Kafka                                    | **MSK**                                 |
+| SQL on S3                                | **Athena**                              |
+| BI dashboards                            | **QuickSight**                          |
+| Data lake + fine-grained permissions     | **Lake Formation**                      |
+| SaaS → S3 / Redshift                     | **AppFlow**                             |
+| Images/video                             | **Rekognition**                         |
+| Speech → text                            | **Transcribe**                          |
+| Text → speech                            | **Polly**                               |
+| Text → another language                  | **Translate**                           |
+| Text/sentiment analysis                  | **Comprehend**                          |
+| Scanned forms/invoices                   | **Textract**                            |
+| Enterprise document search               | **Kendra**                              |
+| Recommendations                          | **Personalize**                         |
+| Time-series forecasting                  | **Forecast**                            |
+| Chatbot                                  | **Lex**                                 |
+| Custom ML models                         | **SageMaker**                           |
+| Secure instance shell without SSH        | **SSM Session Manager**                 |
+| Run commands across instances            | **SSM Run Command**                     |
+| Automated OS patching                    | **SSM Patch Manager**                   |
+| Long-running batch jobs                  | **AWS Batch**                           |
+| GraphQL / subscriptions                  | **AppSync**                             |
+| Fast web/mobile application development  | **Amplify**                             |
+| Application email                        | **SES**                                 |
+| Bulk operations on existing S3 objects   | **S3 Batch Operations**                 |
+| Quick Aurora copy                        | **Aurora Cloning**                      |
+| Distributed request tracing              | **X-Ray**                               |
+| AWS compliance reports                   | **AWS Artifact**                        |
 
-# Final Memory
+# Final memory
 
 ```text
 Amazon MQ
@@ -1204,11 +1373,29 @@ MSK
 Athena
 = SQL ON S3
 
+QuickSight
+= BI DASHBOARDS
+
 Lake Formation
 = DATA LAKE PERMISSIONS
 
 AppFlow
 = SAAS → AWS
+
+Rekognition
+= IMAGE / VIDEO ANALYSIS
+
+Transcribe
+= SPEECH → TEXT
+
+Polly
+= TEXT → SPEECH
+
+Translate
+= TEXT → ANOTHER LANGUAGE
+
+Comprehend
+= UNDERSTAND TEXT
 
 Textract
 = SCANNED DOCUMENTS
@@ -1216,11 +1403,23 @@ Textract
 Kendra
 = DOCUMENT SEARCH
 
+Personalize
+= RECOMMENDATIONS
+
+Forecast
+= TIME-SERIES FORECASTING
+
+Lex
+= CHATBOT
+
+SageMaker
+= CUSTOM ML
+
 SSM Session Manager
 = SECURE INSTANCE ACCESS
 
 SSM Run Command
-= RUN COMMANDS
+= RUN COMMANDS ON MANY INSTANCES
 
 SSM Patch Manager
 = PATCH INSTANCES
@@ -1231,8 +1430,17 @@ Batch
 AppSync
 = GRAPHQL
 
+Amplify
+= WEB / MOBILE APP DEVELOPMENT
+
 SES
 = EMAIL
+
+S3 Batch Operations
+= BULK S3 OBJECT OPERATIONS
+
+Aurora Cloning
+= FAST AURORA COPY
 
 X-Ray
 = DISTRIBUTED TRACING
