@@ -193,6 +193,108 @@ Private IP
 
 ---
 
+# Route 53 Resolver endpoints
+
+**Route 53 Resolver** provides DNS resolution for VPCs. **Resolver endpoints** allow DNS queries to cross between AWS and an on-premises network.
+
+Think of them as **DNS doors between AWS and on-premises**.
+
+## Inbound endpoint
+
+**On-premises → AWS**
+
+An inbound Resolver endpoint allows DNS queries from on-premises DNS servers to be resolved by Route 53 Resolver in AWS.
+
+Example:
+
+```text
+On-prem DNS
+     |
+     | DNS query
+     v
+Inbound Resolver endpoint
+     |
+     v
+Route 53 Resolver
+     |
+     v
+Private hosted zone
+```
+
+Example use case:
+
+> On-premises users need to resolve `internal.company.com`, which is stored in an AWS Route 53 private hosted zone.
+
+→ **Inbound Resolver endpoint**
+
+### Exam signal
+
+> "On-premises DNS needs to resolve private DNS names in AWS."
+
+→ **Inbound endpoint**
+
+---
+
+## Outbound endpoint
+
+**AWS → on-premises**
+
+An outbound Resolver endpoint allows DNS queries from resources in a VPC to be forwarded to DNS servers in an on-premises network.
+
+Example:
+
+```text
+EC2
+ |
+ | DNS query
+ v
+Route 53 Resolver
+ |
+ v
+Outbound Resolver endpoint
+ |
+ v
+On-prem DNS
+```
+
+You normally use a **Resolver forwarding rule** to specify which DNS queries should be sent to the on-premises DNS servers.
+
+Example:
+
+```text
+corp.local
+    ↓
+Forward to on-prem DNS
+```
+
+### Exam signal
+
+> "AWS resources need to resolve DNS names hosted by the on-premises DNS servers."
+
+→ **Outbound endpoint + forwarding rule**
+
+---
+
+## Easy memory
+
+```text
+Inbound
+→ DNS comes IN to AWS
+→ On-premises → AWS
+
+Outbound
+→ DNS goes OUT of AWS
+→ AWS → On-premises
+```
+
+### Important distinction
+
+A VPC already has **Route 53 Resolver** for normal DNS resolution.
+
+You need **Resolver endpoints** when DNS resolution needs to cross the **AWS/on-premises boundary**.
+
+---
+
 # Routing policies
 
 Route 53 routing policies determine **which record is returned to the client**.
@@ -407,31 +509,6 @@ It can provide simple DNS-level distribution, but it is **not a replacement for 
 > "Return several healthy IP addresses and let the client choose."
 
 → **Multi-Value Answer**
-
----
-
-# Latency vs Geolocation vs Geoproximity
-
-These three are easy to confuse.
-
-| Policy           | Question being answered                                                      |
-| ---------------- | ---------------------------------------------------------------------------- |
-| **Latency**      | Which destination gives this user the best network performance?              |
-| **Geolocation**  | Where is the user, and what rule applies to that location?                   |
-| **Geoproximity** | How should traffic be distributed geographically, and how can bias shift it? |
-
-### Easy memory
-
-```text
-Fastest
-→ Latency
-
-Country / continent rule
-→ Geolocation
-
-Bias / shift geographic traffic
-→ Geoproximity
-```
 
 ---
 
@@ -730,6 +807,8 @@ This allows traffic to move to another healthy endpoint without waiting for norm
 | Root domain → AWS resource           | **Alias**                               |
 | Public DNS                           | **Public hosted zone**                  |
 | Internal VPC-only DNS                | **Private hosted zone**                 |
+| On-prem DNS → AWS                    | **Inbound Resolver endpoint**           |
+| AWS → on-prem DNS                    | **Outbound Resolver endpoint**          |
 | Percentage / 10% / A-B test          | **Weighted**                            |
 | Lowest latency / best performance    | **Latency**                             |
 | Primary + DR / active-passive        | **Failover**                            |
@@ -824,6 +903,10 @@ The most important SAA distinctions are:
 **Failover = primary/secondary DR.**
 
 **Multi-Value = multiple healthy answers.**
+
+**Inbound Resolver = on-premises → AWS DNS.**
+
+**Outbound Resolver = AWS → on-premises DNS.**
 
 **Route 53 = DNS decision.**
 
