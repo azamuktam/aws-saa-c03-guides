@@ -1049,6 +1049,21 @@ Examples include AWS compliance documentation such as:
 Artifact is a document portal. It is not a monitoring service.
 
 ---
+## AppStream 2.0
+
+**Amazon AppStream 2.0 = stream desktop applications to users from AWS.**
+
+The application runs on AWS, while the user accesses it remotely through a browser or compatible client.
+
+```text
+User's laptop
+     ↓
+Browser
+     ↓
+AppStream 2.0
+     ↓
+Application runs on AWS
+---
 
 # Question patterns
 
@@ -1175,6 +1190,8 @@ Artifact is a document portal. It is not a monitoring service.
 > **"Auditors need AWS compliance reports."**
 > → **AWS Artifact**
 
+> **"Users need to access a Windows application without installing it locally."**
+> → **AWS AppStream 2.0**
 ---
 
 # Pocket card
@@ -1226,6 +1243,7 @@ Artifact is a document portal. It is not a monitoring service.
 | Quick Aurora copy                        | **Aurora Cloning**                      |
 | Distributed request tracing              | **X-Ray**                               |
 | AWS compliance reports                   | **AWS Artifact**                        |
+| Stream desktop applications              | **AppStream 2.0** |
 
 # Final memory
 
