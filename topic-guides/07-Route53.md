@@ -2,131 +2,831 @@
 
 ## The idea
 
-You type `www.example.com` into your browser. Your computer has no idea what that means — the internet runs on IP addresses, not names. So the first thing that happens, before a single byte of your website loads, is a lookup: *"what IP address is example.com?"*
+**Amazon Route 53** is AWS's managed **DNS (Domain Name System)** service.
 
-**DNS (Domain Name System) is the internet's phonebook.** You give it a name, it gives you back a number, and then it's done. Route 53 is AWS's DNS service — and the single most important thing to understand about it is this:
+DNS translates a domain name into information such as an IP address or an AWS resource.
 
-**Route 53 answers the question, then EXITS. It never carries your traffic.**
-
-Compare that to a load balancer, which is a **doorman standing in the path of every request** — every packet flows through it, forever. Route 53 is more like the receptionist in the lobby who points you to the right building and never sees you again.
-
-That difference sets the two services at **different zoom levels**:
-
-```
-        "Which SITE/REGION?"           "Which INSTANCE?"
-              Route 53          →      Load Balancer (ELB)
-           (phonebook —                  (doorman —
-         out of the path)             in the path always)
-```
-
-- **Route 53 picks between REGIONS or sites** (us-east-1 vs eu-west-1, primary vs DR).
-- **ELB picks between instances** inside a region.
-
-And because clients **cache** DNS answers (controlled by **TTL — Time To Live**, the "how long may you remember this answer" setting), Route 53 failover is **slow** — clients keep using the old cached IP until TTL expires. ELB failover is **instant** because the doorman is in the path and just stops sending to the dead instance. This one fact decides several exam questions.
-
-The standard architecture sandwich you'll see over and over:
-
-```
-User → Route 53 → picks a REGION → ALB in that region → picks an INSTANCE
-        (DNS)                        (load balancer)
+```text
+User
+  ↓
+www.example.com
+  ↓
+Route 53
+  ↓
+IP address / AWS resource
+  ↓
+User connects to the destination
 ```
 
-## Record types
+The most important thing to understand:
 
-| Record | Maps | Notes |
-|---|---|---|
-| **A** | name → IPv4 address | The bread and butter |
-| **AAAA** | name → IPv6 address | "Quad-A" = IPv6 |
-| **CNAME** | name → **another name** | **CANNOT exist at the root/apex** (`example.com` itself) — only on subdomains like `www.example.com` |
-| **Alias** | name → **AWS resource** | AWS extension. **WORKS at the apex**, queries are **free**, and it **auto-tracks the resource's changing IPs** |
+> **Route 53 chooses where the client should connect. It does not carry the application's traffic.**
 
-Alias records point at ALBs, CloudFront distributions, S3 static websites, API Gateway, and more. AWS resources like ALBs have IPs that change constantly, so you can never hardcode an A record to one.
+Compare:
 
-**THE trap:** *"point the root domain `example.com` at an ALB"* → **Alias record, never CNAME** (CNAME is illegal at the apex) **and never a plain A record** (the ALB's IPs change). Root domain + AWS resource = **Alias**. Every time.
+```text
+Route 53
+→ DNS
+→ decides where to connect
 
-## Hosted zones
+ALB / NLB
+→ load balancing
+→ sits in the traffic path
+→ distributes requests to targets
+```
 
-A **hosted zone** is a container for all the DNS records of one domain.
+A common architecture is:
 
-- **Public hosted zone** — answers queries from the whole internet.
-- **Private hosted zone** — answers queries **only from inside VPCs you attach it to**. This is how you get internal DNS names like `db.internal.company.com` that resolve only within your network. Exam signal: *"DNS names resolvable only within the VPC"* → private hosted zone.
+```text
+User
+  ↓
+Route 53
+  ↓
+ALB
+  ↓
+EC2 instances
+```
 
-## Routing policies
+Route 53 chooses the destination. The load balancer then distributes traffic among instances.
 
-This is the heart of the Route 53 exam material. Learn the **signal phrases**:
+---
 
-| Policy | What it does | Exam signal phrase |
-|---|---|---|
-| **Simple** | One record, one answer, no health checks | The default; rarely the answer |
-| **Weighted** | Split traffic by percentage you assign | *"A/B test"*, *"send 10% to the new version"* — **canary** |
-| **Latency** | Answers with whichever region is **fastest for that user** | *"best performance for global users"*, *"lowest latency"* |
-| **Failover** | Primary + secondary; flips when **health check** fails | *"active-passive"*, *"disaster recovery site"* |
-| **Geolocation** | Routes by **where the user IS** — a hard rule | *"EU users must be served from EU"* (compliance), language-specific sites. **Needs a Default record** for unmatched locations |
-| **Geoproximity** | Draws a map boundary between **YOUR resources**, adjustable with a **BIAS** dial | *"gradually shift/increase the traffic share to a region"*, the literal word **"bias"** |
-| **Multi-Value** | Returns **up to 8 healthy** answers at once | *"simple load balancing via DNS"* — a poor man's load balancer |
+# DNS records
 
-**Latency vs Geolocation** — the classic confusion pair:
-- **Latency** = a **performance** decision. "What's FASTEST for this user?" (A user in London might get served from us-east-1 if that's genuinely faster right now.)
-- **Geolocation** = a **legal/content RULE**. "Users in Germany get the German site, period." Location is the rule, not the speed.
+The most important SAA record types are:
 
-Ask yourself: does the scenario care about *speed* or about *where the user physically is*? Speed → Latency. Rule → Geolocation.
+| Record    | Maps                          | Important point                 |
+| --------- | ----------------------------- | ------------------------------- |
+| **A**     | Name → IPv4 address           | Standard IPv4 DNS record        |
+| **AAAA**  | Name → IPv6 address           | IPv6                            |
+| **CNAME** | Name → another DNS name       | Cannot be used at the root/apex |
+| **Alias** | Name → supported AWS resource | Can be used at the root/apex    |
 
-**Geoproximity's name tag:** if the question says **"bias"** or talks about **expanding one region's share of traffic** by turning a dial, that's Geoproximity. Geolocation has no dial; Geoproximity is all dial.
+## A record
 
-## Health checks
+Example:
 
-Route 53 health checks are performed by a fleet of **global checkers** scattered around the internet. That creates one famous limitation:
+```text
+example.com
+    ↓
+192.0.2.10
+```
 
-**Global checkers live on the public internet — they CANNOT see private endpoints** (instances in private subnets, private IPs). The fix: create a **CloudWatch alarm** that monitors the private resource, then create a Route 53 health check **based on that alarm**.
+Use an A record when you have an IPv4 address.
 
-**THE trap:** *"health check a private endpoint"* → global checkers can't reach it → **CloudWatch alarm-based health check**.
+## AAAA record
 
-You can also build **calculated health checks** — combine up to 256 child checks with AND/OR/NOT logic into one parent check ("healthy only if at least 3 of 5 children are healthy").
+Example:
 
-## Failover: who handles what
+```text
+example.com
+    ↓
+2001:db8::1
+```
 
-| Failure level | Who fixes it | Speed |
-|---|---|---|
-| Instance dies in a region | **ELB** stops routing to it | Instant (in-path) |
-| Whole region/site dies | **Route 53** failover policy | Slow-ish (DNS TTL caching) |
+Use an AAAA record for IPv6.
 
-One neat corollary: if your DR design is **a single instance per region**, there's nothing for an ELB to balance — Route 53 Failover pointing at the instances directly is enough, and you can **skip the ELB entirely** (saves money; the exam likes this).
+## CNAME
 
-## Question patterns
+A CNAME points one DNS name to another DNS name.
 
-> *"Point the apex/root domain example.com at an Application Load Balancer"* → **Alias record** (CNAME is forbidden at the apex; Alias is the AWS answer, free and auto-tracking).
+```text
+www.example.com
+       ↓
+app.example.com
+```
 
-> *"Active-passive setup: send traffic to the standby region only when the primary fails"* → **Failover routing policy + health check** ("active-passive" is the giveaway).
+A CNAME **cannot be used at the DNS zone apex**:
 
-> *"Test a new app version by sending 10% of users to it"* → **Weighted routing** (canary = percentages = weights).
+```text
+example.com
+```
 
-> *"Users in Germany must see the German-language site"* → **Geolocation** (user's location is a RULE, not a performance choice — and don't forget the Default record).
+### Exam signal
 
-> *"Serve global users with the best possible performance"* → **Latency routing** ("fastest" = latency).
+> "Point the root domain to an AWS resource."
 
-> *"Gradually increase the share of traffic going to the new region"* → **Geoproximity with bias** ("shift traffic share" / "bias" is Geoproximity's name tag).
+→ **Alias**, not CNAME.
 
-> *"Health-check an endpoint that has a private IP inside a VPC"* → **CloudWatch alarm-based health check** (global checkers can't see inside your VPC).
+---
 
-> *"Return several healthy IPs and let clients pick, without a load balancer"* → **Multi-Value answer routing** (up to 8 healthy records).
+# Route 53 Alias records
 
-> *"Multi-region app needs near-INSTANT failover; DNS caching delays are unacceptable"* → **Global Accelerator instead of Route 53** (anything in the request path beats a phonebook when clients cache old answers).
+An Alias record is an AWS-specific DNS feature that can point a domain name to supported AWS resources.
 
-## Pocket card
+Common examples:
 
-| Keyword in question | Answer |
-|---|---|
-| Root/apex domain → ALB/CloudFront/S3 | **Alias record** |
-| name → name, NOT at apex | CNAME |
-| "A/B test", "10% canary" | **Weighted** |
-| "best performance", "lowest latency" | **Latency** |
-| "active-passive", "DR site" | **Failover** + health check |
-| "users in country X get X content", compliance | **Geolocation** (+ Default record) |
-| "bias", "shift traffic share between regions" | **Geoproximity** |
-| up to 8 healthy answers, DNS-level LB | **Multi-Value** |
-| DNS only inside a VPC | **Private hosted zone** |
-| health check a private endpoint | **CloudWatch alarm-based check** |
-| combine many health checks | Calculated health check |
-| instant multi-region failover, no DNS lag | **Global Accelerator** |
+* Application Load Balancer
+* Network Load Balancer
+* CloudFront
+* API Gateway
+* S3 static website endpoint
 
-Route 53 hands out addresses and steps aside — but when the exam demands *instant* global failover with fixed IPs, you need something that stays in the path, which is exactly where Section 8's Global Accelerator picks up.
+Alias records have two important SAA advantages:
+
+* Can be used at the **root/apex domain**
+* No Route 53 charge for Alias queries
+
+### Example
+
+```text
+example.com
+      ↓
+Alias
+      ↓
+ALB
+```
+
+### Exam signal
+
+> "Point `example.com` directly to an ALB."
+
+→ **Alias record**
+
+Do not use CNAME at the apex.
+
+---
+
+# Hosted zones
+
+A **hosted zone** contains the DNS records for a domain.
+
+There are two main types.
+
+## Public hosted zone
+
+Answers DNS queries from the public Internet.
+
+```text
+Internet users
+      ↓
+Public hosted zone
+      ↓
+DNS records
+```
+
+### Exam signal
+
+> "Public website must resolve on the Internet."
+
+→ **Public hosted zone**
+
+## Private hosted zone
+
+Answers DNS queries only from associated VPCs.
+
+Example:
+
+```text
+db.internal.example.com
+        ↓
+Private hosted zone
+        ↓
+Private IP
+```
+
+### Exam signal
+
+> "Private DNS names should only resolve inside the VPC."
+
+→ **Private hosted zone**
+
+---
+
+# Routing policies
+
+Route 53 routing policies determine **which record is returned to the client**.
+
+This is one of the most important SAA Route 53 topics.
+
+| Routing policy         | Main purpose                                              | Key signal                    |
+| ---------------------- | --------------------------------------------------------- | ----------------------------- |
+| **Simple**             | Basic DNS response                                        | One normal answer             |
+| **Weighted**           | Split traffic by percentage                               | A/B testing, canary           |
+| **Latency**            | Send users to the lowest-latency Region                   | Best performance              |
+| **Failover**           | Primary + secondary                                       | Active-passive DR             |
+| **Geolocation**        | Route based on user location                              | Country/continent rules       |
+| **Geoproximity**       | Route based on resource/user geographic distance and bias | Shift traffic using **bias**  |
+| **Multi-Value Answer** | Return multiple healthy records                           | Simple DNS-level distribution |
+
+---
+
+# Simple routing
+
+Simple routing returns a single record.
+
+It is the basic/default routing behavior.
+
+It does not provide traffic percentage splitting or active-passive failover by itself.
+
+### Exam signal
+
+> "A normal DNS record with no special routing requirement."
+
+→ **Simple routing**
+
+---
+
+# Weighted routing
+
+Weighted routing divides traffic according to percentages.
+
+Example:
+
+```text
+90% → Version A
+10% → Version B
+```
+
+This is useful for:
+
+* A/B testing
+* Canary deployments
+* Gradually introducing a new version
+
+### Exam signal
+
+> "Send 10% of traffic to the new application."
+
+→ **Weighted routing**
+
+Think:
+
+**Percentage → Weight**
+
+---
+
+# Latency-based routing
+
+Latency routing sends the user to the Region that Route 53 determines will provide the **lowest latency**.
+
+Example:
+
+```text
+User in Europe
+      ↓
+Lowest latency Region
+      ↓
+eu-west-1
+
+User in Asia
+      ↓
+Lowest latency Region
+      ↓
+ap-southeast-1
+```
+
+The decision is about **performance**, not geographic rules.
+
+### Exam signal
+
+> "Global users should be sent to the Region with the best performance."
+
+→ **Latency routing**
+
+### Important distinction
+
+A user in Germany does **not necessarily** go to a German/European Region.
+
+Route 53 chooses based on latency.
+
+---
+
+# Failover routing
+
+Failover routing provides a **primary and secondary** setup.
+
+Typical use:
+
+```text
+Primary Region
+      ↓
+Healthy?
+      │
+   Yes → Primary
+      │
+   No
+      ↓
+Secondary / DR Region
+```
+
+A Route 53 health check determines whether the primary is healthy.
+
+### Exam signal
+
+* Active-passive
+* Primary + secondary
+* Disaster recovery
+* Use standby only if primary fails
+
+→ **Failover routing**
+
+### Important
+
+Route 53 failover is still DNS-based.
+
+Clients and DNS resolvers may cache answers according to TTL, so failover is not necessarily instantaneous.
+
+---
+
+# Geolocation routing
+
+Geolocation routing makes the decision based on **where the user is located**.
+
+Example:
+
+```text
+Germany users
+     ↓
+German application
+
+US users
+     ↓
+US application
+```
+
+Typical use cases:
+
+* Legal requirements
+* Content restrictions
+* Language or regional content
+* Country-specific applications
+
+### Exam signal
+
+> "Users in Germany must receive the German website."
+
+→ **Geolocation routing**
+
+This is a **location rule**, not a performance decision.
+
+### Default record
+
+Geolocation routing should have a **default record** for users whose location does not match one of the configured locations.
+
+---
+
+# Geoproximity routing
+
+Geoproximity routing uses the geographic relationship between users and your AWS resources and lets you modify the traffic distribution using **bias**.
+
+A positive or negative bias changes how much geographic area is associated with a resource.
+
+### Exam signal
+
+> "Gradually shift more traffic toward Region A."
+
+> "Increase the traffic share using bias."
+
+→ **Geoproximity routing**
+
+### Remember
+
+```text
+Geolocation
+→ Where is the USER?
+
+Geoproximity
+→ Geographic distance + BIAS
+```
+
+The word **bias** is one of the strongest exam clues for Geoproximity.
+
+---
+
+# Multi-Value Answer routing
+
+Multi-Value Answer routing can return multiple healthy records in response to a DNS query.
+
+Route 53 can return up to **8 healthy records**.
+
+It can provide simple DNS-level distribution, but it is **not a replacement for an ELB**.
+
+### Exam signal
+
+> "Return several healthy IP addresses and let the client choose."
+
+→ **Multi-Value Answer**
+
+---
+
+# Latency vs Geolocation vs Geoproximity
+
+These three are easy to confuse.
+
+| Policy           | Question being answered                                                      |
+| ---------------- | ---------------------------------------------------------------------------- |
+| **Latency**      | Which destination gives this user the best network performance?              |
+| **Geolocation**  | Where is the user, and what rule applies to that location?                   |
+| **Geoproximity** | How should traffic be distributed geographically, and how can bias shift it? |
+
+### Easy memory
+
+```text
+Fastest
+→ Latency
+
+Country / continent rule
+→ Geolocation
+
+Bias / shift geographic traffic
+→ Geoproximity
+```
+
+---
+
+# Health checks
+
+Route 53 health checks can monitor endpoints and influence routing decisions.
+
+For example:
+
+```text
+Route 53
+   ↓
+Health check
+   ↓
+Application endpoint
+```
+
+If the endpoint becomes unhealthy, a routing policy such as **Failover** can stop returning it.
+
+## Important limitation
+
+Route 53 health checkers operate from the public AWS/Internet infrastructure.
+
+They cannot directly check a normal **private IP endpoint inside a VPC**.
+
+For a private resource:
+
+```text
+Private resource
+      ↓
+CloudWatch metric/alarm
+      ↓
+Route 53 health check based on alarm
+```
+
+### Exam signal
+
+> "Route 53 must health-check a private resource."
+
+→ **CloudWatch alarm-based health check**
+
+---
+
+# Calculated health checks
+
+A calculated health check combines other health checks using logic.
+
+You can combine many child health checks and define whether the overall result should be healthy based on the configured logic.
+
+Example idea:
+
+```text
+Check A ──┐
+Check B ──┼──► Calculated health check
+Check C ──┘
+```
+
+### Exam signal
+
+> "Combine multiple Route 53 health checks."
+
+→ **Calculated health check**
+
+---
+
+# Route 53 vs Load Balancer
+
+This distinction is extremely important.
+
+## Route 53
+
+Works at the **DNS level**.
+
+```text
+User
+ ↓
+Route 53
+ ↓
+Choose destination
+```
+
+Typical decisions:
+
+* Region
+* DR site
+* AWS resource
+* Geographic destination
+
+## Load Balancer
+
+Works in the **traffic path**.
+
+```text
+User
+ ↓
+Load Balancer
+ ↓
+Instance A
+Instance B
+Instance C
+```
+
+Typical decisions:
+
+* Which EC2 instance?
+* Which container?
+* Which target?
+
+### Exam rule
+
+```text
+Choose between Regions / sites
+→ Route 53
+
+Choose between instances / targets
+→ ELB
+```
+
+---
+
+# Route 53 failover vs ELB failover
+
+Consider where the failure occurs.
+
+### Instance failure
+
+```text
+ALB
+ ↓
+EC2-A ❌
+ ↓
+EC2-B ✅
+```
+
+The load balancer stops sending traffic to the unhealthy target.
+
+→ **ELB**
+
+### Regional failure
+
+```text
+Route 53
+ ├── Region A ❌
+ └── Region B ✅
+```
+
+→ **Route 53 failover**
+
+The important architectural idea:
+
+```text
+ELB
+→ inside a Region
+
+Route 53
+→ can choose between Regions
+```
+
+---
+
+# TTL
+
+**TTL (Time To Live)** tells DNS resolvers how long they may cache a DNS answer.
+
+Example:
+
+```text
+TTL = 60 seconds
+```
+
+A resolver can cache the answer for roughly 60 seconds before asking DNS for a new answer.
+
+### Why TTL matters
+
+Lower TTL:
+
+* Faster changes/failover visibility
+* More DNS queries
+
+Higher TTL:
+
+* More caching
+* Fewer DNS queries
+* Slower propagation of changes
+
+### Exam signal
+
+> "DNS changes need to be reflected quickly."
+
+→ **Lower TTL**
+
+Remember:
+
+> Route 53 cannot force every client to immediately forget a cached DNS answer.
+
+---
+
+# Global Accelerator vs Route 53
+
+Both can help global applications, but they work at different layers.
+
+## Route 53
+
+DNS-based.
+
+```text
+User
+ ↓
+DNS lookup
+ ↓
+Route 53
+ ↓
+Destination
+```
+
+The client then connects directly to the destination.
+
+## Global Accelerator
+
+Uses static anycast IP addresses and stays in the network path.
+
+```text
+User
+ ↓
+Global Accelerator
+ ↓
+AWS global network
+ ↓
+Healthy regional endpoint
+```
+
+This allows traffic to move to another healthy endpoint without waiting for normal DNS TTL behavior.
+
+### Exam signal
+
+> "Need very fast global failover and static IP addresses."
+
+→ **Global Accelerator**
+
+> "Need DNS-based routing between Regions."
+
+→ **Route 53**
+
+---
+
+# Question patterns
+
+> **"Point the root domain to an ALB."**
+> → **Alias record**
+
+> **"Point a subdomain to another DNS name."**
+> → **CNAME**
+
+> **"Send 10% of traffic to a new application version."**
+> → **Weighted routing**
+
+> **"Send global users to the Region with the lowest latency."**
+> → **Latency routing**
+
+> **"Users in Germany must receive the German application."**
+> → **Geolocation routing**
+
+> **"Gradually shift more geographic traffic toward a Region."**
+> → **Geoproximity + bias**
+
+> **"Primary Region should receive traffic unless it becomes unhealthy."**
+> → **Failover routing + health check**
+
+> **"Return multiple healthy IP addresses."**
+> → **Multi-Value Answer**
+
+> **"Private VPC endpoint must be health-checked by Route 53."**
+> → **CloudWatch alarm-based health check**
+
+> **"Combine several health checks."**
+> → **Calculated health check**
+
+> **"DNS changes need to propagate faster."**
+> → **Lower TTL**
+
+> **"Need fast global failover without waiting for DNS caching."**
+> → **Global Accelerator**
+
+> **"Private DNS names should resolve only inside a VPC."**
+> → **Private hosted zone**
+
+---
+
+# Pocket card
+
+| Keyword                              | Answer                                  |
+| ------------------------------------ | --------------------------------------- |
+| IPv4 DNS record                      | **A**                                   |
+| IPv6 DNS record                      | **AAAA**                                |
+| Name → another name                  | **CNAME**                               |
+| Root domain → AWS resource           | **Alias**                               |
+| Public DNS                           | **Public hosted zone**                  |
+| Internal VPC-only DNS                | **Private hosted zone**                 |
+| Percentage / 10% / A-B test          | **Weighted**                            |
+| Lowest latency / best performance    | **Latency**                             |
+| Primary + DR / active-passive        | **Failover**                            |
+| User country / continent             | **Geolocation**                         |
+| Bias / geographic traffic shift      | **Geoproximity**                        |
+| Multiple healthy IPs                 | **Multi-Value Answer**                  |
+| Private endpoint health check        | **CloudWatch alarm-based health check** |
+| Combine health checks                | **Calculated health check**             |
+| Faster DNS changes                   | **Lower TTL**                           |
+| Choose between Regions               | **Route 53**                            |
+| Choose between instances             | **ELB**                                 |
+| Instant global failover / static IPs | **Global Accelerator**                  |
+
+---
+
+# Core mental model
+
+When a Route 53 question appears, first ask **what decision needs to be made**.
+
+```text
+What domain record is needed?
+        ↓
+A / AAAA / CNAME / Alias
+
+Who should receive the traffic?
+        ↓
+Routing policy
+
+Percentage
+        ↓
+Weighted
+
+Fastest Region
+        ↓
+Latency
+
+Primary / DR
+        ↓
+Failover
+
+User location
+        ↓
+Geolocation
+
+Geographic traffic shift / bias
+        ↓
+Geoproximity
+
+Several healthy addresses
+        ↓
+Multi-Value Answer
+```
+
+Then ask whether health matters:
+
+```text
+Need endpoint health
+        ↓
+Route 53 Health Check
+
+Private endpoint
+        ↓
+CloudWatch alarm
+        ↓
+Route 53 health check
+```
+
+Finally, ask whether DNS itself is the right tool:
+
+```text
+DNS-based regional routing
+        ↓
+Route 53
+
+Fast global failover + static IPs
+        ↓
+Global Accelerator
+```
+
+The most important SAA distinctions are:
+
+**Alias = AWS resource + root domain.**
+
+**Weighted = percentage.**
+
+**Latency = fastest Region.**
+
+**Geolocation = user location rule.**
+
+**Geoproximity = geographic distribution + bias.**
+
+**Failover = primary/secondary DR.**
+
+**Multi-Value = multiple healthy answers.**
+
+**Route 53 = DNS decision.**
+
+**ELB = traffic distribution inside the destination.**
+
+**Global Accelerator = fast global traffic routing without waiting for DNS caching.**
