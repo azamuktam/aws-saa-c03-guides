@@ -990,22 +990,6 @@ So:
 
 ---
 
-## Aurora Cloning
-
-**Aurora Cloning = quickly create a copy of an Aurora database using copy-on-write.**
-
-Use it when:
-
-> "Create a production-like database for testing without immediately duplicating all the storage."
-
-This is covered in your Aurora section as well.
-
-### Signal
-
-> **Quick Aurora copy for testing → Aurora Cloning**
-
----
-
 ## X-Ray
 
 **AWS X-Ray = distributed tracing.**
