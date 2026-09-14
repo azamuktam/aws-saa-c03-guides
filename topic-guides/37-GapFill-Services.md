@@ -1243,7 +1243,58 @@ Application runs on AWS
 ```
 
 ---
+## Amazon Managed Service for Prometheus
 
+**Amazon Managed Service for Prometheus = managed, Prometheus-compatible monitoring and alerting for container workloads.**
+
+It is especially useful for monitoring:
+
+* Amazon EKS
+* Amazon ECS
+* AWS Fargate
+* Kubernetes environments
+
+It uses the **Prometheus data model and PromQL** for querying metrics.
+
+### Signal
+
+> **Prometheus / PromQL + container metrics → Amazon Managed Service for Prometheus**
+
+### Typical pattern
+
+```text
+Container workloads
+        ↓
+Prometheus metrics
+        ↓
+Amazon Managed Service for Prometheus
+        ↓
+PromQL / Grafana
+```
+
+Amazon Managed Grafana can be used to visualize Prometheus metrics.
+
+### Important distinction
+
+```text
+CloudWatch
+= AWS-native metrics, logs, and monitoring
+
+Amazon Managed Service for Prometheus
+= Prometheus-compatible metrics + PromQL
+= especially useful for container/Kubernetes monitoring
+```
+
+
+### Final memory
+
+```text
+Amazon Managed Service for Prometheus
+= MANAGED PROMETHEUS
+= CONTAINER METRICS
+= PromQL
+```
+---
 # Question patterns
 
 > **"Existing on-premises application uses RabbitMQ and must migrate with minimal code changes."**
@@ -1384,6 +1435,9 @@ Application runs on AWS
 > **"Users need to access a Windows application without installing it locally."**
 > → **AWS AppStream 2.0**
 
+> "A company uses Kubernetes and wants to use Prometheus and PromQL for monitoring without managing the Prometheus infrastructure."
+
+> → **Amazon Managed Service for Prometheus**
 ---
 
 # Pocket card
@@ -1440,6 +1494,10 @@ Application runs on AWS
 | Distributed request tracing              | **X-Ray**                               |
 | AWS compliance reports                   | **AWS Artifact**                        |
 | Stream desktop applications              | **AppStream 2.0**                       |
+| Prometheus / PromQL                            | **Amazon Managed Service for Prometheus**           |
+| Container / Kubernetes metrics with Prometheus | **Amazon Managed Service for Prometheus**           |
+| Prometheus dashboards                          | **Amazon Managed Service for Prometheus + Grafana** |
+
 
 # Final memory
 
