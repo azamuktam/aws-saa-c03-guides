@@ -556,9 +556,67 @@ Use it for:
 
 You can use **Spot Instances for suitable EMR task nodes** to reduce cost.
 
+### BI + standard SQL + analytical workloads
+
+When you see:
+
+> **BI + standard SQL + analytical workloads**
+
+→ **Amazon Redshift** is the typical analytical destination.
+
+EMR can process the large dataset, while **Amazon Redshift** provides the high-performance data warehouse used by BI tools and standard SQL queries.
+
+Typical pattern:
+
+```text
+S3 data lake
+     ↓
+Amazon EMR
+(Spark / Hadoop)
+     ↓
+Amazon Redshift
+     ↓
+BI tools + standard SQL
+```
+
+### EMR vs Redshift
+
+```text
+EMR
+= managed big-data processing
+= Spark / Hadoop
+= process / transform large datasets
+
+Redshift
+= managed data warehouse
+= analytical SQL queries
+= BI / reporting / analytics
+```
+
+### Important distinction
+
+> **Spark / Hadoop → EMR**
+
+> **BI + standard SQL + analytical workloads → Redshift**
+
+A question can require **both** services:
+
+```text
+EMR → process big data
+Redshift → analyze the processed data
+```
+
+### Example
+
+> "A company stores large datasets in S3 and wants to use big-data processing frameworks to process the data. Business users then need high-performance access using BI tools and standard SQL queries."
+
+→ **Amazon EMR + Amazon Redshift**
+
 ### Signal
 
 > **Spark / Hadoop → EMR**
+
+> **BI + standard SQL + analytical workloads → Redshift**
 
 ---
 
