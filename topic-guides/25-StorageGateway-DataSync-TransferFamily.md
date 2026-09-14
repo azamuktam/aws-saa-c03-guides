@@ -189,7 +189,7 @@ Because with Cached, only frequently used data is local.
 
 # Tape Gateway
 
-Tape Gateway is for companies that use **physical tape backups**.
+Tape Gateway is for companies that use **physical tape backups**.replaces your traditional physical tape backup system with virtual tapes in AWS
 
 It provides a **Virtual Tape Library (VTL)** so existing backup software can continue working.
 
