@@ -30,6 +30,9 @@ IPv6 outbound-only Internet access
 
 Query S3 using SQL
 → Athena
+
+Apache Flink / real-time stream processing
+→ Managed Service for Apache Flink
 ```
 
 ---
@@ -250,8 +253,7 @@ So:
 
 ```text
 HTTPS on ALB
-→ ACM  certificate in the SAME REGION as the ALB
-
+→ ACM certificate in the SAME REGION as the ALB
 
 HTTPS on CloudFront
 → ACM in us-east-1
@@ -317,18 +319,20 @@ Use it for:
 
 # Analytics family
 
-| Service               | What it does                                              | Signal keyword                   |
-| --------------------- | --------------------------------------------------------- | -------------------------------- |
-| **AWS Glue**          | Serverless ETL + Data Catalog                             | ETL / data preparation / catalog |
-| **Glue Crawler**      | Automatically discovers data and schema                   | Discover schema                  |
-| **Glue Data Catalog** | Stores metadata about datasets                            | Metadata / tables / schema       |
-| **Glue ETL**          | Performs data transformations                             | CSV → Parquet / ETL              |
-| **EMR**               | Managed big-data processing                               | Spark / Hadoop                   |
-| **MSK**               | Managed Apache Kafka                                      | Kafka                            |
-| **Athena**            | SQL directly on S3                                        | SQL on S3                        |
-| **QuickSight**        | BI dashboards                                             | Business dashboards              |
-| **Lake Formation**    | Build/manage a data lake with fine-grained access control | Data lake + permissions          |
-| **AppFlow**           | Move data between SaaS and AWS services                   | Salesforce → S3                  |
+| Service                              | What it does                                                | Signal keyword                     |
+| ------------------------------------ | ----------------------------------------------------------- | ---------------------------------- |
+| **AWS Glue**                         | Serverless ETL + Data Catalog                               | ETL / data preparation / catalog   |
+| **Glue Crawler**                     | Automatically discovers data and schema                     | Discover schema                    |
+| **Glue Data Catalog**                | Stores metadata about datasets                              | Metadata / tables / schema         |
+| **Glue ETL**                         | Performs data transformations                               | CSV → Parquet / ETL                |
+| **EMR**                              | Managed big-data processing                                 | Spark / Hadoop                     |
+| **Managed Service for Apache Flink** | Managed real-time stream processing                         | Apache Flink / real-time streaming |
+| **Flink Studio**                     | Interactive Apache Flink development and streaming analysis | Interactive Flink / streaming SQL  |
+| **MSK**                              | Managed Apache Kafka                                        | Kafka                              |
+| **Athena**                           | SQL directly on S3                                          | SQL on S3                          |
+| **QuickSight**                       | BI dashboards                                               | Business dashboards                |
+| **Lake Formation**                   | Build/manage a data lake with fine-grained access control   | Data lake + permissions            |
+| **AppFlow**                          | Move data between SaaS and AWS services                     | Salesforce → S3                    |
 
 ---
 
@@ -617,6 +621,183 @@ Redshift → analyze the processed data
 > **Spark / Hadoop → EMR**
 
 > **BI + standard SQL + analytical workloads → Redshift**
+
+---
+
+## Managed Service for Apache Flink
+
+**Amazon Managed Service for Apache Flink = managed real-time stream processing using Apache Flink.**
+
+Use it when you need to process **streaming data continuously and in real time**.
+
+It is useful for:
+
+* real-time analytics
+* streaming ETL
+* processing events continuously
+* transforming streaming data
+* detecting patterns in streams
+
+Typical streaming sources include:
+
+* Amazon Kinesis Data Streams
+* Amazon MSK / Apache Kafka
+
+Typical pattern:
+
+```text
+Kinesis / Kafka
+      ↓
+Managed Service for Apache Flink
+      ↓
+Real-time processing
+      ↓
+Kinesis / S3 / other destinations
+```
+
+### What is Apache Flink?
+
+**Apache Flink is a distributed stream-processing framework.**
+
+The key idea is:
+
+```text
+Incoming events
+      ↓
+continuous processing
+      ↓
+results in near real time
+```
+
+Instead of waiting for a large batch of data to accumulate, Flink can process events as they arrive.
+
+### Signal
+
+> **Apache Flink + real-time streaming analytics → Managed Service for Apache Flink**
+
+### Example
+
+> "A company receives continuous streaming data from Amazon Kinesis and needs to perform real-time analytics using Apache Flink."
+
+→ **Amazon Managed Service for Apache Flink**
+
+---
+
+## Flink Studio
+
+**Managed Service for Apache Flink Studio = an interactive environment for developing and analyzing Apache Flink streaming applications.**
+
+It is useful when you want to:
+
+* interactively explore streaming data
+* run SQL queries against streaming data
+* develop Flink applications
+* test streaming logic
+* analyze streaming data interactively
+
+It provides an interactive development experience rather than requiring you to build everything as a traditional production Flink application first.
+
+Typical idea:
+
+```text
+Streaming source
+(Kinesis / Kafka)
+       ↓
+   Flink Studio
+       ↓
+Interactive queries / analysis
+       ↓
+Explore streaming data
+```
+
+### Signal
+
+> **Interactive Apache Flink development or streaming analysis → Flink Studio**
+
+### Flink Studio vs Managed Service for Apache Flink
+
+Think of them as:
+
+```text
+Managed Service for Apache Flink
+= run managed Flink stream-processing applications
+
+Flink Studio
+= interactively develop / query / analyze Flink streaming workloads
+```
+
+### Simple distinction
+
+```text
+"Run real-time stream processing with Apache Flink"
+→ Managed Service for Apache Flink
+
+"Interactively analyze streaming data using Flink"
+→ Flink Studio
+```
+
+### Important SAA distinction: Flink vs EMR
+
+```text
+Apache Flink
+= real-time stream processing
+
+EMR
+= managed big-data processing
+= commonly Spark / Hadoop
+```
+
+Think:
+
+```text
+Continuous incoming events
+→ Flink
+
+Large-scale Spark / Hadoop processing
+→ EMR
+```
+
+### Common exam trap
+
+Do not automatically choose EMR just because the question says **big data**.
+
+Look for the framework and processing model:
+
+```text
+Apache Spark
+→ EMR
+
+Hadoop
+→ EMR
+
+Apache Flink
+→ Managed Service for Apache Flink
+
+Real-time stream processing
+→ Managed Service for Apache Flink
+
+Interactive Flink streaming analysis
+→ Flink Studio
+```
+
+### Very important keyword mapping
+
+```text
+Apache Flink
+→ Managed Service for Apache Flink
+
+Flink Studio
+→ Interactive Flink analysis / development
+
+Spark
+→ EMR
+
+Hadoop
+→ EMR
+
+Kafka
+→ MSK
+```
 
 ---
 
@@ -1107,6 +1288,7 @@ Examples include AWS compliance documentation such as:
 Artifact is a document portal. It is not a monitoring service.
 
 ---
+
 ## AppStream 2.0
 
 **Amazon AppStream 2.0 = stream desktop applications to users from AWS.**
@@ -1122,6 +1304,7 @@ AppStream 2.0
      ↓
 Application runs on AWS
 ```
+
 ---
 
 # Question patterns
@@ -1173,6 +1356,12 @@ Application runs on AWS
 
 > **"Managed Apache Spark processing."**
 > → **Amazon EMR**
+
+> **"Process continuous streaming data using Apache Flink."**
+> → **Managed Service for Apache Flink**
+
+> **"Interactively query or analyze streaming data using Apache Flink."**
+> → **Flink Studio**
 
 > **"Existing Apache Kafka workload."**
 > → **Amazon MSK**
@@ -1251,6 +1440,7 @@ Application runs on AWS
 
 > **"Users need to access a Windows application without installing it locally."**
 > → **AWS AppStream 2.0**
+
 ---
 
 # Pocket card
@@ -1275,6 +1465,8 @@ Application runs on AWS
 | Store metadata                           | **Glue Data Catalog**                   |
 | Transform data                           | **Glue ETL**                            |
 | Spark / Hadoop                           | **EMR**                                 |
+| Apache Flink / real-time streaming       | **Managed Service for Apache Flink**    |
+| Interactive Flink streaming analysis     | **Flink Studio**                        |
 | Kafka                                    | **MSK**                                 |
 | SQL on S3                                | **Athena**                              |
 | BI dashboards                            | **QuickSight**                          |
@@ -1302,7 +1494,7 @@ Application runs on AWS
 | Quick Aurora copy                        | **Aurora Cloning**                      |
 | Distributed request tracing              | **X-Ray**                               |
 | AWS compliance reports                   | **AWS Artifact**                        |
-| Stream desktop applications              | **AppStream 2.0** |
+| Stream desktop applications              | **AppStream 2.0**                       |
 
 # Final memory
 
@@ -1351,6 +1543,12 @@ Glue ETL
 
 EMR
 = SPARK / HADOOP
+
+Managed Service for Apache Flink
+= REAL-TIME STREAM PROCESSING
+
+Flink Studio
+= INTERACTIVE FLINK STREAM ANALYSIS
 
 MSK
 = KAFKA
@@ -1432,6 +1630,9 @@ X-Ray
 
 Artifact
 = COMPLIANCE DOCUMENTS
+
+AppStream 2.0
+= STREAM DESKTOP APPLICATIONS
 ```
 
 ## The golden rule
@@ -1445,16 +1646,19 @@ Memorize the unique signal.
 For example:
 
 ```text
-RabbitMQ       → MQ
-Rehost         → MGN
-Disaster       → DRS
-Kafka          → MSK
-Spark          → EMR
-5G             → Wavelength
-Discover schema→ Glue Crawler
-Store metadata → Glue Data Catalog
-Transform data → Glue ETL
-Scanned form   → Textract
-GraphQL        → AppSync
-Compliance     → Artifact
+RabbitMQ        → MQ
+Rehost          → MGN
+Disaster        → DRS
+Kafka           → MSK
+Spark           → EMR
+Hadoop          → EMR
+Apache Flink    → Managed Service for Apache Flink
+Flink Studio    → Interactive Flink analysis
+5G              → Wavelength
+Discover schema → Glue Crawler
+Store metadata  → Glue Data Catalog
+Transform data  → Glue ETL
+Scanned form    → Textract
+GraphQL         → AppSync
+Compliance      → Artifact
 ```
