@@ -28,7 +28,7 @@ API Gateway can handle things such as:
 * caching
 * request validation
 * monitoring
-
+* **supports A serverless, pay-per-use model**
 ### Common serverless architecture
 
 ```text
