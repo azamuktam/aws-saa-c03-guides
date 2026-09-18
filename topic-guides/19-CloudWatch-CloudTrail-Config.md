@@ -30,9 +30,9 @@ Which service in a request chain is slow?
 
 ---
 
-## CloudWatch — "How is it performing?"
+# CloudWatch — "How is it performing?"
 
-**Amazon CloudWatch = monitoring for metrics, logs, and alarms.**
+**Amazon CloudWatch = monitoring for metrics, logs, alarms, and dashboards.**
 
 It helps you monitor:
 
@@ -43,8 +43,11 @@ It helps you monitor:
 * latency
 * alarms
 * dashboards
+* application/system metrics
 
-### CloudWatch Metrics
+---
+
+## CloudWatch Metrics
 
 Metrics are **numbers measured over time**.
 
@@ -56,38 +59,192 @@ Request count = 10,000
 Latency = 250 ms
 ```
 
-### Important EC2 metric trap
+---
+
+## Important EC2 metric trap
 
 EC2 provides many standard metrics, such as:
 
 * CPU utilization
 * network traffic
-* some disk-related metrics
+* status checks
+* some EBS-related metrics
 
-But metrics such as:
+But **OS-level metrics** such as:
 
-* **memory usage**
-* **free disk space**
+* memory usage
+* swap usage
+* filesystem disk usage
 
-are **not standard EC2 metrics**.
+are not part of the normal EC2 metric set.
 
-To collect these, install the **CloudWatch Agent**.
+To collect these, install the **CloudWatch Agent**. The agent can collect memory, disk, process, network, and swap metrics.
 
 ### Exam pattern
 
-> *"Alert when EC2 memory usage exceeds 80%."*
+> "Alert when EC2 memory usage exceeds 80%."
 
-→ **CloudWatch Agent + metric + CloudWatch Alarm**
+→ **CloudWatch Agent + memory metric + CloudWatch Alarm**
 
 ---
 
-## CloudWatch Enhanced Monitoring vs normal CloudWatch
+# EC2 Swap Space Monitoring
+
+This is an important CloudWatch exam trap.
+
+Suppose:
+
+> "Several EC2 instances are failing because they have insufficient swap space. Monitor the available/used swap space."
+
+The correct approach is:
+
+→ **Install the CloudWatch Agent and monitor swap metrics.**
+
+The CloudWatch Agent can collect:
+
+```text
+swap_free
+swap_used
+swap_used_percent
+```
+
+`swap_used_percent` represents the percentage of swap space currently being used.
+
+Some exam/question banks may refer to this concept as **`SwapUtilization`**, but the current AWS CloudWatch Agent metric name is **`swap_used_percent`**.
+
+### Example
+
+```text
+EC2 instance
+      ↓
+CloudWatch Agent
+      ↓
+swap_used_percent
+      ↓
+CloudWatch
+      ↓
+Alarm
+```
+
+Example:
+
+```text
+Swap space = 4 GB
+Swap used  = 3 GB
+
+swap_used_percent = 75%
+```
+
+### Exam pattern
+
+> "EC2 instances are running out of swap space. Monitor swap utilization."
+
+→ **CloudWatch Agent + swap metric**
+
+---
+
+## Why EC2 Detailed Monitoring is NOT enough
+
+This is a common trap.
+
+**EC2 Detailed Monitoring does not mean more OS-level metrics.**
+
+It mainly changes the frequency of standard EC2 metrics:
+
+```text
+Basic monitoring
+→ standard EC2 metrics
+→ usually 5-minute periods
+
+Detailed monitoring
+→ same general EC2 metric categories
+→ 1-minute periods
+```
+
+AWS documents EC2 detailed monitoring as providing metrics at one-minute intervals rather than the five-minute intervals of basic monitoring.
+
+It does **not** suddenly give you:
+
+* memory usage
+* swap usage
+* filesystem usage
+* process-level metrics
+
+For those, use the **CloudWatch Agent**.
+
+### Remember
+
+```text
+Detailed Monitoring
+= MORE FREQUENT EC2 METRICS
+
+CloudWatch Agent
+= MORE OS-LEVEL METRICS
+```
+
+---
+
+## EC2 Monitoring — the important distinction
+
+| Requirement                      | Solution                        |
+| -------------------------------- | ------------------------------- |
+| Standard EC2 CPU/network metrics | **CloudWatch**                  |
+| Standard metrics every 1 minute  | **EC2 Detailed Monitoring**     |
+| EC2 memory usage                 | **CloudWatch Agent**            |
+| EC2 swap usage                   | **CloudWatch Agent**            |
+| EC2 filesystem disk usage        | **CloudWatch Agent**            |
+| EC2 process-level metrics        | **CloudWatch Agent / procstat** |
+| Alarm on any collected metric    | **CloudWatch Alarm**            |
+
+### Memory trick
+
+```text
+Detailed Monitoring
+= frequency
+
+CloudWatch Agent
+= visibility inside the OS
+```
+
+---
+
+## Auto Scaling + CloudWatch Agent
+
+If the question says:
+
+> "Instances are launched dynamically by an Auto Scaling Group. Monitor memory/swap/disk on every instance."
+
+You still need the **CloudWatch Agent**.
+
+For an Auto Scaling fleet, a common architecture is:
+
+```text
+Launch Template / AMI / User Data / Systems Manager
+                    ↓
+             CloudWatch Agent
+                    ↓
+              EC2 instances
+                    ↓
+             CloudWatch metrics
+                    ↓
+                 Alarms
+```
+
+The important exam point is:
+
+> **Auto Scaling does not automatically install the CloudWatch Agent.**
+
+You must configure the instances to have the agent.
+
+---
+
+# CloudWatch Enhanced Monitoring vs normal CloudWatch
 
 For **RDS**, there is an important distinction.
 
-### Normal CloudWatch RDS monitoring
+## Normal CloudWatch RDS monitoring
 
-CloudWatch can show the overall database instance metrics.
+CloudWatch can show overall database-instance metrics.
 
 Example:
 
@@ -97,7 +254,9 @@ RDS CPUUtilization = 75%
 
 This tells you about the **RDS instance as a whole**.
 
-### RDS Enhanced Monitoring
+---
+
+## RDS Enhanced Monitoring
 
 **Enhanced Monitoring = OS-level monitoring of the RDS instance.**
 
@@ -123,7 +282,7 @@ RDS instance
 
 ### Exam pattern
 
-> *"Monitor the CPU and memory used by individual processes on an RDS instance."*
+> "Monitor the CPU and memory used by individual processes on an RDS instance."
 
 → **RDS Enhanced Monitoring**
 
@@ -133,13 +292,61 @@ RDS instance
 Overall RDS CPU
 → CloudWatch
 
-CPU / memory / processes at OS level
+RDS OS-level CPU / memory / processes
 → Enhanced Monitoring
 ```
 
 ---
 
-## CloudWatch Alarms
+# RDS Performance Insights
+
+Do not confuse **Enhanced Monitoring** with **Performance Insights**.
+
+### Performance Insights
+
+Performance Insights is focused on **database performance and query/load analysis**.
+
+Think:
+
+```text
+Which SQL queries
+are consuming database resources?
+```
+
+### Enhanced Monitoring
+
+Enhanced Monitoring is focused on the **underlying OS**.
+
+Think:
+
+```text
+How much CPU / memory
+are the database processes using?
+```
+
+### Exam pattern
+
+> "Identify which SQL queries are causing high database load."
+
+→ **Performance Insights**
+
+> "Monitor OS-level CPU, memory, and process information."
+
+→ **Enhanced Monitoring**
+
+### Memory trick
+
+```text
+Enhanced Monitoring
+= OS-level RDS monitoring
+
+Performance Insights
+= database workload / query performance
+```
+
+---
+
+# CloudWatch Alarms
 
 A CloudWatch Alarm watches a metric and takes action when a condition is met.
 
@@ -159,7 +366,9 @@ An alarm can also trigger things such as:
 * EC2 actions
 * SNS notifications
 
-### Composite alarms
+---
+
+## Composite alarms
 
 A **Composite Alarm** combines multiple alarms.
 
@@ -177,13 +386,13 @@ Use it when you want to reduce unnecessary alerts.
 
 ### Exam pattern
 
-> *"Several alarms are firing and the company wants fewer unnecessary notifications."*
+> "Several alarms are firing and the company wants fewer unnecessary notifications."
 
 → **Composite Alarm**
 
 ---
 
-## CloudWatch Logs
+# CloudWatch Logs
 
 CloudWatch Logs stores application and system logs.
 
@@ -200,7 +409,9 @@ A **log group** usually represents an application or service.
 
 A **log stream** contains logs from one source, such as an instance or container.
 
-### Metric Filters
+---
+
+## Metric Filters
 
 A **metric filter** searches logs for a pattern and turns the result into a metric.
 
@@ -226,13 +437,13 @@ Alarm if > 100
 
 ### Exam pattern
 
-> *"Trigger an alarm when the application writes more than 100 ERROR messages in 5 minutes."*
+> "Trigger an alarm when the application writes more than 100 ERROR messages in 5 minutes."
 
 → **CloudWatch Logs Metric Filter + Alarm**
 
 ---
 
-## CloudWatch Logs Insights
+# CloudWatch Logs Insights
 
 **Logs Insights = query and analyze logs interactively.**
 
@@ -251,12 +462,12 @@ Metric Filter
 = turn log patterns into metrics
 
 Logs Insights
-= query/analyze logs
+= query / analyze logs
 ```
 
 ---
 
-## CloudWatch Logs Subscription Filters
+# CloudWatch Logs Subscription Filters
 
 A **subscription filter** sends log events somewhere else in **near real time**.
 
@@ -278,19 +489,42 @@ Lambda / Kinesis
 
 ### Exam pattern
 
-> *"Process log entries in real time as they arrive."*
+> "Process log entries in real time as they arrive."
 
 → **CloudWatch Logs Subscription Filter**
 
 ---
 
-## CloudWatch Dashboards
+# CloudWatch Logs → S3 / Firehose
+
+Another common pattern is:
+
+```text
+CloudWatch Logs
+      ↓
+Subscription Filter
+      ↓
+Kinesis Data Firehose
+      ↓
+S3
+```
+
+Think of this when the requirement is to:
+
+* continuously export logs
+* centralize logs
+* archive logs
+* process logs before storing them
+
+---
+
+# CloudWatch Dashboards
 
 CloudWatch dashboards display metrics and monitoring information in one place.
 
 They can show resources and metrics from different Regions.
 
-### Example
+Example:
 
 ```text
 US
@@ -304,6 +538,72 @@ CPU / Errors / Latency
 ```
 
 → One CloudWatch dashboard
+
+---
+
+# CloudWatch — High-Value Exam Traps
+
+### EC2 Memory
+
+> "Monitor EC2 memory usage."
+
+→ **CloudWatch Agent**
+
+Not:
+
+→ EC2 Detailed Monitoring
+
+---
+
+### EC2 Swap
+
+> "Monitor EC2 swap utilization."
+
+→ **CloudWatch Agent**
+
+Current AWS Agent metrics include `swap_used_percent`, `swap_used`, and `swap_free`.
+
+---
+
+### EC2 Disk Space
+
+> "Alert when the EC2 filesystem is 90% full."
+
+→ **CloudWatch Agent**
+
+Do not confuse:
+
+```text
+EBS volume metrics
+```
+
+with:
+
+```text
+filesystem space inside the operating system
+```
+
+The CloudWatch Agent can collect filesystem metrics such as `disk_used_percent`.
+
+---
+
+### EC2 Detailed Monitoring
+
+> "The company wants EC2 metrics every minute instead of every five minutes."
+
+→ **Detailed Monitoring**
+
+It changes the **frequency**, not the type of OS metrics collected.
+
+---
+
+### Process-level EC2 metrics
+
+> "Monitor CPU and memory usage for a specific process running on EC2."
+
+→ **CloudWatch Agent / procstat**
+
+The CloudWatch Agent can collect process-specific CPU and memory metrics.
 
 ---
 
@@ -337,7 +637,7 @@ CloudTrail
 
 ---
 
-## CloudTrail Event History
+# CloudTrail Event History
 
 CloudTrail provides **90 days of management event history** without requiring you to create a trail.
 
@@ -353,17 +653,17 @@ Store the logs in S3 for long-term retention.
 
 ### Exam pattern
 
-> *"Keep API activity records for several years."*
+> "Keep API activity records for several years."
 
 → **CloudTrail Trail → S3**
 
 ---
 
-## CloudTrail Management Events vs Data Events
+# CloudTrail Management Events vs Data Events
 
 This is very important.
 
-### Management events
+## Management events
 
 These are **control-plane operations**.
 
@@ -374,9 +674,9 @@ Examples:
 * create S3 bucket
 * change IAM policy
 
-Management events are logged by default in CloudTrail event history.
+---
 
-### Data events
+## Data events
 
 These are **resource-level operations**.
 
@@ -386,19 +686,19 @@ Examples:
 * deleting an S3 object
 * invoking a Lambda function
 
-Data events must generally be **enabled explicitly** and can incur additional charges.
+Data events generally must be **enabled explicitly** and can incur additional charges.
 
 ### Exam trap
 
-> *"Who deleted a specific object from S3?"*
+> "Who deleted a specific object from S3?"
 
-→ **CloudTrail S3 data events**
+→ **CloudTrail S3 Data Events**
 
 Normal management events are not enough.
 
 ---
 
-## CloudTrail Log File Integrity Validation
+# CloudTrail Log File Integrity Validation
 
 This helps prove that CloudTrail log files have **not been modified after delivery**.
 
@@ -411,13 +711,13 @@ Useful for:
 
 ### Exam pattern
 
-> *"Logs must be tamper-evident for forensic purposes."*
+> "Logs must be tamper-evident for forensic purposes."
 
-→ **CloudTrail log file integrity validation**
+→ **CloudTrail Log File Integrity Validation**
 
 ---
 
-## CloudTrail Insights
+# CloudTrail Insights
 
 **CloudTrail Insights detects unusual API activity.**
 
@@ -459,7 +759,7 @@ or:
 
 ---
 
-## Configuration history
+# Configuration history
 
 AWS Config records changes to resource configurations.
 
@@ -480,13 +780,13 @@ You can investigate the configuration history.
 
 ### Exam pattern
 
-> *"Show what a security group's configuration was one week ago."*
+> "Show what a security group's configuration was one week ago."
 
 → **AWS Config**
 
 ---
 
-## Config Rules
+# Config Rules
 
 AWS Config Rules evaluate whether resources meet a requirement.
 
@@ -511,13 +811,13 @@ Rules can be:
 
 ### Exam pattern
 
-> *"Identify security groups that allow SSH from the Internet."*
+> "Identify security groups that allow SSH from the Internet."
 
 → **AWS Config Rule**
 
 ---
 
-## Config Remediation
+# Config Remediation
 
 AWS Config can automatically trigger remediation when a resource becomes noncompliant.
 
@@ -541,7 +841,7 @@ Fix the resource
 
 ---
 
-## Important Config limitation
+# Important Config limitation
 
 **AWS Config does not prevent the action from happening.**
 
@@ -611,7 +911,7 @@ DynamoDB      100 ms
 
 ### Exam pattern
 
-> *"A request passes through ten microservices. Find which service is causing the latency."*
+> "A request passes through ten microservices. Find which service is causing the latency."
 
 → **X-Ray**
 
@@ -654,41 +954,344 @@ X-Ray
 
 ---
 
-## Question patterns
+# Similar Exam Questions
 
-> *"Determine who terminated a production EC2 instance last week."* → **CloudTrail**
+## 1. EC2 memory monitoring
 
-> *"Alert when EC2 memory usage exceeds 80%."* → **CloudWatch Agent + custom metric + CloudWatch Alarm**
+> "An application running on EC2 occasionally runs out of memory. The architect needs to monitor memory utilization."
 
-> *"Monitor CPU and memory usage of individual processes on an RDS instance."* → **RDS Enhanced Monitoring**
+→ **CloudWatch Agent**
 
-> *"Trigger an alarm when the application logs more than 100 ERROR messages in 5 minutes."* → **CloudWatch Logs Metric Filter + Alarm**
-
-> *"Query application logs to find requests taking more than 2 seconds."* → **CloudWatch Logs Insights**
-
-> *"Process log entries in real time as they are written."* → **CloudWatch Logs Subscription Filter → Lambda/Kinesis**
-
-> *"Show the security group configuration as it existed last Tuesday."* → **AWS Config**
-
-> *"Identify security groups that allow SSH from the Internet."* → **AWS Config Rule**
-
-> *"Automatically fix noncompliant security groups."* → **Config Rule + remediation action / SSM Automation**
-
-> *"A request crosses multiple microservices; identify which service adds the latency."* → **X-Ray**
-
-> *"Identify who downloaded a specific S3 object."* → **CloudTrail S3 Data Events**
-
-> *"Keep API activity records for seven years."* → **CloudTrail Trail → S3**
-
-> *"Prove CloudTrail logs were not tampered with."* → **CloudTrail Log File Integrity Validation**
-
-> *"Detect unusual spikes in AWS API activity."* → **CloudTrail Insights**
-
-> *"Prevent users from disabling a security control across the organization."* → **SCP**, not Config
+```text
+EC2
+ ↓
+CloudWatch Agent
+ ↓
+Memory metric
+ ↓
+CloudWatch Alarm
+```
 
 ---
 
-## Pocket card
+## 2. EC2 swap monitoring
+
+> "Several EC2 instances are failing because of insufficient swap space. Monitor swap utilization."
+
+→ **CloudWatch Agent**
+
+Current agent metric:
+
+```text
+swap_used_percent
+```
+
+(Some question banks may call this `SwapUtilization`.)
+
+---
+
+## 3. EC2 disk-space monitoring
+
+> "Alert when `/var` reaches 90% disk utilization."
+
+→ **CloudWatch Agent**
+
+Because this is **filesystem-level information inside the OS**.
+
+---
+
+## 4. EC2 metric frequency
+
+> "The company needs EC2 metrics every minute rather than every five minutes."
+
+→ **EC2 Detailed Monitoring**
+
+```text
+Basic
+→ 5 minutes
+
+Detailed
+→ 1 minute
+```
+
+---
+
+## 5. EC2 process monitoring
+
+> "Find how much CPU and memory a specific process is consuming."
+
+→ **CloudWatch Agent with process/procstat monitoring**
+
+---
+
+## 6. RDS overall CPU
+
+> "Monitor the CPU utilization of an RDS instance."
+
+→ **CloudWatch**
+
+---
+
+## 7. RDS process-level CPU/memory
+
+> "Monitor CPU and memory usage of individual processes on an RDS instance."
+
+→ **RDS Enhanced Monitoring**
+
+---
+
+## 8. RDS query performance
+
+> "Determine which SQL statements are responsible for database load."
+
+→ **RDS Performance Insights**
+
+---
+
+## 9. Log message alarm
+
+> "Send an alert if the application generates more than 100 ERROR entries in five minutes."
+
+→ **CloudWatch Logs Metric Filter + CloudWatch Alarm**
+
+---
+
+## 10. Search logs
+
+> "Find requests that took more than two seconds."
+
+→ **CloudWatch Logs Insights**
+
+---
+
+## 11. Real-time log processing
+
+> "Send application logs to Lambda for real-time processing."
+
+→ **CloudWatch Logs Subscription Filter → Lambda**
+
+---
+
+## 12. Identify who performed an API action
+
+> "Who terminated the EC2 instance?"
+
+→ **CloudTrail**
+
+---
+
+## 13. Identify who deleted an S3 object
+
+> "Who deleted this specific object from an S3 bucket?"
+
+→ **CloudTrail S3 Data Events**
+
+---
+
+## 14. Long-term API auditing
+
+> "Keep API activity records for seven years."
+
+→ **CloudTrail Trail → S3**
+
+---
+
+## 15. Unusual API activity
+
+> "Detect unusual spikes in API activity."
+
+→ **CloudTrail Insights**
+
+---
+
+## 16. Prove logs were not modified
+
+> "Provide evidence that CloudTrail logs have not been tampered with."
+
+→ **CloudTrail Log File Integrity Validation**
+
+---
+
+## 17. Historical configuration
+
+> "What did this security group look like last Tuesday?"
+
+→ **AWS Config**
+
+---
+
+## 18. Compliance
+
+> "Identify security groups that allow SSH from the Internet."
+
+→ **AWS Config Rule**
+
+---
+
+## 19. Automatic compliance remediation
+
+> "Automatically fix resources that violate the security rule."
+
+→ **AWS Config Rule + remediation**
+
+Often:
+
+```text
+Config
+ ↓
+Noncompliant
+ ↓
+SSM Automation
+ ↓
+Fix
+```
+
+---
+
+## 20. Prevent the action
+
+> "Prevent developers from disabling CloudTrail."
+
+→ **IAM / SCP / preventive control**
+
+Not:
+
+→ AWS Config
+
+---
+
+## 21. Distributed application latency
+
+> "A request passes through API Gateway, Lambda, several microservices, and DynamoDB. Find which component is causing the delay."
+
+→ **X-Ray**
+
+---
+
+# Very Common Monitoring Traps
+
+## Trap 1 — "Detailed Monitoring" sounds like detailed OS monitoring
+
+It isn't.
+
+```text
+EC2 Detailed Monitoring
+= more frequent standard EC2 metrics
+
+CloudWatch Agent
+= OS-level metrics
+```
+
+---
+
+## Trap 2 — CloudWatch vs CloudWatch Agent
+
+Both are CloudWatch-related, but remember:
+
+```text
+CloudWatch
+= monitoring platform
+
+CloudWatch Agent
+= software running on the server
+  that collects additional OS metrics
+```
+
+---
+
+## Trap 3 — CloudWatch Agent vs RDS Enhanced Monitoring
+
+```text
+EC2 memory/swap/disk
+→ CloudWatch Agent
+
+RDS OS-level process/memory monitoring
+→ Enhanced Monitoring
+```
+
+---
+
+## Trap 4 — Enhanced Monitoring vs Performance Insights
+
+```text
+OS/process information
+→ Enhanced Monitoring
+
+Database/query/load information
+→ Performance Insights
+```
+
+---
+
+## Trap 5 — CloudWatch Logs vs CloudTrail
+
+```text
+Application logs
+→ CloudWatch Logs
+
+AWS API activity
+→ CloudTrail
+```
+
+Example:
+
+```text
+"Application returned HTTP 500"
+→ CloudWatch Logs
+
+"Who deleted the EC2 instance?"
+→ CloudTrail
+```
+
+---
+
+## Trap 6 — CloudTrail vs Config
+
+```text
+Who changed the resource?
+→ CloudTrail
+
+What did the resource look like?
+→ Config
+```
+
+Example:
+
+```text
+Who changed the security group?
+→ CloudTrail
+
+What was the security group's configuration yesterday?
+→ Config
+```
+
+---
+
+## Trap 7 — Config vs IAM/SCP
+
+```text
+Detect noncompliance
+→ Config
+
+Prevent unauthorized action
+→ IAM / SCP
+```
+
+---
+
+## Trap 8 — CloudWatch vs X-Ray
+
+```text
+Metric shows high latency
+→ CloudWatch
+
+Find which service/hop caused the latency
+→ X-Ray
+```
+
+---
+
+# Pocket Card
 
 | Keyword                         | Answer                            |
 | ------------------------------- | --------------------------------- |
@@ -699,8 +1302,13 @@ X-Ray
 | Query logs                      | **Logs Insights**                 |
 | Real-time log processing        | **Subscription Filter**           |
 | Reduce alert noise              | **Composite Alarm**               |
-| EC2 memory / disk-space metrics | **CloudWatch Agent**              |
+| EC2 memory                      | **CloudWatch Agent**              |
+| EC2 swap                        | **CloudWatch Agent**              |
+| EC2 filesystem disk usage       | **CloudWatch Agent**              |
+| EC2 process metrics             | **CloudWatch Agent / procstat**   |
+| EC2 metrics every 1 minute      | **Detailed Monitoring**           |
 | RDS process-level CPU/memory    | **Enhanced Monitoring**           |
+| RDS query/database load         | **Performance Insights**          |
 | Who did what / API audit        | **CloudTrail**                    |
 | Long-term API logs              | **CloudTrail Trail → S3**         |
 | S3 object-level "who"           | **CloudTrail Data Events**        |
@@ -712,11 +1320,19 @@ X-Ray
 | Prevent an action               | **IAM / SCP**                     |
 | Trace request across services   | **X-Ray**                         |
 
-## Final memory
+---
+
+# Final Memory
 
 ```text
 CloudWatch
 = HOW IS IT PERFORMING?
+
+CloudWatch Agent
+= WHAT IS HAPPENING INSIDE THE OS?
+
+CloudWatch Detailed Monitoring
+= GIVE ME STANDARD EC2 METRICS MORE FREQUENTLY
 
 CloudTrail
 = WHO DID WHAT?
@@ -729,14 +1345,36 @@ X-Ray
 = WHICH PART OF THE REQUEST IS SLOW?
 ```
 
-### The most important RDS monitoring distinction
+## The most important monitoring distinctions
 
 ```text
-Overall RDS CPU
+EC2 overall CPU
 → CloudWatch
 
-RDS process-level CPU / memory
-→ Enhanced Monitoring
-```
+EC2 memory / swap / filesystem
+→ CloudWatch Agent
 
-You now have the monitoring services separated by exactly what the exam is asking you to **measure, audit, inspect, or trace**.
+EC2 standard metrics every 1 minute
+→ Detailed Monitoring
+
+RDS overall CPU
+→ CloudWatch
+
+RDS OS / process CPU and memory
+→ Enhanced Monitoring
+
+RDS database/query workload
+→ Performance Insights
+
+Application logs
+→ CloudWatch Logs
+
+AWS API actions
+→ CloudTrail
+
+Resource configuration history / compliance
+→ AWS Config
+
+Distributed request tracing
+→ X-Ray
+```
