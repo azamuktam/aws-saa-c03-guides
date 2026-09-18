@@ -1,8 +1,8 @@
-# Section 17: SQS, SNS & Kinesis — the messaging block
+# Section 17: SQS, SNS, SWF, Step Functions & Kinesis — the messaging block
 
 ## The idea
 
-Messaging services help **decouple application components** so they do not need to communicate directly.
+Messaging and integration services help **decouple application components** so they do not need to communicate directly.
 
 Without a queue:
 
@@ -56,6 +56,8 @@ SQS
     ↓
 Consumer
 ```
+
+---
 
 ## Visibility timeout
 
@@ -116,11 +118,11 @@ The message becomes visible again after 30 seconds even though the first worker 
 
 ### Fix
 
-> **Increase the visibility timeout.**
+→ **Increase the visibility timeout**
 
 ---
 
-## Dead-Letter Queue (DLQ)
+# Dead-Letter Queue (DLQ)
 
 A **Dead-Letter Queue** stores messages that repeatedly fail processing.
 
@@ -146,7 +148,7 @@ This prevents a bad message from continuously returning to the main queue.
 
 ---
 
-## Long polling
+# Long polling
 
 With short polling, a consumer repeatedly checks the queue and may receive empty responses.
 
@@ -164,7 +166,7 @@ This reduces:
 
 ---
 
-## SQS message size
+# SQS message size
 
 The maximum SQS message size is **256 KB**.
 
@@ -184,7 +186,7 @@ Send S3 location in SQS message
 
 ---
 
-## SQS message retention
+# SQS message retention
 
 SQS retains messages for:
 
@@ -197,12 +199,12 @@ SQS is a queue, not permanent storage.
 
 # Standard vs FIFO
 
-|            | Standard                          | FIFO                                           |
-| ---------- | --------------------------------- | ---------------------------------------------- |
-| Throughput | Very high / virtually unlimited   | **300 msg/s** or **3,000 msg/s with batching** |
-| Delivery   | At-least-once                     | Exactly-once processing support                |
-| Ordering   | Best-effort                       | **Strict order**                               |
-| Use when   | Highest throughput / normal queue | Ordering or duplicate-sensitive workloads      |
+|            | Standard                          | FIFO                                                                                                |
+| ---------- | --------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Throughput | Very high / virtually unlimited   | **300 msg/s** or **3,000 msg/s with batching** per FIFO queue without high-throughput FIFO settings |
+| Delivery   | At-least-once                     | Designed to avoid duplicates through FIFO deduplication                                             |
+| Ordering   | Best-effort                       | **Strict order**                                                                                    |
+| Use when   | Highest throughput / normal queue | Ordering or duplicate-sensitive workloads                                                           |
 
 ## Standard Queue
 
@@ -226,9 +228,13 @@ Use FIFO when:
 
 → **SQS FIFO**
 
+### Important nuance
+
+FIFO provides **exactly-once processing support / deduplication behavior**, but your application should still be designed carefully for retries and side effects.
+
 ---
 
-## SQS + Auto Scaling
+# SQS + Auto Scaling
 
 A common architecture is:
 
@@ -299,7 +305,7 @@ The key idea is:
 
 ---
 
-## SNS push model
+# SNS push model
 
 SNS uses a **push** model.
 
@@ -325,7 +331,7 @@ SNS
 
 ---
 
-## SNS message storage
+# SNS message storage
 
 SNS is not a long-term message queue.
 
@@ -375,7 +381,7 @@ Without SQS:
 SNS → Fraud service
 ```
 
-The application does not have a queue where the messages can wait for that consumer.
+There is no queue where the messages can wait for that consumer.
 
 With SQS:
 
@@ -395,7 +401,7 @@ The queue can hold the messages until the service recovers.
 
 ---
 
-## SNS message filtering
+# SNS message filtering
 
 SNS supports **subscription filter policies**.
 
@@ -411,9 +417,384 @@ Fraud subscription   → suspicious events
 Shipping subscription → shipment events
 ```
 
+The publisher sends **one message** to the SNS topic with message attributes or body values used by the filter policy.
+
+Example:
+
+```text
+quoteType = "home"
+```
+
+SNS evaluates each subscription:
+
+```text
+Auto SQS  → filter: auto  → ❌
+Home SQS  → filter: home  → ✅
+Life SQS  → filter: life  → ❌
+```
+
 ### Signal
 
 > **Different subscribers should receive different message types → SNS message filtering**
+
+---
+
+# SWF — Simple Workflow Service
+
+**Amazon SWF = managed workflow orchestration for distributed applications.**
+
+SWF coordinates **long-running, asynchronous workflows** made up of multiple tasks.
+
+The important exam concept is that the workers performing those tasks can run:
+
+* on Amazon EC2
+* on AWS infrastructure
+* on **on-premises servers**
+* in other environments that can reach SWF
+
+A classic exam pattern is a company with workloads in both AWS and on-premises that needs a **distributed workflow**.
+
+---
+
+## SWF basic architecture
+
+```text
+                    Amazon SWF
+                        │
+             ┌──────────┴──────────┐
+             ↓                     ↓
+       Workflow logic          Task coordination
+             │
+       ┌─────┴─────┐
+       ↓           ↓
+   EC2 worker   On-prem worker
+```
+
+SWF coordinates things such as:
+
+* task scheduling
+* task dependencies
+* workflow state
+* retries
+* failures
+* sequential tasks
+* parallel tasks
+
+The workers perform the actual business logic.
+
+---
+
+# SWF vs SQS
+
+These services are related, but they solve different problems.
+
+### SQS
+
+**SQS = message queue / application decoupling**
+
+```text
+Producer
+   ↓
+  SQS
+   ↓
+Consumer
+```
+
+Main idea:
+
+> **Put work into a queue so another application can process it later.**
+
+### SWF
+
+**SWF = workflow orchestration**
+
+```text
+Start workflow
+      ↓
+Task A
+      ↓
+Task B
+      ↓
+Task C
+      ↓
+Complete
+```
+
+Main idea:
+
+> **Coordinate a multi-step workflow and keep track of workflow progress.**
+
+---
+
+# SWF and AWS + on-premises
+
+This is a particularly useful exam clue.
+
+### SQS example
+
+```text
+On-premises application
+        ↓
+       SQS
+        ↓
+     EC2 worker
+```
+
+SQS decouples the applications through messages.
+
+### SWF example
+
+```text
+              SWF
+               │
+       ┌───────┴───────┐
+       ↓               ↓
+On-premises worker   EC2 worker
+       │               │
+       └───────┬───────┘
+               ↓
+        Workflow continues
+```
+
+### Exam signal
+
+> **"Coordinate tasks performed by workers running both on-premises and in AWS."**
+
+→ **SWF**
+
+---
+
+# SWF workflow components
+
+A simplified SWF workflow contains:
+
+```text
+Workflow
+   ↓
+Decider
+   ↓
+Activity tasks
+   ↓
+Activity workers
+```
+
+## Decider
+
+The **decider** determines what should happen next in the workflow.
+
+Example:
+
+```text
+Payment successful?
+       │
+   ┌───┴───┐
+   ↓       ↓
+  YES      NO
+   ↓       ↓
+Ship     Cancel
+```
+
+## Activity worker
+
+An **activity worker** performs the actual business task.
+
+Examples:
+
+```text
+Payment worker
+Shipping worker
+Document-processing worker
+On-premises validation worker
+```
+
+Workers poll SWF for tasks and report the results back.
+
+---
+
+# Sequential and parallel workflows
+
+SWF can coordinate both sequential and parallel activities.
+
+### Sequential
+
+```text
+Task A
+  ↓
+Task B
+  ↓
+Task C
+```
+
+### Parallel
+
+```text
+        ┌→ Task A ─┐
+Start ──┤          ├→ Continue
+        └→ Task B ─┘
+```
+
+---
+
+# When to choose SWF
+
+Choose SWF when the question emphasizes:
+
+* distributed workflow
+* long-running workflow
+* asynchronous workflow
+* multiple workflow steps
+* task coordination
+* workflow state
+* workers running on **AWS and on-premises**
+* sequential or parallel activities
+
+### Strong exam signal
+
+> **"Coordinate tasks performed by workers running both on-premises and in AWS."**
+
+→ **SWF**
+
+---
+
+# SWF vs Step Functions
+
+For **modern AWS architecture**, **AWS Step Functions** is the more important modern workflow orchestration service.
+
+SWF is a **legacy/older workflow service** that can still appear in SAA-style questions.
+
+```text
+SWF
+= older distributed workflow service
+= custom workers
+= can coordinate AWS + on-premises workers
+
+Step Functions
+= modern AWS workflow orchestration
+= state-machine based
+= integrates directly with many AWS services
+```
+
+Step Functions can also interact with external workers through **Activities**, so the distinction is not simply "SWF = on-premises and Step Functions = AWS."
+
+For exam questions, the strongest SWF clue is:
+
+> **Distributed, long-running workflows with workers running across environments, including on-premises.**
+
+---
+
+# Step Functions — modern workflow orchestration
+
+**AWS Step Functions = managed workflow orchestration using state machines.**
+
+It lets you coordinate multiple AWS services and application steps into a workflow.
+
+Example:
+
+```text
+Order
+  ↓
+Validate
+  ↓
+Charge payment
+  ↓
+Ship
+  ↓
+Send notification
+```
+
+It can coordinate services such as:
+
+* Lambda
+* ECS
+* SNS
+* SQS
+* DynamoDB
+* AWS Batch
+* Glue
+* other AWS services
+
+---
+
+## Step Functions state machine
+
+A workflow is represented as states and transitions.
+
+Example:
+
+```text
+Start
+  ↓
+Validate Order
+  ↓
+Payment
+  ↓
+Choice
+ ┌──┴──┐
+ ↓     ↓
+Ship  Cancel
+  \    /
+   ↓  ↓
+    End
+```
+
+### Common state types
+
+* Task
+* Choice
+* Wait
+* Parallel
+* Map
+* Pass
+* Succeed
+* Fail
+
+### Signal
+
+> **"Coordinate several AWS services through a visual/state-machine workflow."**
+
+→ **Step Functions**
+
+---
+
+# Step Functions vs SQS
+
+These are not replacements for each other.
+
+```text
+SQS
+= queue work
+
+Step Functions
+= orchestrate workflow steps
+```
+
+Example:
+
+```text
+Order service
+    ↓
+   SQS
+    ↓
+Worker
+```
+
+SQS simply buffers/distributes work.
+
+But:
+
+```text
+Step Functions
+    ↓
+Validate
+    ↓
+Charge
+    ↓
+Choice
+    ↓
+Ship / Cancel
+```
+
+Step Functions manages the **workflow logic and state**.
 
 ---
 
@@ -453,7 +834,7 @@ Both applications can process the same data.
 
 ---
 
-## Replay
+# Replay
 
 Kinesis Data Streams retains records so consumers can process them again.
 
@@ -473,11 +854,11 @@ This means applications can go back and reprocess older records within the reten
 
 ---
 
-## Shards
+# Shards
 
-Kinesis Data Streams uses **shards** as the basic capacity unit.
+Kinesis Data Streams uses **shards** as a basic capacity unit.
 
-A shard provides approximately:
+A traditional provisioned shard provides approximately:
 
 * **1 MB/s write throughput**
 * **2 MB/s read throughput**
@@ -496,19 +877,19 @@ Ordered records
 
 ### Signal
 
-> **Need higher stream throughput → increase the number of shards**
+> **Need higher provisioned stream throughput → increase the number of shards**
 
 ---
 
 # Kinesis Data Streams vs SQS
 
-|              | SQS                                    | Kinesis Data Streams                             |
-| ------------ | -------------------------------------- | ------------------------------------------------ |
-| Main purpose | Decoupling / work queues               | Real-time streaming                              |
-| Consumption  | One consumer processes a message       | Multiple applications can read the same data     |
-| Replay       | Not designed for replay after deletion | **Yes, within retention period**                 |
-| Ordering     | FIFO only                              | Ordering within a shard                          |
-| Typical use  | Background jobs, buffering             | Streaming analytics, telemetry, event processing |
+|              | SQS                                  | Kinesis Data Streams                             |
+| ------------ | ------------------------------------ | ------------------------------------------------ |
+| Main purpose | Decoupling / work queues             | Real-time streaming                              |
+| Consumption  | One consumer processes a message     | Multiple applications can read the same stream   |
+| Replay       | Not designed for stream-style replay | **Yes, within retention period**                 |
+| Ordering     | FIFO only                            | Ordering within a shard                          |
+| Typical use  | Background jobs, buffering           | Streaming analytics, telemetry, event processing |
 
 ### Two important Kinesis signals
 
@@ -592,7 +973,7 @@ Kinesis Data Firehose
 
 ---
 
-# Amazon Kinesis Video Streams
+# Kinesis Video Streams
 
 **Amazon Kinesis Video Streams = capture, transport, store, and process video streams for analysis and playback.**
 
@@ -674,16 +1055,134 @@ Amazon MQ
 
 ---
 
-# Four-way decision table
+# Decoupled AWS + On-Premises Architecture
 
-| Service                   | Model                      | Consumers                                | Storage / Replay                     | Pick when                                                            |
-| ------------------------- | -------------------------- | ---------------------------------------- | ------------------------------------ | -------------------------------------------------------------------- |
-| **SQS**                   | Queue, PULL                | One consumer per message                 | Message retention, not stream replay | Decouple applications, buffer spikes, distribute work                |
-| **SNS**                   | Pub/Sub, PUSH              | Many subscribers                         | Not a durable work queue             | Notify many systems                                                  |
-| **Kinesis Data Streams**  | Real-time stream           | Many consumers can read the same data    | **24h–365d, replayable**             | Streaming analytics, multiple consumers, reprocessing                |
-| **Kinesis Data Firehose** | Managed delivery           | AWS manages delivery                     | Destination-based delivery           | Deliver streams to S3/Redshift/OpenSearch/Splunk with minimal effort |
-| **Kinesis Video Streams** | Video streaming            | Video processing / playback applications | Video stream storage                 | Cameras, video feeds, media processing                               |
-| **Amazon MQ**             | Traditional message broker | Broker clients                           | Broker semantics                     | Existing RabbitMQ/ActiveMQ applications                              |
+This is an important SAA pattern.
+
+Suppose a company has:
+
+```text
+AWS
+  └── EC2 application
+
+On-premises
+  └── Internal application
+```
+
+The goal is to decouple them.
+
+Several AWS integration services can be used depending on the requirement.
+
+### SQS
+
+Use SQS when the requirement is:
+
+> **Asynchronous message-based decoupling**
+
+```text
+On-premises
+    ↓
+   SQS
+    ↓
+   EC2
+```
+
+### SWF
+
+Use SWF when the requirement is:
+
+> **Coordinate a distributed workflow across workers in AWS and on-premises**
+
+```text
+              SWF
+             /   \
+            /     \
+      EC2 worker  On-prem worker
+```
+
+### Step Functions
+
+Use Step Functions when the requirement is:
+
+> **Modern workflow orchestration using AWS services/state machines**
+
+---
+
+# What is NOT a decoupling service?
+
+Several AWS services may connect or store data but do not themselves provide application decoupling.
+
+### DynamoDB
+
+```text
+Database
+≠
+Message queue
+```
+
+### RDS
+
+```text
+Relational database
+≠
+Message queue
+```
+
+### VPC Peering
+
+```text
+Network connectivity
+≠
+Application decoupling
+```
+
+For AWS-to-on-premises network connectivity, think:
+
+```text
+Site-to-Site VPN
+or
+AWS Direct Connect
+```
+
+But network connectivity itself does not create a decoupled message architecture.
+
+---
+
+# Amazon SQS vs SWF vs Step Functions
+
+| Service            | Main purpose                       | Key clue                                    |
+| ------------------ | ---------------------------------- | ------------------------------------------- |
+| **SQS**            | Message queue / decoupling         | Buffer work between applications            |
+| **SWF**            | Distributed workflow orchestration | Long-running workflow + distributed workers |
+| **Step Functions** | Modern workflow orchestration      | State machine + AWS service orchestration   |
+
+### Memory
+
+```text
+SQS
+= QUEUE WORK
+
+SWF
+= COORDINATE DISTRIBUTED WORKFLOW
+
+Step Functions
+= MODERN AWS WORKFLOW
+```
+
+---
+
+# Four-way / seven-way decision table
+
+| Service                   | Model                       | Main purpose                       | Pick when                                                              |
+| ------------------------- | --------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
+| **SQS**                   | Queue, PULL                 | Application decoupling / buffering | Background work, traffic spikes, asynchronous processing               |
+| **SNS**                   | Pub/Sub, PUSH               | Notification / fan-out             | One event should reach many subscribers                                |
+| **SWF**                   | Workflow orchestration      | Distributed workflow coordination  | Long-running workflows with distributed workers, including on-premises |
+| **Step Functions**        | State-machine orchestration | Modern workflow coordination       | Coordinate AWS services and workflow logic                             |
+| **Kinesis Data Streams**  | Real-time stream            | Streaming event processing         | Multiple consumers, replay, real-time analytics                        |
+| **Kinesis Data Firehose** | Managed delivery            | Stream → supported destination     | Minimal operational effort                                             |
+| **Kinesis Video Streams** | Video streaming             | Video/media ingestion              | Cameras and video processing                                           |
+| **Amazon MQ**             | Traditional message broker  | Compatibility                      | Existing RabbitMQ/ActiveMQ applications                                |
 
 ---
 
@@ -709,11 +1208,17 @@ The queue absorbs the spike while additional workers process the messages.
 
 ---
 
+> **"Different SQS queues should receive different types of SNS messages."**
+
+→ **One SNS topic + SQS subscriptions + SNS filter policies**
+
+---
+
 > **"Some SQS messages are being processed twice."**
 
 → **Increase the visibility timeout**
 
-The processing time is probably longer than the visibility timeout.
+The processing time may be longer than the visibility timeout.
 
 ---
 
@@ -753,47 +1258,79 @@ The processing time is probably longer than the visibility timeout.
 
 ---
 
-> **"An existing application uses RabbitMQ and should migrate to AWS without rewriting the application."**
+> **"An existing application uses RabbitMQ and should migrate to AWS without rewriting the messaging architecture."**
 
 → **Amazon MQ**
 
 ---
 
-> **"Different SNS subscribers should receive different types of messages."**
+> **"A long-running workflow needs to coordinate workers running both in AWS and on-premises."**
 
-→ **SNS message filtering**
+→ **SWF**
+
+---
+
+> **"A modern AWS-native workflow needs to coordinate Lambda, ECS, DynamoDB, and other AWS services."**
+
+→ **Step Functions**
+
+---
+
+> **"A company has AWS and on-premises systems and needs asynchronous decoupling through messages."**
+
+→ **SQS**
+
+---
+
+> **"Coordinate several sequential and parallel workflow tasks and track their state."**
+
+→ **SWF or Step Functions, depending on the architecture**
+
+For modern AWS-native designs:
+
+→ **Step Functions**
+
+For legacy/distributed-worker exam scenarios, especially workers across environments:
+
+→ **SWF**
 
 ---
 
 # Pocket card
 
-| Keyword                                            | Answer                              |
-| -------------------------------------------------- | ----------------------------------- |
-| Decouple applications / buffer spikes              | **SQS**                             |
-| One message → one worker                           | **SQS**                             |
-| Consumer PULLs messages                            | **SQS**                             |
-| Processing takes too long / duplicate processing   | **Increase visibility timeout**     |
-| Poison messages                                    | **DLQ + MaxReceiveCount**           |
-| Reduce empty polling                               | **Long polling (up to 20s)**        |
-| Strict order                                       | **SQS FIFO**                        |
-| Exactly-once processing requirement                | **SQS FIFO**                        |
-| Message > 256 KB                                   | **S3 + pointer**                    |
-| Retention                                          | **4 days default / 14 days max**    |
-| One → many                                         | **SNS**                             |
-| SNS pushes to subscribers                          | **SNS**                             |
-| Different subscribers need different message types | **SNS filtering**                   |
-| One event → multiple durable consumers             | **SNS → multiple SQS queues**       |
-| Multiple consumers read the same stream            | **Kinesis Data Streams**            |
-| Replay / reprocess streaming data                  | **Kinesis Data Streams**            |
-| Real-time event streaming                          | **Kinesis Data Streams**            |
-| Shard throughput                                   | **1 MB/s in, 2 MB/s out**           |
-| Ordering                                           | **Per shard**                       |
-| Stream → S3/Redshift/OpenSearch/Splunk             | **Kinesis Data Firehose**           |
-| Minimal operational effort for stream delivery     | **Firehose**                        |
-| Camera / video stream                              | **Kinesis Video Streams**           |
-| Existing RabbitMQ / ActiveMQ                       | **Amazon MQ**                       |
-| AMQP / MQTT / JMS / STOMP                          | **Amazon MQ**                       |
-| Workers scale on queue depth                       | **SQS + CloudWatch + Auto Scaling** |
+| Keyword                                            | Answer                                            |
+| -------------------------------------------------- | ------------------------------------------------- |
+| Decouple applications / buffer spikes              | **SQS**                                           |
+| One → one work processing                          | **SQS**                                           |
+| Consumer PULLs messages                            | **SQS**                                           |
+| Processing takes too long / duplicate processing   | **Increase visibility timeout**                   |
+| Poison messages                                    | **DLQ + MaxReceiveCount**                         |
+| Reduce empty polling                               | **Long polling (up to 20s)**                      |
+| Strict order                                       | **SQS FIFO**                                      |
+| Duplicate-sensitive workload                       | **SQS FIFO**                                      |
+| Message > 256 KB                                   | **S3 + pointer**                                  |
+| Retention                                          | **4 days default / 14 days max**                  |
+| One → many                                         | **SNS**                                           |
+| SNS pushes to subscribers                          | **SNS**                                           |
+| Different subscribers need different message types | **SNS filtering**                                 |
+| One event → multiple durable consumers             | **SNS → multiple SQS queues**                     |
+| Long-running distributed workflow                  | **SWF**                                           |
+| AWS + on-premises workflow workers                 | **SWF**                                           |
+| Modern AWS workflow orchestration                  | **Step Functions**                                |
+| State-machine workflow                             | **Step Functions**                                |
+| Multiple consumers read the same stream            | **Kinesis Data Streams**                          |
+| Replay / reprocess streaming data                  | **Kinesis Data Streams**                          |
+| Real-time event streaming                          | **Kinesis Data Streams**                          |
+| Shard throughput                                   | **~1 MB/s in, ~2 MB/s out per traditional shard** |
+| Ordering                                           | **Per shard**                                     |
+| Stream → S3 / Redshift / OpenSearch / Splunk       | **Kinesis Data Firehose**                         |
+| Minimal operational effort for stream delivery     | **Firehose**                                      |
+| Camera / video stream                              | **Kinesis Video Streams**                         |
+| Existing RabbitMQ / ActiveMQ                       | **Amazon MQ**                                     |
+| AMQP / MQTT / JMS / STOMP                          | **Amazon MQ**                                     |
+| Workers scale on queue depth                       | **SQS + CloudWatch + Auto Scaling**               |
+| AWS + on-premises asynchronous messaging           | **SQS**                                           |
+| AWS + on-premises distributed workflow             | **SWF**                                           |
 
 ---
 
@@ -803,13 +1340,25 @@ The processing time is probably longer than the visibility timeout.
 SQS
 = QUEUE
 = DECOUPLING
-= ONE WORKER PER MESSAGE
+= WORK
 = PULL
 
 SNS
 = PUB/SUB
-= ONE MESSAGE → MANY SUBSCRIBERS
+= FAN-OUT
+= NOTIFY
 = PUSH
+
+SWF
+= DISTRIBUTED WORKFLOW
+= COORDINATE TASKS
+= LONG-RUNNING WORKFLOWS
+= AWS + ON-PREMISES WORKERS
+
+Step Functions
+= MODERN WORKFLOW ORCHESTRATION
+= STATE MACHINE
+= AWS SERVICE INTEGRATION
 
 Kinesis Data Streams
 = REAL-TIME APPLICATION DATA
@@ -837,10 +1386,19 @@ Need to decouple workers?
 Need to notify many subscribers?
 → SNS
 
+Need different subscribers to receive different message types?
+→ SNS filtering
+
+Need a long-running distributed workflow across AWS/on-premises workers?
+→ SWF
+
+Need modern AWS workflow orchestration?
+→ Step Functions
+
 Need multiple consumers to read the same real-time data?
 → Kinesis Data Streams
 
-Need to replay streaming data?
+Need to replay/reprocess streaming data?
 → Kinesis Data Streams
 
 Need to deliver streaming data to S3/Redshift/OpenSearch/Splunk with minimal effort?
