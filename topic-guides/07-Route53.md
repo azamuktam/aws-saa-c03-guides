@@ -147,6 +147,111 @@ Do not use CNAME at the apex.
 
 ---
 
+# Route 53 + S3 static website hosting
+
+Route 53 can route a domain to an **S3 static website endpoint** using an **Alias record**.
+
+For the standard S3 website setup, the S3 bucket name should match the domain name.
+
+Example:
+
+```text
+Domain:
+www.example.com
+
+S3 bucket:
+www.example.com
+```
+
+Architecture:
+
+```text
+User
+  ↓
+www.example.com
+  ↓
+Route 53
+  ↓
+Alias record
+  ↓
+S3 static website endpoint
+  ↓
+Website
+```
+
+## Prerequisites / important points
+
+* The **domain name must be registered**.
+* The S3 bucket must be configured for **static website hosting**.
+* The **S3 bucket name must match the domain name** for the standard S3 website-hosting setup.
+* The S3 bucket and Route 53 hosted zone **do not need to be in the same Region**.
+* **CORS is not required** just to make the website accessible through Route 53.
+* **MX records are for email**, not website routing.
+
+### Exam signal
+
+> "A static website is hosted in an S3 bucket and a domain registered with Route 53 needs to point to it."
+
+Think:
+
+**S3 static website + Route 53 Alias + matching bucket/domain name**
+
+Example:
+
+```text
+example.com
+    ↓
+Route 53 Alias
+    ↓
+S3 bucket: example.com
+```
+
+### Important distinction
+
+The S3 bucket name matching the domain is particularly important for **S3 website hosting**.
+
+```text
+www.example.com
+       ↓
+S3 bucket: www.example.com
+```
+
+This is different from simply storing arbitrary objects in S3.
+
+### CORS
+
+CORS controls whether browser-based requests from one origin can access resources from another origin.
+
+It is **not a prerequisite for Route 53 → S3 website routing**.
+
+```text
+Route 53
+→ DNS routing
+
+CORS
+→ Browser cross-origin access
+```
+
+### HTTPS note
+
+The native S3 **website endpoint** does not provide HTTPS.
+
+For a production website requiring HTTPS, a common architecture is:
+
+```text
+User
+  ↓
+Route 53
+  ↓
+CloudFront
+  ↓
+S3 bucket
+```
+
+CloudFront can provide HTTPS using an ACM certificate.
+
+---
+
 # Hosted zones
 
 A **hosted zone** contains the DNS records for a domain.
@@ -421,7 +526,7 @@ A Route 53 health check determines whether the primary is healthy.
 * Disaster recovery
 * Use standby only if primary fails
 
-→ **Failover routing**
+→ **Failover routing + health check**
 
 ### Important
 
@@ -556,7 +661,7 @@ Route 53 health check based on alarm
 
 A calculated health check combines other health checks using logic.
 
-You can combine many child health checks and define whether the overall result should be healthy based on the configured logic.
+You can combine multiple child health checks and define whether the overall result should be healthy based on the configured logic.
 
 Example idea:
 
@@ -762,6 +867,9 @@ This allows traffic to move to another healthy endpoint without waiting for norm
 > **"Point a subdomain to another DNS name."**
 > → **CNAME**
 
+> **"A static website is hosted in an S3 bucket and a Route 53 domain needs to point to it."**
+> → **S3 static website hosting + matching bucket/domain name + Alias**
+
 > **"Send 10% of traffic to a new application version."**
 > → **Weighted routing**
 
@@ -795,6 +903,12 @@ This allows traffic to move to another healthy endpoint without waiting for norm
 > **"Private DNS names should resolve only inside a VPC."**
 > → **Private hosted zone**
 
+> **"On-premises DNS needs to resolve private DNS names in AWS."**
+> → **Inbound Resolver endpoint**
+
+> **"AWS resources need to resolve DNS names hosted on-premises."**
+> → **Outbound Resolver endpoint + forwarding rule**
+
 ---
 
 # Pocket card
@@ -805,6 +919,7 @@ This allows traffic to move to another healthy endpoint without waiting for norm
 | IPv6 DNS record                      | **AAAA**                                |
 | Name → another name                  | **CNAME**                               |
 | Root domain → AWS resource           | **Alias**                               |
+| S3 static website + Route 53         | **Matching bucket/domain name + Alias** |
 | Public DNS                           | **Public hosted zone**                  |
 | Internal VPC-only DNS                | **Private hosted zone**                 |
 | On-prem DNS → AWS                    | **Inbound Resolver endpoint**           |
@@ -876,7 +991,7 @@ CloudWatch alarm
 Route 53 health check
 ```
 
-Finally, ask whether DNS itself is the right tool:
+Then ask whether DNS itself is the right tool:
 
 ```text
 DNS-based regional routing
@@ -891,6 +1006,8 @@ Global Accelerator
 The most important SAA distinctions are:
 
 **Alias = AWS resource + root domain.**
+
+**S3 website = matching bucket/domain name + static website hosting.**
 
 **Weighted = percentage.**
 
