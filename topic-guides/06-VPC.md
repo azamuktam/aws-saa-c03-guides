@@ -352,7 +352,53 @@ Example:
 10.0.0.0/16
 ```
 
-The `/16` tells you how much of the address is fixed.
+`/16` means **the first 16 bits are fixed**, and an IPv4 address has **32 bits total**.
+
+IPv4 has 4 groups called **octets**:
+
+```text
+10 . 0 . 0 . 0
+ ↑    ↑   ↑   ↑
+ 1    2   3   4
+```
+
+Each octet is **8 bits**:
+
+```text
+8 + 8 + 8 + 8 = 32 bits
+```
+
+For:
+
+```text
+10.0.0.0/16
+```
+
+the first **16 bits = first 2 octets** are fixed:
+
+```text
+10 . 0 . X . X
+^^^^^^^^^^^^
+   fixed 16 bits
+```
+
+The last two octets can change:
+
+```text
+10.0.0.0
+10.0.0.1
+10.0.0.2
+...
+10.0.255.255
+```
+
+So:
+
+```text
+10.0.X.X
+```
+
+is the whole `/16` range.
 
 Common examples:
 
