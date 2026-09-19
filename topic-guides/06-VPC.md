@@ -336,9 +336,9 @@ Internet → EC2 ❌
 
 ### Memory
 
-> **IPv4 private outbound → NAT Gateway**
+> **NAT Gateway → public subnet → IPv4 outbound**
 
-> **IPv6 private outbound-only → Egress-Only IGW**
+> **Egress-Only IGW → VPC-attached → IPv6 outbound**
 
 ---
 
