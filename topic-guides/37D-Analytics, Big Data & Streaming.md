@@ -644,7 +644,29 @@ Redshift
 ```
 
 ---
+### Amazon Timestream
 
+**Amazon Timestream** is a fully managed **time-series database** designed for data that changes over time.
+
+Typical use cases:
+
+* IoT sensor data
+* Application and infrastructure metrics
+* Monitoring data
+* Device telemetry
+
+Example:
+
+```text
+10:00 → CPU = 45%
+10:01 → CPU = 52%
+10:02 → CPU = 61%
+```
+
+**Remember:**
+
+> **Timestream = time-series data over time**
+ 
 ## Athena vs Redshift
 
 The key distinction is where and how the data is queried.
