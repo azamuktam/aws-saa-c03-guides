@@ -42,6 +42,33 @@ Examples:
 
 Cost Explorer is mainly an **analysis and visualization tool**.
 
+### Cost Explorer API
+
+Cost Explorer is also available through an **API**, which is important when an application needs to work with AWS cost data automatically.
+
+Use the **Cost Explorer API** when an application needs to:
+
+* retrieve AWS cost and usage data programmatically
+* filter cost/usage data by dimensions such as **SERVICE**
+* generate custom cost reports automatically
+* forecast future costs or usage
+
+For large result sets, API responses can use **pagination**, allowing the application to retrieve additional pages of results.
+
+Example:
+
+> A company is building an automation tool that generates custom AWS usage-cost reports and needs to forecast costs for specific AWS services.
+
+Answer:
+
+**Use the Cost Explorer API.**
+
+**Remember:**
+
+> **Cost Explorer = analyze / visualize / forecast**
+>
+> **Cost Explorer API = programmatically retrieve / analyze / forecast**
+
 ---
 
 ### AWS Budgets
@@ -150,6 +177,23 @@ Cost Explorer helps you understand spending; Budgets is designed for thresholds 
 
 ---
 
+### Cost Explorer vs Cost Explorer API
+
+**"Analyze or visualize spending"** → Cost Explorer
+
+**"Programmatically retrieve cost/usage data"** → Cost Explorer API
+
+**"Build an automated custom cost report"** → Cost Explorer API
+
+**"Forecast costs programmatically"** → Cost Explorer API
+
+The key difference is:
+
+* **Cost Explorer** → analysis through the AWS cost-management interface
+* **Cost Explorer API** → application-level programmatic access
+
+---
+
 ### Cost Allocation Tags vs Budgets
 
 **"Track costs by department/team/project"** → Cost Allocation Tags
@@ -209,6 +253,9 @@ It is much less common than the other tools in typical SAA questions.
 | ----------------------------------------- | -------------------------- |
 | Visualize or analyze AWS spending         | **Cost Explorer**          |
 | Forecast spending                         | **Cost Explorer**          |
+| Programmatically access cost/usage data   | **Cost Explorer API**      |
+| Generate automated custom cost reports    | **Cost Explorer API**      |
+| Forecast costs programmatically           | **Cost Explorer API**      |
 | Alert when spending reaches a threshold   | **AWS Budgets**            |
 | Most detailed billing / line-item data    | **CUR**                    |
 | Query billing data with SQL               | **CUR + Athena**           |
@@ -223,6 +270,8 @@ It is much less common than the other tools in typical SAA questions.
 | Keyword                                      | Answer                 |
 | -------------------------------------------- | ---------------------- |
 | **Analyze / visualize / forecast**           | Cost Explorer          |
+| **Programmatically access cost/usage data**  | **Cost Explorer API**  |
+| **Automated custom cost reports**            | **Cost Explorer API**  |
 | **Alert / threshold / 80%**                  | AWS Budgets            |
 | **Detailed / line items / SQL / S3**         | CUR + Athena           |
 | **Unexpected / unusual / spike**             | Cost Anomaly Detection |
@@ -234,6 +283,7 @@ It is much less common than the other tools in typical SAA questions.
 ## The decision rule
 
 **Analyze** → Cost Explorer
+**Programmatically retrieve/analyze cost data** → Cost Explorer API
 **Alert** → AWS Budgets
 **Detailed billing data** → CUR
 **Unusual spending** → Cost Anomaly Detection
