@@ -31,6 +31,9 @@ Data lake + fine-grained permissions
 Salesforce → S3
 → AppFlow
 
+Find/subscribe to third-party datasets
+→ AWS Data Exchange
+
 Bulk operation on millions of existing S3 objects
 → S3 Batch Operations
 ```
@@ -471,6 +474,48 @@ Glue
 
 ---
 
+# AWS Data Exchange
+
+**AWS Data Exchange = discover, subscribe to, share, and use third-party datasets in AWS.**
+
+It provides a way for data providers to make datasets available and for data recipients to discover and subscribe to them. Data products can be available through **AWS Marketplace**, and supported dataset types include files, APIs, Amazon S3, Amazon Redshift, and AWS Lake Formation data.
+
+Typical use case:
+
+```text
+Third-party data provider
+          ↓
+   AWS Data Exchange
+          ↓
+      Subscriber
+          ↓
+   AWS analytics / ML
+```
+
+Example:
+
+> "A company wants to find and subscribe to a third-party dataset for use in its analytics workload."
+
+→ **AWS Data Exchange**
+
+### Signal
+
+> **Find / subscribe to third-party datasets → AWS Data Exchange**
+
+### Important distinction
+
+```text
+AppFlow
+= move data between supported SaaS applications and AWS
+
+Data Exchange
+= discover / subscribe to external datasets
+```
+
+AWS Data Exchange can provide data through several forms, including files, APIs, S3 data, Redshift data, and Lake Formation data.
+
+---
+
 # S3 Batch Operations
 
 **S3 Batch Operations = perform an operation on many existing S3 objects.**
@@ -660,6 +705,12 @@ Lake Formation
 
 ---
 
+> **"A company wants to find and subscribe to a third-party dataset for analytics."**
+
+→ **AWS Data Exchange**
+
+---
+
 > **"Apply an operation to millions of existing S3 objects."**
 
 → **S3 Batch Operations**
@@ -768,6 +819,18 @@ Transform data
 
 ---
 
+## AppFlow vs Data Exchange
+
+```text
+SaaS application → AWS
+→ AppFlow
+
+Third-party dataset → discover/subscribe/use
+→ AWS Data Exchange
+```
+
+---
+
 ## S3 Batch Operations vs normal S3 events
 
 ```text
@@ -807,6 +870,11 @@ What does the question want?
           │      ↓
           │   AppFlow
           │
+          ├── Find / subscribe to
+          │   third-party datasets
+          │      ↓
+          │   AWS Data Exchange
+          │
           └── Bulk operation on existing
               S3 objects
                  ↓
@@ -817,21 +885,22 @@ What does the question want?
 
 # Pocket Card
 
-| Keyword                               | Answer                  |
-| ------------------------------------- | ----------------------- |
-| Serverless ETL / data catalog         | **AWS Glue**            |
-| Discover schema                       | **Glue Crawler**        |
-| Automatically discover S3 file schema | **Glue Crawler**        |
-| Store metadata                        | **Glue Data Catalog**   |
-| Store table/schema definitions        | **Glue Data Catalog**   |
-| Transform data                        | **Glue ETL**            |
-| CSV → Parquet                         | **Glue ETL**            |
-| Data lake + fine-grained permissions  | **Lake Formation**      |
-| Table/row/column permissions          | **Lake Formation**      |
-| SaaS → S3                             | **AppFlow**             |
-| SaaS → Redshift                       | **AppFlow**             |
-| Bulk operation on existing S3 objects | **S3 Batch Operations** |
-| Millions/billions of existing objects | **S3 Batch Operations** |
+| Keyword                                | Answer                  |
+| -------------------------------------- | ----------------------- |
+| Serverless ETL / data catalog          | **AWS Glue**            |
+| Discover schema                        | **Glue Crawler**        |
+| Automatically discover S3 file schema  | **Glue Crawler**        |
+| Store metadata                         | **Glue Data Catalog**   |
+| Store table/schema definitions         | **Glue Data Catalog**   |
+| Transform data                         | **Glue ETL**            |
+| CSV → Parquet                          | **Glue ETL**            |
+| Data lake + fine-grained permissions   | **Lake Formation**      |
+| Table/row/column permissions           | **Lake Formation**      |
+| SaaS → S3                              | **AppFlow**             |
+| SaaS → Redshift                        | **AppFlow**             |
+| Find/subscribe to third-party datasets | **AWS Data Exchange**   |
+| Bulk operation on existing S3 objects  | **S3 Batch Operations** |
+| Millions/billions of existing objects  | **S3 Batch Operations** |
 
 ---
 
@@ -855,6 +924,9 @@ Lake Formation
 
 AppFlow
 = SAAS → AWS
+
+AWS Data Exchange
+= THIRD-PARTY DATA
 
 S3 Batch Operations
 = BULK OPERATIONS ON EXISTING S3 OBJECTS
@@ -881,6 +953,9 @@ Data lake + fine-grained permissions
 Salesforce / SaaS → S3 or Redshift
 → AppFlow
 
+Find or subscribe to third-party datasets
+→ AWS Data Exchange
+
 Millions of existing S3 objects
 → S3 Batch Operations
 ```
@@ -892,11 +967,12 @@ Millions of existing S3 objects
 For example:
 
 ```text
-ETL                → Glue
-Discover schema    → Crawler
-Store metadata     → Catalog
-CSV → Parquet      → Glue ETL
-Data lake access   → Lake Formation
-Salesforce → S3    → AppFlow
-Bulk S3 operation  → S3 Batch Operations
+ETL                    → Glue
+Discover schema        → Crawler
+Store metadata         → Catalog
+CSV → Parquet          → Glue ETL
+Data lake access       → Lake Formation
+Salesforce → S3        → AppFlow
+Third-party datasets   → Data Exchange
+Bulk S3 operation      → S3 Batch Operations
 ```
