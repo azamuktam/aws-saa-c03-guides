@@ -4,26 +4,20 @@
 
 A **VPC (Virtual Private Cloud)** is your private network inside AWS.
 
-You decide:
+You control:
 
-* which IP addresses the network uses
-* where resources are placed
-* which resources can access the internet
-* which resources can communicate with each other
-* how traffic is routed between resources and networks
+* IP address ranges
+* Resource placement
+* Internet access
+* Communication between resources/networks
+* Routing
 
-The basic structure is:
-
-```text
+```text id="s3k3h2"
 AWS Region
 └── VPC
-    ├── Subnet
-    │   └── EC2
-    └── Subnet
-        └── Database
+    ├── Subnet → EC2
+    └── Subnet → Database
 ```
-
-The most important idea:
 
 > **VPC = your AWS network**
 
@@ -31,283 +25,183 @@ The most important idea:
 
 # Boxes in boxes
 
-Everything is organized like this:
-
-```text
+```text id="0v4f6e"
 AWS Region
 └── VPC
-    ├── Availability Zone A
-    │   ├── Public Subnet
-    │   │   └── EC2
-    │   └── Private Subnet
-    │       └── EC2
+    ├── AZ-A
+    │   ├── Public Subnet → EC2
+    │   └── Private Subnet → EC2
     │
-    └── Availability Zone B
-        ├── Public Subnet
-        │   └── EC2
-        └── Private Subnet
-            └── Database
+    └── AZ-B
+        ├── Public Subnet → EC2
+        └── Private Subnet → Database
 ```
 
-* A **VPC belongs to one Region**.
-* A **subnet belongs to one Availability Zone**.
-* Therefore, a multi-AZ architecture needs **multiple subnets**.
-* A subnet contains resources such as EC2 instances.
-* **Route tables** decide where network traffic goes.
+* VPC → one Region
+* Subnet → one AZ
+* Multi-AZ → multiple subnets
+* Subnets contain resources
+* **Route tables determine traffic paths**
 
-Think of a route table as:
-
-> **"Traffic going to X should go through Y."**
+> Route table = **"Traffic to X goes through Y."**
 
 ---
 
 # Route tables
 
-A route table contains routes that determine where traffic is sent.
-
 Example:
 
-```text
+```text id="s0v5k6"
 Destination       Target
 0.0.0.0/0         Internet Gateway
 10.0.0.0/16       local
 ```
 
-The `local` route allows resources inside the VPC's CIDR range to communicate with each other according to security rules.
+The `local` route allows communication within the VPC CIDR, subject to security controls.
 
 ## Longest-prefix match
 
-If multiple routes match the destination, AWS uses the **most specific route**.
+When multiple routes match, the **most specific route wins**.
 
-This is called:
-
-> **Longest-prefix match**
-
-Example:
-
-```text
-10.0.0.0/16   → Transit Gateway
-10.0.1.0/24   → VPC Peering
-```
-
-Traffic to:
-
-```text
-10.0.1.50
-```
-
-uses:
-
-```text
+```text id="g3p4jq"
+10.0.0.0/16 → Transit Gateway
 10.0.1.0/24 → VPC Peering
 ```
 
-because `/24` is more specific than `/16`.
-
-### Memory
+Traffic to `10.0.1.50` uses `/24`.
 
 > **More specific route wins.**
 
 ---
 
-# Public vs private: it's all about the route
+# Public vs private
 
 A subnet is **public** when its route table has a route to an **Internet Gateway (IGW)**.
 
-Example:
-
-```text
+```text id="22wh0h"
 0.0.0.0/0 → Internet Gateway
 ```
 
-A subnet is **private** when it does not have a route to an Internet Gateway.
+A subnet is private when it has **no route to an IGW**.
+
+> **Public subnet = route to IGW**
+
+Not the subnet name and not simply having a public IP.
 
 ## Internet Gateway
 
-An **Internet Gateway (IGW)** provides internet connectivity to the VPC.
+Provides internet connectivity:
 
-```text
-EC2
- ↓
-IGW
- ↓
-Internet
+```text id="9l8w49"
+EC2 ↔ IGW ↔ Internet
 ```
 
-For IPv4, the IGW can support both:
-
-```text
-EC2 → Internet
-Internet → EC2
-```
-
-assuming the required routing, public IP addressing, and security rules allow it.
-
-### Most important rule
-
-> **Public subnet = route table has a route to an IGW.**
-
-Not the subnet name.
-
-Not simply having a public IP.
-
-**The route is what makes the subnet public.**
+For IPv4, both directions are possible if routing, public IP addressing, and security rules allow it.
 
 ---
 
-# Public subnet vs Internet-reachable EC2
+# Public subnet vs internet-reachable EC2
 
-A public subnet and a publicly reachable EC2 instance are related but not identical.
+For IPv4 Internet reachability, an EC2 instance normally needs:
 
-For an EC2 instance to be reachable from the IPv4 Internet, it normally needs:
-
-```text
+```text id="7v5d2t"
 Public subnet
 +
-Public IPv4 address / Elastic IP
+Public IPv4 / Elastic IP
 +
-Security Group / NACL rules allowing the traffic
+Allowed SG/NACL traffic
 ```
 
-So:
+Therefore:
 
-```text
+```text id="3np5yk"
 Public subnet
 = route to IGW
 
 Internet-reachable EC2
-= public subnet
-+ public IP
-+ allowed traffic
+= public subnet + public IP + allowed traffic
 ```
-
-A private instance can still have an IPv4 address inside the VPC, but without a public IPv4 address it is not directly reachable from the public Internet through the IGW.
 
 ---
 
 # Internet access components
 
-| VPC component                    | IP version  | Traffic       | Main purpose                                    |
-| -------------------------------- | ----------- | ------------- | ----------------------------------------------- |
-| **Internet Gateway (IGW)**       | IPv4 + IPv6 | Two-way       | Internet access for public resources            |
-| **NAT Gateway**                  | IPv4        | Outbound only | Private IPv4 resources → Internet               |
-| **Egress-Only Internet Gateway** | IPv6        | Outbound only | Private IPv6 resources → Internet               |
-| **VPC Endpoint**                 | IPv4/IPv6   | Private       | Access AWS services without the public internet |
+| Component            | IP          | Traffic  | Purpose                              |
+| -------------------- | ----------- | -------- | ------------------------------------ |
+| **Internet Gateway** | IPv4 + IPv6 | Two-way  | Internet access for public resources |
+| **NAT Gateway**      | IPv4        | Outbound | Private IPv4 → Internet              |
+| **Egress-Only IGW**  | IPv6        | Outbound | Private IPv6 → Internet              |
+| **VPC Endpoint**     | IPv4/IPv6   | Private  | Access AWS services privately        |
 
 ---
 
-# NAT Gateway — outbound internet for private instances
+# NAT Gateway — private IPv4 outbound
 
-A private EC2 instance may need to:
+Used when private instances need:
 
-* download updates
-* call an external API
-* download packages
+* OS/package updates
+* External APIs
+* Internet access
 
-But you don't want the internet to start connections to that instance.
-
-Use a **NAT Gateway**.
-
-```text
+```text id="te1mb2"
 Private EC2
-     ↓
+ ↓
 NAT Gateway
-     ↓
+ ↓
 Internet Gateway
-     ↓
+ ↓
 Internet
 ```
 
-This allows:
-
-```text
+```text id="l1v2g1"
 Private EC2 → Internet ✅
 Internet → Private EC2 ❌
 ```
 
----
-
 ## NAT Gateway placement
 
-A traditional **zonal NAT Gateway** is placed in a public subnet.
+A traditional zonal NAT Gateway is in a **public subnet**.
 
-The private subnet's route table points to the NAT Gateway:
+Private subnet route:
 
 ```text
 0.0.0.0/0 → NAT Gateway
 ```
 
-The NAT Gateway then uses the Internet Gateway to reach the internet.
+NAT then uses the IGW.
 
----
+## NAT availability
 
-## NAT Gateway availability
+Traditional high-availability pattern:
 
-For the classic highly available architecture:
-
-```text
-AZ-A
-Private Subnet
-     ↓
-NAT Gateway A
-
-AZ-B
-Private Subnet
-     ↓
-NAT Gateway B
-```
-
-This avoids depending on a single AZ's NAT Gateway.
-
-### Why one NAT Gateway can be a problem
-
-Suppose:
-
-```text
-AZ-A → NAT Gateway A
-AZ-B → uses NAT Gateway A
-```
-
-If AZ-A fails, AZ-B can lose its internet path too.
-
-For the traditional AZ-isolated design:
-
-```text
+```text id="m99eqx"
 AZ-A → NAT Gateway A
 AZ-B → NAT Gateway B
 ```
 
-### Important current AWS nuance
+Avoid making one AZ's NAT Gateway a dependency for another AZ.
 
-AWS also provides **Regional NAT Gateways**.
+### Current AWS nuance
 
-A Regional NAT Gateway is designed to automatically expand across Availability Zones, so you don't have to create separate zonal NAT gateways purely for AZ scaling.
+AWS also provides **Regional NAT Gateways**, which automatically expand across AZs.
 
-For SAA questions, still remember the classic pattern:
+For SAA:
 
-> **One zonal NAT Gateway per AZ = traditional high-availability design**
+> **Traditional HA design → one zonal NAT Gateway per AZ**
 
-But know that:
-
-> **Regional NAT Gateway = managed cross-AZ expansion**
+> **Regional NAT Gateway → managed cross-AZ expansion**
 
 ---
 
 # NAT Gateway vs NAT Instance
 
-### NAT Gateway
-
-* AWS-managed
-* automatically scales
-* no security group
-* pay for hourly usage + data processing
-
-### NAT Instance
-
-* EC2 instance that performs NAT
-* you manage and patch it
-* can have a security group
-* must disable **source/destination checks**
+| NAT Gateway                   | NAT Instance                      |
+| ----------------------------- | --------------------------------- |
+| AWS-managed                   | EC2 you manage                    |
+| Automatically scales          | You manage scaling/patching       |
+| No security group             | Can use security group            |
+| Hourly + data processing cost | EC2-based cost                    |
+| —                             | Disable source/destination checks |
 
 ---
 
@@ -315,92 +209,52 @@ But know that:
 
 NAT Gateway is mainly an **IPv4** solution.
 
-For **IPv6 outbound-only internet access**, use:
+For IPv6 outbound-only access:
 
 > **Egress-Only Internet Gateway**
 
-```text
+```text id="9ck3u3"
 IPv6 EC2
-   ↓
-Egress-Only Internet Gateway
-   ↓
+ ↓
+Egress-Only IGW
+ ↓
 Internet
 ```
 
-It allows:
-
-```text
+```text id="9n7hi1"
 EC2 → Internet ✅
 Internet → EC2 ❌
 ```
 
-### Memory
+> **NAT Gateway → IPv4 outbound**
 
-> **NAT Gateway → public subnet → IPv4 outbound**
-
-> **Egress-Only IGW → VPC-attached → IPv6 outbound**
+> **Egress-Only IGW → IPv6 outbound**
 
 ---
 
 # CIDR essentials
 
-CIDR describes the IP range of your network.
-
-Example:
+CIDR describes an IP range.
 
 ```text
 10.0.0.0/16
 ```
 
-`/16` means **the first 16 bits are fixed**, and an IPv4 address has **32 bits total**.
+IPv4 = **32 bits = 4 × 8-bit octets**.
 
-IPv4 has 4 groups called **octets**:
-
-```text
-10 . 0 . 0 . 0
- ↑    ↑   ↑   ↑
- 1    2   3   4
-```
-
-Each octet is **8 bits**:
-
-```text
-8 + 8 + 8 + 8 = 32 bits
-```
-
-For:
-
-```text
-10.0.0.0/16
-```
-
-the first **16 bits = first 2 octets** are fixed:
-
-```text
-10 . 0 . X . X
-^^^^^^^^^^^^
-   fixed 16 bits
-```
-
-The last two octets can change:
-
-```text
-10.0.0.0
-10.0.0.1
-10.0.0.2
-...
-10.0.255.255
-```
-
-So:
+`/16` means the first 16 bits are fixed:
 
 ```text
 10.0.X.X
 ```
 
-is the whole `/16` range.
+Range:
 
-Common examples:
+```text
+10.0.0.0 → 10.0.255.255
+```
+
+Common sizes:
 
 ```text
 /16 → 65,536 addresses
@@ -409,21 +263,39 @@ Common examples:
 
 ### Important facts
 
-* VPC CIDR can be **/16 to /28**.
-* AWS reserves **5 IPv4 addresses in every subnet**.
-* Therefore, a `/24` subnet has:
+* VPC CIDR: **/16 to /28**
+* AWS reserves **5 IPv4 addresses per subnet**
+* `/24` subnet → `256 - 5 = 251 usable`
 
-```text
-256 total
-− 5 reserved
-= 251 usable
+---
+
+# Lambda + VPC capacity
+
+A VPC-connected Lambda function that scales heavily can run into **ENI or subnet IP capacity** limits.
+
+Possible symptoms include:
+
+* `EC2ThrottledException`
+* `SubnetIPAddressLimitReachedException`
+* ENI/IP exhaustion during VPC initialization
+
+> **Lambda + VPC + high concurrency → think ENIs + subnet IP capacity**
+
+Example:
+
+```text id="k7f6qn"
+10.31.0.0/27
+→ 32 total IPv4 addresses
+→ 27 usable AWS subnet IPs
 ```
+
+A small subnet can therefore become a scaling bottleneck for a high-concurrency Lambda workload.
 
 ---
 
 # No overlapping CIDRs
 
-Networks that need to connect should not have overlapping CIDRs.
+Networks that need to connect should use **non-overlapping CIDRs**.
 
 Example:
 
@@ -432,31 +304,25 @@ VPC-A: 10.0.0.0/16
 VPC-B: 10.0.0.0/16
 ```
 
-This causes problems for VPC connectivity such as:
+Overlapping ranges cause problems with:
 
 * VPC Peering
 * Transit Gateway routing
 * VPN connectivity
 
-Plan your CIDRs carefully.
-
-### Important idea
-
-> **Non-overlapping CIDRs make network routing and connectivity much easier.**
+> **Non-overlapping CIDRs make connectivity easier.**
 
 ---
 
-# The two guards: Security Groups vs NACLs
+# Security Groups vs NACLs
 
-Both control network traffic, but they work differently.
-
-|                           | Security Group (SG)              | Network ACL (NACL)      |
-| ------------------------- | -------------------------------- | ----------------------- |
-| Applies to                | **Network interface / instance** | **Subnet**              |
-| Stateful?                 | **Yes**                          | **No**                  |
-| Rules                     | **Allow only**                   | Allow + Deny            |
-| Rule order                | All applicable rules             | **Lowest number first** |
-| Can reference another SG? | **Yes**                          | No, uses CIDR           |
+|              | **Security Group**   | **NACL**            |
+| ------------ | -------------------- | ------------------- |
+| Applies to   | **ENI / instance**   | **Subnet**          |
+| Stateful     | **Yes**              | **No**              |
+| Rules        | **Allow only**       | Allow + Deny        |
+| Evaluation   | All applicable rules | Lowest number first |
+| SG reference | **Yes**              | No, CIDR-based      |
 
 ---
 
@@ -464,56 +330,35 @@ Both control network traffic, but they work differently.
 
 Security Groups are **stateful**.
 
-Example:
-
-```text
+```text id="3pdxw0"
 EC2 → Database
 ```
 
-If the Security Group allows the connection out, the response is automatically allowed back.
+If outbound traffic is allowed, the response is automatically allowed.
 
-You don't need to create a separate rule for the response.
+### SG-to-SG example
 
-### Example
-
-Suppose an application server connects to a MySQL database:
-
-```text
-App Server SG
-      ↓
-Database SG
-```
-
-Database Security Group:
-
-```text
-Allow TCP 3306
-Source: App Server SG
-```
-
-This is better than allowing a fixed IP range when the application instances may change IP addresses.
-
-### Security Group references
-
-A Security Group can reference another Security Group.
-
-This is especially useful for architectures such as:
-
-```text
+```text id="e14gxt"
 ALB SG
  ↓
 App SG
  ↓
-Database SG
+DB SG
 ```
 
-Each layer can allow traffic from the appropriate Security Group.
+For MySQL:
 
-### Security Groups cannot DENY
+```text
+DB SG:
+TCP 3306
+Source: App SG
+```
 
-Security Groups only have **allow rules**.
+This is better than fixed IPs when application instance IPs change.
 
-Therefore:
+### Important
+
+Security Groups **cannot DENY**.
 
 > **Block a specific IP → NACL**
 
@@ -523,88 +368,69 @@ Therefore:
 
 NACLs are **stateless**.
 
-Every direction needs its own rule.
+Both directions must be allowed:
 
-```text
-Request:
+```text id="5fjxzh"
 Client → Server
-
-Response:
 Server → Client
 ```
 
-Both directions must be allowed.
-
-### Rule evaluation
-
-NACL rules are evaluated from the **lowest rule number to the highest**.
-
-The first matching rule is applied.
+Rules are evaluated from the **lowest number upward**; first match wins.
 
 Example:
 
-```text
-Rule 100 → DENY 10.0.0.5/32
-Rule 200 → ALLOW 0.0.0.0/0
+```text id="5jly6a"
+100 → DENY 10.0.0.5/32
+200 → ALLOW 0.0.0.0/0
 ```
 
-Traffic from `10.0.0.5` matches rule 100 first and is denied.
+`10.0.0.5` is denied by rule 100.
 
 ---
 
 # Ephemeral ports
 
-When a server sends a response, it commonly uses an **ephemeral port**.
-
-Typical range:
+Responses commonly use ephemeral ports:
 
 ```text
 1024–65535
 ```
 
-Therefore, a NACL may need to allow these ports for return traffic.
+NACLs may need these ports for return traffic.
 
-### Exam trap
-
-> **Request leaves, but response never comes back**
-
-→ Check the **NACL**, especially ephemeral ports.
+> **Request leaves but response does not return → check NACL / ephemeral ports**
 
 ---
 
 # Security Group vs NACL memory
 
-```text
+```text id="2v4d9h"
 Security Group
 = stateful
 = instance / ENI
 = allow only
-= can reference SG
+= SG references
 
 NACL
 = stateless
 = subnet
 = allow + deny
-= CIDR-based
+= CIDR
 = lowest rule number first
 ```
 
 ---
 
-# VPC Endpoints — private access to AWS services
+# VPC Endpoints
 
-Normally, a private EC2 instance might use a NAT Gateway to access an AWS service.
+VPC Endpoints provide a **private path to AWS services without the public Internet**.
 
-VPC Endpoints provide a **private path to AWS services without using the public internet**.
-
-There are two important endpoint types:
-
-|                                      | Gateway Endpoint | Interface Endpoint       |
-| ------------------------------------ | ---------------- | ------------------------ |
-| Main services                        | **S3, DynamoDB** | Many AWS services + SaaS |
-| Cost                                 | **Free**         | Paid                     |
-| How it works                         | Route table      | ENI in your subnet       |
-| Can be used from on-prem/peered VPC? | **No**           | **Yes**                  |
+|                          | **Gateway Endpoint** | **Interface Endpoint**   |
+| ------------------------ | -------------------- | ------------------------ |
+| Main services            | **S3, DynamoDB**     | Many AWS services + SaaS |
+| Cost                     | **Free**             | Paid                     |
+| Implementation           | Route table          | ENI                      |
+| On-prem / peering access | No                   | Yes                      |
 
 ---
 
@@ -615,85 +441,58 @@ Used for:
 * S3
 * DynamoDB
 
-Example:
-
-```text
+```text id="4x7p5k"
 Private EC2
-    ↓
+ ↓
 Gateway Endpoint
-    ↓
+ ↓
 S3
 ```
 
-No NAT Gateway is required.
+No NAT required.
 
-### Exam pattern
+> **Private S3/DynamoDB + lowest cost → Gateway Endpoint**
 
-> "Private EC2 needs to access S3 privately and at the lowest cost."
-
-→ **Gateway VPC Endpoint**
-
-### Important
-
-Gateway endpoints use route tables to provide private connectivity to supported AWS services.
+Gateway endpoints use route tables.
 
 ---
 
 # Interface Endpoint
 
-An Interface Endpoint uses an **ENI** in your subnet.
+Uses an **ENI** in your subnet and **AWS PrivateLink**.
 
-It is based on **AWS PrivateLink**.
-
-It can provide private access to many AWS services and SaaS services.
-
-It can also be used from:
+Supports many AWS services and SaaS and can be used through:
 
 * VPC Peering
 * Transit Gateway
 * VPN
-* on-premises networks
+* On-premises connectivity
 
-### Important exam distinction
+### Important nuance
 
-> **S3/DynamoDB + normal VPC access + lowest cost → Gateway Endpoint**
+S3 and DynamoDB also support Interface Endpoints.
 
-> **Most other AWS services / SaaS / on-prem access → Interface Endpoint**
-
-### Important current nuance
-
-S3 and DynamoDB also support **Interface Endpoints**.
-
-This matters when the architecture needs capabilities provided by an interface endpoint, such as private access from outside the VPC through supported connectivity.
-
-So the better rule is:
-
-```text
-S3 / DynamoDB
-+ normal VPC access
-+ lowest cost
+```text id="db1h7v"
+S3/DynamoDB
++ normal VPC access + lowest cost
 → Gateway Endpoint
 
-S3 / DynamoDB
-+ need Interface Endpoint capabilities
+S3/DynamoDB
++ Interface Endpoint capabilities
 → Interface Endpoint
 ```
 
-### Memory
+> **Gateway → S3/DynamoDB + cheap**
 
-> **Gateway = S3/DynamoDB and cheapest private VPC path**
-
-> **Interface = ENI + PrivateLink + many services / advanced connectivity scenarios**
+> **Interface → ENI + PrivateLink + many services / advanced connectivity**
 
 ---
 
-# Connecting VPCs: three very different tools
+# Connecting VPCs
 
-There are three concepts you must clearly separate:
-
-```text
+```text id="e4d8um"
 VPC Peering
-= direct VPC-to-VPC connection
+= direct VPC-to-VPC
 
 Transit Gateway
 = central networking hub
@@ -704,164 +503,113 @@ PrivateLink
 
 ---
 
-# VPC Peering — direct connection
+# VPC Peering
 
-VPC Peering connects **two VPCs directly**.
+Connects **two VPCs directly**.
 
-```text
-VPC-A ←────────→ VPC-B
+```text id="wllc9e"
+VPC-A ←→ VPC-B
 ```
 
-Important facts:
+* Cross-account supported
+* Cross-Region supported
+* **Not transitive**
+* CIDRs cannot overlap
 
-* Can be cross-account.
-* Can be cross-region.
-* **Not transitive.**
-* CIDRs cannot overlap.
-
----
-
-## Not transitive
-
-If:
+Example:
 
 ```text
 VPC-A ↔ VPC-B
 VPC-B ↔ VPC-C
 ```
 
-That does **not** mean:
+Does not create:
 
 ```text
 VPC-A ↔ VPC-C
 ```
 
-You would need another connection.
-
-### Memory
-
-> **VPC Peering = direct connection between two VPCs, not a transit network.**
+> **VPC Peering = direct, not transit**
 
 ---
 
-# Transit Gateway (TGW) — central hub
+# Transit Gateway
 
-Transit Gateway connects many networks through one central hub.
-
-```text
-             VPC-A
-               |
-VPC-B ---- Transit Gateway ---- VPC-C
-               |
-              VPN
-               |
-           On-premises
-```
-
-It can connect:
+Central hub for:
 
 * VPCs
 * Site-to-Site VPN
 * Direct Connect
 
-The big advantage:
+```text id="8s1qv1"
+VPC-A
+   \
+VPC-B — Transit Gateway — VPC-C
+   /
+ VPN
+   |
+On-premises
+```
 
-> **Traffic can be transitive through the Transit Gateway.**
+* Supports transitive routing
+* Can be shared across accounts using **AWS RAM**
 
-You don't need a separate connection between every pair of VPCs.
-
-It can also be shared across AWS accounts using **AWS RAM**.
-
-### When to use it
-
-> **Many VPCs + centralized networking → Transit Gateway**
+> **Many VPCs/networks → Transit Gateway**
 
 ---
 
-# PrivateLink — expose one service
+# PrivateLink
 
-PrivateLink is different.
+PrivateLink exposes **one service**, not a whole network.
 
-It does **not** connect two complete networks.
-
-Instead, it lets another VPC access **one specific service**.
-
-```text
+```text id="9q3d1l"
 Provider VPC
-    ↓
+ ↓
 NLB
-    ↓
+ ↓
 Endpoint Service
-    ↓
+ ↓
 PrivateLink
-    ↓
+ ↓
 Customer VPC
 ```
 
-The customer gets access to that service, not the entire provider network.
+* Customer accesses the service, not the provider network
+* Can work with **overlapping CIDRs**
 
-### Important advantage
+> **One service/API to another VPC → PrivateLink**
 
-PrivateLink can work when the VPCs have **overlapping CIDRs** because it does not require normal network routing between the VPCs.
-
-### When to use it
-
-> **Give another VPC access to one service/API → PrivateLink**
-
-Common example:
-
-> A SaaS company wants thousands of customer VPCs to privately access its service.
-
-→ **PrivateLink**
+Common use: SaaS service consumed privately by many customer VPCs.
 
 ---
 
 # Quick chooser
 
-```text
-2 VPCs need direct network communication
-→ VPC Peering
+```text id="e89oij"
+2 VPCs → VPC Peering
 
-Many VPCs / VPN / DX need centralized routing
-→ Transit Gateway
+Many VPCs / VPN / DX → Transit Gateway
 
-Another VPC needs access to ONE service
-→ PrivateLink
+One service → PrivateLink
 ```
 
 ---
 
 # Observability & admin access
 
-# VPC Flow Logs
+## VPC Flow Logs
 
-VPC Flow Logs record **network traffic metadata**.
+Record **traffic metadata**, including:
 
-They can show:
+* Source IP
+* Destination IP
+* Port
+* Protocol
+* ACCEPT / REJECT
 
-* source IP
-* destination IP
-* port
-* protocol
-* ACCEPT or REJECT
+They do **not** capture packet contents.
 
-They do **not** capture the actual packet contents.
-
-Use Flow Logs when asking:
-
-> "Why is this connection being rejected?"
-
-For example:
-
-```text
-ACCEPT
-REJECT
-REJECT
-```
-
-A REJECT can help identify a security rule or network-control problem.
-
-### Memory
+> **Why is traffic rejected? → Flow Logs**
 
 > **Flow Logs = metadata**
 
@@ -869,69 +617,57 @@ A REJECT can help identify a security rule or network-control problem.
 
 # Traffic Mirroring
 
-Need the actual packets?
+Copies **actual packets** to an inspection/monitoring system.
 
-Use:
+> **Need packet contents → Traffic Mirroring**
 
-> **Traffic Mirroring**
-
-Traffic Mirroring copies network traffic to a monitoring or inspection system.
-
-### Memory
-
-> **Traffic Mirroring = packets**
-
-So:
-
-```text
+```text id="bq99q3"
 Flow Logs
 = metadata
 
 Traffic Mirroring
-= packet copies
+= packets
 ```
 
 ---
 
 # Bastion Host
 
-A bastion host is an EC2 instance used as a **jump server**.
+EC2 jump server for private instances.
 
-```text
+```text id="of7avh"
 Your computer
-      ↓ SSH
+ ↓ SSH
 Bastion
-      ↓ SSH
+ ↓ SSH
 Private EC2
 ```
 
-The bastion is normally in a public subnet.
-
-Example Security Group setup:
+Typical SG:
 
 ```text
 Bastion SG
-→ SSH only from your trusted IP
+→ SSH only from trusted IP
 
 Private EC2 SG
 → SSH from Bastion SG
 ```
 
-You have to manage the bastion yourself.
+You manage the bastion.
 
 ---
 
 # SSM Session Manager
 
-SSM Session Manager is the modern alternative to a bastion host.
+Modern alternative to bastion.
 
-You can connect to private EC2 instances without:
+Provides private EC2 access without:
 
-* public IP
-* open port 22
-* bastion host
+* Public IP
+* Port 22
+* Bastion
 
-```text
+```text id="v1b38y"
 You
  ↓
 SSM Session Manager
@@ -939,360 +675,265 @@ SSM Session Manager
 Private EC2
 ```
 
-Sessions can also be logged.
+Sessions can be logged.
 
-### Exam pattern
-
-> **"Most secure way to administer a private EC2 instance"**
-
-→ **SSM Session Manager**
+> **Most secure private EC2 administration → SSM Session Manager**
 
 ---
 
 # VPC Sharing
 
-VPC Sharing allows one AWS account to own the VPC while other accounts use its subnets.
+Allows one account to own the VPC while other accounts use its subnets.
 
-```text
+```text id="m4r7va"
 Network Account
       ↓
      VPC
    /     \
-Account A  Account B
-resources  resources
+Account A Account B
 ```
 
-Use it when:
+Uses **AWS RAM**.
 
-> **A central networking team owns the VPC, while multiple AWS accounts deploy applications into it.**
-
-It uses **AWS RAM**.
+> Central networking account + multiple application accounts → **VPC Sharing**
 
 ---
 
-# Hybrid Networking & Connectivity — SAA
+# Hybrid Networking & Connectivity
 
-## Core idea
-
-Hybrid networking means:
-
-> **Connect your on-premises network to AWS.**
-
-The main services are:
+Main services:
 
 * **Direct Connect (DX)** → dedicated private connection
-* **Site-to-Site VPN** → encrypted connection over the Internet
-* **VPC Peering** → connects two VPCs
-* **Transit Gateway** → connects many networks
-* **VPN CloudHub** → connects multiple remote networks through VPN
+* **Site-to-Site VPN** → encrypted Internet connection
+* **VPC Peering** → two VPCs
+* **Transit Gateway** → many networks
+* **VPN CloudHub** → multiple remote networks via VPN
 
 ---
 
-# Direct Connect and Virtual Interfaces (VIF)
+# Direct Connect and VIF
 
-Direct Connect has several important components:
-
-```text
+```text id="d0hlyj"
 On-premises
     |
-    | Direct Connect
-    v
+Direct Connect
+    ↓
 AWS
     |
-    | VIF
-    v
-VPC / Transit Gateway
+   VIF
 ```
 
 ## Direct Connect connection
 
-This is the **physical/dedicated network connection** between your on-premises network and AWS.
+Physical/dedicated network connection between on-premises and AWS.
 
-## Virtual Interface (VIF)
+## VIF
 
-A VIF is a **logical connection** configured on top of Direct Connect.
+Logical connection over Direct Connect using **BGP** for routes.
 
-It uses **BGP** to exchange routes.
+> **DX = physical connection**
+
+> **VIF = logical connection**
 
 ---
 
 # Private VIF
 
-A **Private VIF** provides private connectivity to a VPC through a **Virtual Private Gateway (VGW)**.
+Private VIF connects through a **Virtual Private Gateway (VGW)**.
 
-```text
+```text id="n3paj8"
 On-premises
-     |
-     | Direct Connect
-     ↓
+ ↓
+Direct Connect
+ ↓
 Private VIF
-     ↓
+ ↓
 VGW
-     ↓
+ ↓
 VPC
 ```
 
-### Easy memory
-
-> **Direct Connect = physical connection**
-
-> **VIF = logical connection on top of it**
+> **Private VIF → VGW / VPC**
 
 ---
 
 # Direct Connect Gateway
 
-A **Direct Connect Gateway (DXGW)** allows Direct Connect connectivity to be used with supported AWS networking architectures across VPCs and Regions.
+Centralizes Direct Connect connectivity across supported architectures.
 
-A common architecture is:
-
-```text
+```text id="qv2ao8"
 On-premises
-     |
+ ↓
 Direct Connect
-     |
-   VIF
-     |
- Direct Connect Gateway
-     |
- ┌───┴───────────┐
- ↓               ↓
-VPC / VGW      Transit Gateway
+ ↓
+VIF
+ ↓
+Direct Connect Gateway
+ ├── VPC / VGW
+ └── Transit Gateway
 ```
 
-For architectures involving **Transit Gateway**, a **Transit VIF** is used to connect Direct Connect to the Transit Gateway through the Direct Connect Gateway.
+For Transit Gateway, use a **Transit VIF** with the Direct Connect Gateway.
 
-### Memory
-
-```text
+```text id="mxy5rv"
 Private VIF
 → VGW / VPC
 
 Transit VIF
-→ Direct Connect Gateway
+→ DX Gateway
 → Transit Gateway
 ```
 
-### Exam signal
-
-> **One Direct Connect architecture needs connectivity to multiple VPCs / a centralized Transit Gateway design**
-
-→ Think **Direct Connect Gateway**
-
----
-
-# Why the Private VIF targets the VPC's Region
-
-A Private VIF connects to a **VGW**, and the VGW belongs to a specific VPC.
-
-Example:
-
-```text
-On-premises
-     |
-     | Direct Connect
-     ↓
-Private VIF
-     ↓
-VGW
-     ↓
-VPC-1
-```
-
-The VIF must provide connectivity to the **correct VGW for the target VPC**.
-
-### Exam memory
-
-If the question says:
-
-> "Create redundant Direct Connect connectivity to VPC-1"
-
-make sure the new connection/VIF actually provides connectivity to **VPC-1**, not just to another VPC.
+> **One DX architecture + multiple VPCs / centralized TGW → Direct Connect Gateway**
 
 ---
 
 # Direct Connect redundancy
 
-One Direct Connect connection can be a **single point of failure**.
+One DX connection can be a single point of failure.
 
-```text
-On-premises
-     |
-     | DX
-     ↓
-    VPC
+Use:
+
+* Another independent DX connection
+* Or VPN as backup
+
+```text id="b9f6y4"
+DX #1 ──→ VPC
+DX #2 ──→ VPC
+
+or
+
+DX ──→ VPC
+VPN ─→ VPC
 ```
 
-If DX fails, the connection is lost.
-
-For better fault tolerance, use another independent connection.
-
-```text
-             DX #1
-On-premises -------> VPC
-       \
-        \ DX #2
-         -------> VPC
-```
-
-Another option is to use VPN as a backup.
+> **DX + VPN = independent paths**
 
 ---
 
-# VPN as a backup
+# Why Private VIF targets the correct VPC
 
-```text
-                 Direct Connect
-On-premises ----------------------> VPC
-     \
-      \------ Internet VPN -------> VPC
+A Private VIF connects to a **VGW**, and the VGW belongs to a specific VPC.
+
+```text id="rfm7f7"
+On-premises
+ ↓
+Private VIF
+ ↓
+VGW
+ ↓
+VPC-1
 ```
 
-If Direct Connect fails, the VPN can continue providing connectivity.
+The VIF must reach the **correct VGW/VPC**.
 
-### Memory
+> Redundant DX for VPC-1 → ensure the VIF actually connects to **VPC-1**
 
-> **DX + VPN = two independent paths**
+---
+
+# VPN as backup
+
+```text id="u24k7t"
+On-premises
+   | \
+   |  \ VPN
+   DX  \
+   |    \
+   +----> VPC
+```
+
+> **DX failure → VPN can maintain connectivity**
 
 ---
 
 # VPC Peering
 
-VPC Peering connects two VPCs privately.
+Private connection between two VPCs:
 
-```text
-VPC-1 ←────────→ VPC-2
+```text id="6vw13y"
+VPC-1 ←→ VPC-2
 ```
 
-But it is **not transitive**.
+Not transitive.
 
-Example:
-
-```text
+```text id="xwhw6d"
 VPC-1 ←→ VPC-2 ←→ VPC-3
 ```
 
-does not mean:
-
-```text
-VPC-1 ←→ VPC-3
-```
-
-### Exam memory
-
-> **VPC Peering = direct connection between two VPCs, not a transit network.**
+does not connect VPC-1 to VPC-3 through VPC-2.
 
 ---
 
 # Exam question pattern
 
-Suppose:
+Given:
 
-```text
+```text id="4w60be"
 On-premises
-     |
+     ↓
 Direct Connect
-     |
-   VPC-1
+     ↓
+VPC-1
 ```
 
-The question asks:
+Need more fault tolerance:
 
-> "How can we make the connection to VPC-1 more fault tolerant?"
+**Good:**
 
-### Good answers
+1. Add Site-to-Site VPN directly to VPC-1
+2. Add another independent DX connection to VPC-1
 
-**1. Add a Site-to-Site VPN directly to VPC-1**
+**Bad assumption:**
 
-```text
-On-premises
-   | \
-   |  \ VPN
-   |   \
-   DX   → VPC-1
+```text id="m6qv8y"
+On-premises → VPC-2 → Peering → VPC-1
 ```
 
-**2. Add another independent Direct Connect connection to VPC-1**
-
-```text
-On-premises
-   | \
- DX#1 DX#2
-   |   |
-   +---+
-     ↓
-   VPC-1
-```
-
-### Bad reasoning
-
-If you add connectivity to VPC-2:
-
-```text
-On-premises
-     ↓
-   VPC-2
-     ↓
-  Peering
-     ↓
-   VPC-1
-```
-
-you should not assume that VPC-2 will act as a transit router.
-
-**VPC Peering is not transitive.**
+VPC Peering is **not transitive**.
 
 ---
 
 # Direct Connect vs VPN
 
-| Feature    | Direct Connect                  | Site-to-Site VPN               |
-| ---------- | ------------------------------- | ------------------------------ |
-| Connection | Dedicated connection            | Internet                       |
-| Encryption | Not automatically encrypted     | IPsec encrypted                |
-| Main use   | Consistent private connectivity | Secure connectivity / backup   |
-| Redundancy | Use multiple DX connections     | Use redundant VPN connectivity |
+|            | **Direct Connect**              | **Site-to-Site VPN**         |
+| ---------- | ------------------------------- | ---------------------------- |
+| Connection | Dedicated                       | Internet                     |
+| Encryption | Not automatically encrypted     | IPsec encrypted              |
+| Main use   | Consistent private connectivity | Secure connectivity / backup |
+| Redundancy | Multiple DX connections         | Redundant VPN                |
 
 ---
 
 # VPC Peering vs Transit Gateway
 
-|              | VPC Peering          | Transit Gateway    |
-| ------------ | -------------------- | ------------------ |
-| Connect VPCs | Yes                  | Yes                |
-| Transitive   | **No**               | **Yes**            |
-| Model        | Direct connection    | Central hub        |
-| Best for     | Small number of VPCs | Many VPCs/networks |
+|              | **VPC Peering**      | **Transit Gateway** |
+| ------------ | -------------------- | ------------------- |
+| Connect VPCs | Yes                  | Yes                 |
+| Transitive   | **No**               | **Yes**             |
+| Model        | Direct               | Central hub         |
+| Best for     | Small number of VPCs | Many VPCs/networks  |
 
 ---
 
 # VPN CloudHub
 
-**VPN CloudHub** allows multiple remote networks to communicate using a hub-and-spoke VPN architecture.
+Connects multiple remote networks through a hub-and-spoke VPN architecture.
 
-Conceptually:
-
-```text
+```text id="a6r4ml"
 Branch A
-    \
-     \
-      Transit / VPN hub
-     /
-    /
+   \
+    VPN hub
+   /
 Branch B
 ```
 
-It is useful when multiple sites need to communicate with each other through AWS VPN infrastructure.
-
-### Memory
-
-> **Multiple remote sites connected through VPN → VPN CloudHub**
+> **Multiple remote VPN sites → VPN CloudHub**
 
 ---
 
 # One-line mental model
 
-```text
+```text id="wnp17z"
 VPC
 = AWS private network
 
@@ -1300,10 +941,10 @@ IGW
 = Internet connection
 
 NAT Gateway
-= Private IPv4 instances → Internet
+= Private IPv4 → Internet
 
 Egress-Only IGW
-= Private IPv6 instances → Internet, no inbound
+= Private IPv6 → Internet, no inbound
 
 Security Group
 = Stateful firewall for instance / ENI
@@ -1312,221 +953,146 @@ NACL
 = Stateless firewall for subnet
 
 Gateway Endpoint
-= Private S3/DynamoDB access
+= Private S3/DynamoDB
 
 Interface Endpoint
-= Private access to AWS services / SaaS
+= Private AWS service/SaaS access
 
 VPC Peering
-= Connect two VPCs
+= Two VPCs
 
 Transit Gateway
-= Connect many networks
+= Many networks
 
 PrivateLink
-= Give access to one service
+= One service
 
 Flow Logs
-= Network traffic metadata
+= Network metadata
 
 Traffic Mirroring
-= Copy network packets
+= Packet copies
 
 SSM Session Manager
-= Secure access to private EC2
+= Private EC2 administration
 ```
 
 # Hybrid Networking — one-line mental model
 
-```text
+```text id="1gxz2q"
 Direct Connect
-= Dedicated connection to AWS
+= Dedicated connection
 
 Direct Connect Gateway
-= Centralize Direct Connect connectivity
+= DX centralization
 
 Private VIF
-= Direct Connect → VPC / VGW
+= DX → VGW / VPC
 
 Transit VIF
-= Direct Connect → DX Gateway → Transit Gateway
+= DX → DXGW → TGW
 
 Site-to-Site VPN
-= Encrypted connection over Internet
+= Encrypted Internet connection
 
 DX + VPN
 = Redundancy
 
 VPC Peering
-= Direct VPC-to-VPC connection
+= Direct VPC-to-VPC
 
 Transit Gateway
-= Central hub for many networks
+= Central hub
 
 VPN CloudHub
-= Connect multiple remote networks through VPN
+= Multiple remote VPN networks
 ```
 
 ---
 
 # Question patterns
 
-> **"Block all traffic from a specific IP address"**
+> **Block a specific IP** → **NACL DENY**
 
-→ **NACL DENY rule**
+> **Only app servers connect to DB** → **DB SG allows App SG**
 
----
+> **Private EC2 → private/free S3** → **Gateway Endpoint**
 
-> **"Only app servers can connect to the database"**
+> **25 VPCs + on-premises** → **Transit Gateway**
 
-→ **Database SG allows traffic from the app SG**
+> **One service to another VPC** → **PrivateLink**
 
----
+> **Overlapping CIDRs + one service must be shared** → **PrivateLink**
 
-> **"Private EC2 needs private, free access to S3"**
+> **Traditional NAT HA across AZs** → **One zonal NAT Gateway per AZ**
 
-→ **Gateway VPC Endpoint**
+> **Private IPv4 EC2 → Internet** → **NAT Gateway**
 
----
+> **IPv6 outbound-only** → **Egress-Only IGW**
 
-> **"25 VPCs and on-premises networks need to communicate"**
+> **Accepted/rejected traffic** → **VPC Flow Logs**
 
-→ **Transit Gateway**
+> **Full packet inspection** → **Traffic Mirroring**
 
----
+> **Secure private EC2 administration** → **SSM Session Manager**
 
-> **"Expose only one service to another VPC"**
+> **NAT Instance not forwarding** → **Disable source/destination check**
 
-→ **PrivateLink**
+> **Requests leave but responses don't return** → **Check NACL ephemeral ports**
 
----
+> **One DX connection needs fault tolerance** → **Another DX or Site-to-Site VPN**
 
-> **"CIDR ranges overlap but one service must be shared"**
+> **On-prem → specific VPC** → **DX/VPN path must actually reach that VPC**
 
-→ **PrivateLink**
+> **One DX design → multiple VPCs / centralized TGW** → **Direct Connect Gateway**
 
----
+> **Multiple remote VPN networks** → **VPN CloudHub**
 
-> **"Make NAT highly available across AZs"**
-
-→ **One traditional zonal NAT Gateway per AZ**
-
----
-
-> **"Private IPv4 EC2 needs Internet access"**
-
-→ **NAT Gateway**
-
----
-
-> **"IPv6 EC2 needs outbound Internet access but must reject unsolicited inbound connections"**
-
-→ **Egress-Only Internet Gateway**
-
----
-
-> **"Need to know whether traffic was accepted or rejected"**
-
-→ **VPC Flow Logs**
-
----
-
-> **"Need full packet information for inspection"**
-
-→ **Traffic Mirroring**
-
----
-
-> **"Most secure way to access private EC2"**
-
-→ **SSM Session Manager**
-
----
-
-> **"NAT instance is not forwarding traffic"**
-
-→ **Disable source/destination check**
-
----
-
-> **"Requests leave but responses do not return"**
-
-→ **Check NACL rules for ephemeral ports**
-
----
-
-> **"One Direct Connect connection must become fault tolerant"**
-
-→ **Add another independent DX connection or a Site-to-Site VPN**
-
----
-
-> **"Need connectivity from on-premises to a specific VPC"**
-
-→ **Use Direct Connect/VPN connectivity that actually reaches that VPC**
-
----
-
-> **"Need one Direct Connect architecture to reach multiple VPCs or a centralized Transit Gateway design"**
-
-→ **Direct Connect Gateway**
-
----
-
-> **"Multiple remote sites need to communicate using VPN through AWS"**
-
-→ **VPN CloudHub**
-
----
-
-> **"Multiple routes match a destination"**
-
-→ **Longest-prefix match**
+> **Multiple matching routes** → **Longest-prefix match**
 
 ---
 
 # Pocket card
 
-| Keyword                           | Answer                                      |
-| --------------------------------- | ------------------------------------------- |
-| Public subnet                     | Route to IGW                                |
-| Internet-reachable EC2            | Public subnet + public IP + allowed traffic |
-| Private IPv4 → Internet           | NAT Gateway                                 |
-| Traditional NAT high availability | One NAT Gateway per AZ                      |
-| NAT Instance                      | Disable source/destination check            |
-| IPv6 outbound-only                | Egress-Only IGW                             |
-| Reserved IPs per subnet           | 5                                           |
-| VPC CIDR                          | /16 to /28                                  |
-| Longest matching route            | Most specific / longest prefix              |
-| Block traffic                     | NACL DENY                                   |
-| Stateful firewall                 | Security Group                              |
-| Stateless firewall                | NACL                                        |
-| SG-to-SG access                   | Reference another SG                        |
-| S3/DynamoDB private access        | Gateway Endpoint                            |
-| Other AWS services / SaaS         | Interface Endpoint                          |
-| On-prem → private AWS service     | Interface Endpoint                          |
-| Two VPCs                          | VPC Peering                                 |
-| Many VPCs + VPN/DX                | Transit Gateway                             |
-| One service to another VPC        | PrivateLink                                 |
-| Traffic metadata                  | VPC Flow Logs                               |
-| Full packet inspection            | Traffic Mirroring                           |
-| Private EC2 administration        | SSM Session Manager                         |
-| Multiple accounts, one VPC        | VPC Sharing                                 |
-| Dedicated hybrid connection       | Direct Connect                              |
-| DX → VPC / VGW                    | Private VIF                                 |
-| DX → Transit Gateway              | Transit VIF + Direct Connect Gateway        |
-| Encrypted Internet connection     | Site-to-Site VPN                            |
-| DX backup                         | VPN or another DX                           |
-| VPC Peering transit               | **No**                                      |
-| Transit routing                   | Transit Gateway                             |
-| Multiple remote VPN sites         | VPN CloudHub                                |
-| AWS → one service                 | PrivateLink                                 |
+| Keyword                         | Answer                                      |
+| ------------------------------- | ------------------------------------------- |
+| Public subnet                   | Route to **IGW**                            |
+| Internet-reachable EC2          | Public subnet + public IP + allowed traffic |
+| Private IPv4 → Internet         | **NAT Gateway**                             |
+| Traditional NAT HA              | **One NAT Gateway per AZ**                  |
+| NAT Instance                    | Disable **source/destination check**        |
+| IPv6 outbound-only              | **Egress-Only IGW**                         |
+| Reserved IPv4/subnet            | **5**                                       |
+| VPC CIDR                        | **/16–/28**                                 |
+| Most specific route             | **Longest-prefix match**                    |
+| Block traffic                   | **NACL DENY**                               |
+| Stateful firewall               | **Security Group**                          |
+| Stateless firewall              | **NACL**                                    |
+| SG-to-SG access                 | **SG reference**                            |
+| S3/DynamoDB private access      | **Gateway Endpoint**                        |
+| Other AWS/SaaS                  | **Interface Endpoint**                      |
+| Two VPCs                        | **VPC Peering**                             |
+| Many VPCs/networks              | **Transit Gateway**                         |
+| One service                     | **PrivateLink**                             |
+| Traffic metadata                | **VPC Flow Logs**                           |
+| Packet inspection               | **Traffic Mirroring**                       |
+| Private EC2 access              | **SSM Session Manager**                     |
+| One VPC shared by accounts      | **VPC Sharing**                             |
+| Dedicated hybrid connection     | **Direct Connect**                          |
+| DX → VPC                        | **Private VIF**                             |
+| DX → TGW                        | **Transit VIF + DX Gateway**                |
+| Encrypted hybrid connection     | **Site-to-Site VPN**                        |
+| DX backup                       | **VPN / another DX**                        |
+| VPC Peering transit             | **No**                                      |
+| Central transit routing         | **Transit Gateway**                         |
+| Multiple remote VPN sites       | **VPN CloudHub**                            |
+| Lambda + VPC + high concurrency | **ENI + subnet IP capacity**                |
 
 ---
 
 # Final memory
 
-```text
+```text id="ef04zj"
 VPC
 = AWS PRIVATE NETWORK
 
@@ -1541,7 +1107,7 @@ IPv6 OUTBOUND-ONLY
 
 SECURITY GROUP
 = STATEFUL
-= INSTANCE / ENI
+= ENI / INSTANCE
 = ALLOW ONLY
 
 NACL
@@ -1551,12 +1117,11 @@ NACL
 
 GATEWAY ENDPOINT
 = S3 / DYNAMODB
-= LOWEST-COST PRIVATE VPC PATH
+= CHEAP PRIVATE VPC PATH
 
 INTERFACE ENDPOINT
-= ENI
-= PRIVATElink
-= MANY AWS SERVICES / SAAS
+= ENI + PRIVATELINK
+= MANY SERVICES / SAAS
 
 VPC PEERING
 = TWO VPCS
@@ -1579,7 +1144,7 @@ TRAFFIC MIRRORING
 = PACKETS
 
 SSM SESSION MANAGER
-= SECURE PRIVATE EC2 ACCESS
+= PRIVATE EC2 ACCESS
 
 DIRECT CONNECT
 = DEDICATED CONNECTION
@@ -1604,11 +1169,14 @@ VPN CLOUDHUB
 
 LONGEST-PREFIX MATCH
 = MOST SPECIFIC ROUTE WINS
+
+LAMBDA + VPC
+= WATCH ENI + SUBNET IP CAPACITY
 ```
 
 # The Golden Rule
 
-```text
+```text id="i8b35c"
 Public subnet
 → Route to IGW
 
@@ -1630,7 +1198,7 @@ Block an IP
 Private S3/DynamoDB
 → Gateway Endpoint
 
-Private access to many AWS services / SaaS
+Private many AWS services / SaaS
 → Interface Endpoint
 
 Two VPCs
@@ -1639,13 +1207,13 @@ Two VPCs
 Many VPCs / centralized networking
 → Transit Gateway
 
-One service to another VPC
+One service
 → PrivateLink
 
 Traffic metadata
-→ VPC Flow Logs
+→ Flow Logs
 
-Actual packet inspection
+Packet inspection
 → Traffic Mirroring
 
 Private EC2 administration
@@ -1657,7 +1225,7 @@ Dedicated on-premises connection
 DX → VPC
 → Private VIF
 
-DX → Transit Gateway
+DX → TGW
 → Transit VIF + Direct Connect Gateway
 
 Encrypted backup path
@@ -1668,31 +1236,9 @@ Multiple remote VPN sites
 
 Multiple matching routes
 → Longest-prefix match
+
+Lambda + VPC + massive concurrency
+→ ENI / subnet IP capacity
 ```
 
-> **Don't memorize the implementation.**
->
-> **Memorize the unique signal.**
-
-For example:
-
-```text
-Public subnet          → Route to IGW
-Private IPv4 internet  → NAT Gateway
-IPv6 outbound-only     → Egress-Only IGW
-Stateful firewall      → Security Group
-Stateless firewall     → NACL
-S3/DynamoDB endpoint   → Gateway Endpoint
-Many AWS services      → Interface Endpoint
-Two VPCs               → VPC Peering
-Many networks          → Transit Gateway
-One service            → PrivateLink
-Traffic metadata       → Flow Logs
-Packet inspection      → Traffic Mirroring
-Private EC2 access     → SSM Session Manager
-Dedicated connection  → Direct Connect
-DX → VPC               → Private VIF
-DX → TGW               → Transit VIF + DXGW
-VPN backup             → Site-to-Site VPN
-Route conflict        → Longest-prefix match
-```
+> **Don't memorize the implementation. Memorize the unique signal.**
