@@ -2,153 +2,98 @@
 
 ## Big picture
 
-These services solve **different problems**:
+These services solve different problems:
 
-* **Storage Gateway** → on-premises systems **access AWS storage**
-* **DataSync** → **move/copy data** between storage systems
-* **Transfer Family** → people or companies **upload/download files** using SFTP/FTP/FTPS/AS2
+* **Storage Gateway** → on-premises **access to AWS storage**
+* **DataSync** → **move/copy data**
+* **Transfer Family** → **file transfers** using SFTP/FTP/FTPS/AS2
 
-The easiest memory trick:
-
-> **Gateway = ACCESS**
-> **DataSync = COPY**
-> **Transfer Family = FILE TRANSFER**
+```text id="3ez6pv"
+Gateway     = ACCESS
+DataSync    = COPY
+Transfer Family = FILE TRANSFER
+```
 
 ---
 
 # 1. Storage Gateway
 
-Storage Gateway connects your **on-premises environment** to AWS storage.
+Connects on-premises systems to AWS storage while allowing existing applications to use familiar storage protocols.
 
-```text
+```text id="1g0l4e"
 On-premises
    ↓
 Storage Gateway
    ↓
-AWS
+AWS storage
 ```
-
-The important point:
-
-> Your existing on-premises applications can keep using familiar storage protocols.
-
-Storage Gateway has several types.
-
----
 
 ## S3 File Gateway
 
-Your application uses a normal **file share** using:
+Provides **NFS/SMB** file access while storing files in **S3**.
 
-* NFS
-* SMB
-
-But the actual files are stored in **Amazon S3**.
-
-```text
-Application
-    ↓
-NFS / SMB
-    ↓
-S3 File Gateway
-    ↓
-S3
+```text id="yqf1xy"
+Application → NFS/SMB → S3 File Gateway → S3
 ```
 
-### Use it when
+### Use when
 
-> "We have applications that need normal file access, but we want the files stored in S3."
+* Existing file-based applications need S3
+* On-premises file share / NAS replacement
+* NFS or SMB + S3
 
-### Exam keywords
-
-* NFS or SMB
-* files
-* S3
-* on-premises file share
-* replace NAS
-
-### Remember
-
-**S3 File Gateway = file access to S3**
+> **NFS/SMB + S3 → S3 File Gateway**
 
 ---
 
 ## FSx File Gateway
 
-This is similar to S3 File Gateway, but the backend is:
+Provides **SMB** access from on-premises to **FSx for Windows File Server**.
 
-**Amazon FSx for Windows File Server**
-
-It provides on-premises access to FSx using **SMB**.
-
-```text
-On-premises
-    ↓
-SMB
-    ↓
-FSx File Gateway
-    ↓
-FSx for Windows
+```text id="82l0ma"
+On-premises → SMB → FSx File Gateway → FSx for Windows
 ```
 
-### Use it when
-
-> "On-premises users need low-latency access to an FSx for Windows file share."
-
-### Remember
-
-**FSx File Gateway = SMB + FSx for Windows**
+> **SMB + FSx for Windows → FSx File Gateway**
 
 ---
 
 # Volume Gateway
 
-Volume Gateway provides **block storage** to on-premises applications using:
+Provides **block storage via iSCSI** to on-premises applications.
 
-**iSCSI**
-
-There are two types:
+Two types:
 
 * Cached
 * Stored
 
-The important question is:
+The key question:
 
 > **Where is the main/full dataset?**
 
----
-
 ## Volume Gateway — Cached
 
-The **main data is in AWS/S3**.
+**Main data = S3/AWS**
 
-Only frequently used data is kept locally for fast access.
+Only frequently accessed data is cached locally.
 
-```text
+```text id="9m2j40"
 S3
-= main/full dataset
+= main dataset
 
 Local
 = frequently used data
 ```
 
-### Use it when
-
-> "Our on-premises storage is running out of space and we want to expand capacity using AWS."
-
-### Remember
-
-**Cached = cloud is primary**
-
----
+> On-premises storage running out of space / AWS becomes primary → **Cached**
 
 ## Volume Gateway — Stored
 
-The **main/full dataset stays on-premises**.
+**Main/full dataset = on-premises**
 
-AWS S3 stores **snapshots** for backup and disaster recovery.
+S3 stores snapshots for backup/DR.
 
-```text
+```text id="b4j4yl"
 Local
 = full dataset
 
@@ -156,46 +101,30 @@ S3
 = snapshots / backup
 ```
 
-### Use it when
+> Entire dataset must stay local + AWS backup → **Stored**
 
-> "The entire dataset must be available locally with low latency, but we also want AWS backup."
+### Cached vs Stored
 
-### Remember
+|              | **Cached**           | **Stored**                        |
+| ------------ | -------------------- | --------------------------------- |
+| Main dataset | **S3**               | **On-premises**                   |
+| Local        | Frequently used data | **Entire dataset**                |
+| Main use     | Increase capacity    | Low-latency local access + backup |
+| AWS role     | Primary storage      | Backup/snapshots                  |
 
-**Stored = local is primary**
+**Trap:**
 
----
-
-## Cached vs Stored
-
-|              | Cached               | Stored                     |
-| ------------ | -------------------- | -------------------------- |
-| Main dataset | **S3**               | **On-premises**            |
-| Local data   | Frequently used data | **Entire dataset**         |
-| Main use     | Increase capacity    | Fast local access + backup |
-| AWS role     | Primary storage      | Backup/snapshots           |
-
-### Important exam trap
-
-> "Low-latency access to the **entire dataset**"
-
-→ **Volume Gateway — Stored**
-
-Why?
-
-Because with Cached, only frequently used data is local.
+> Low-latency access to the **entire dataset** → **Volume Gateway Stored**
 
 ---
 
 # Tape Gateway
 
-Tape Gateway is for companies that use **physical tape backups**.replaces your traditional physical tape backup system with virtual tapes in AWS
+Replaces physical tape infrastructure with **virtual tapes in AWS**.
 
-It provides a **Virtual Tape Library (VTL)** so existing backup software can continue working.
+Provides a **Virtual Tape Library (VTL)** so existing backup software can continue working.
 
-The data is stored in AWS instead of physical tapes.
-
-```text
+```text id="mw6n3j"
 Backup software
       ↓
 Tape Gateway
@@ -203,122 +132,96 @@ Tape Gateway
 S3 / Glacier
 ```
 
-### Use it when
+> Physical tape replacement + existing backup software → **Tape Gateway**
 
-> "Replace physical tape infrastructure but keep the existing backup software."
-
-### Exam keyword
-
-**Tape → Tape Gateway**
+**Keyword:** `Tape → Tape Gateway`
 
 ---
 
 # 2. DataSync
 
-## The main idea
+**DataSync = move/copy data.**
 
-**DataSync = move/copy data**
+Use for:
 
-It is used for:
-
-* migrations
-* scheduled transfers
-* synchronization
-* large data transfers
+* Migrations
+* Scheduled transfers
+* Synchronization
+* Large data transfers
 
 Examples:
 
-```text
-On-premises NFS → S3
-On-premises SMB → EFS
-
+```text id="2g8j6t"
+On-prem NFS → S3
+On-prem SMB → EFS
 S3 → EFS
 EFS → FSx
 ```
 
 For on-premises storage, DataSync commonly uses an **agent**.
 
-DataSync can also preserve things such as:
+It can preserve:
 
-* file metadata
-* permissions
+* File metadata
+* Permissions
 
-It supports **bandwidth throttling** so you can control how much network bandwidth the transfer uses.
+It supports **bandwidth throttling**.
 
----
+### Example
 
-## Example
-
-> "Copy 50 TB from an on-premises NAS to S3 while preserving file metadata."
-
-→ **DataSync**
-
-Why?
-
-Because the requirement is to **move the data**.
+> Copy 50 TB from on-premises NAS to S3 while preserving metadata → **DataSync**
 
 ---
 
-## DataSync vs Storage Gateway
+# DataSync vs Storage Gateway
 
-This is one of the most important differences.
+| Requirement                                 | Answer              |
+| ------------------------------------------- | ------------------- |
+| **Move/copy the data**                      | **DataSync**        |
+| **Keep using AWS storage from on-premises** | **Storage Gateway** |
 
-### DataSync
-
-> **I need to copy/move the data.**
-
-```text
+```text id="a4ifz7"
 Old storage
-    ↓
+   ↓
 DataSync
-    ↓
+   ↓
 New storage
 ```
 
-### Storage Gateway
+vs.
 
-> **I still need my on-premises applications to access AWS storage.**
-
-```text
-On-premises application
-        ↓
+```text id="tduwha"
+On-prem application
+       ↓
 Storage Gateway
-        ↓
+       ↓
 AWS storage
 ```
 
-### Easy rule
-
-> **Move the data → DataSync**
-> **Keep using the storage → Storage Gateway**
+> **Move data → DataSync**
+> **Access AWS storage → Storage Gateway**
 
 ---
 
 # 3. Transfer Family
 
-Transfer Family provides a **managed file-transfer server**.
+Provides a **managed file-transfer server**.
 
-Supported protocols include:
+Supported protocols:
 
-* SFTP
-* FTPS
-* FTP
-* AS2
+* **SFTP**
+* **FTPS**
+* **FTP**
+* **AS2**
 
-The files can be stored in:
+Storage backends:
 
-* S3
-* EFS
+* **S3**
+* **EFS**
 
----
+Example:
 
-## Example
-
-A company has business partners that already upload files using SFTP.
-
-They don't want to change their existing process.
-
-```text
+```text id="0jnk7o"
 Partner
    ↓
 SFTP
@@ -328,142 +231,83 @@ Transfer Family
 S3 / EFS
 ```
 
-Answer:
+> Business partners already use SFTP → **Transfer Family**
 
-**AWS Transfer Family**
-
-You do **not** need to build and manage your own SFTP server on EC2.
+No need to build/manage an SFTP server on EC2.
 
 ---
 
 # Storage Gateway vs DataSync vs Transfer Family
 
-| Service             | Main purpose                                  | Example                            |
-| ------------------- | --------------------------------------------- | ---------------------------------- |
-| **Storage Gateway** | Access AWS storage from on-premises           | On-prem app accesses files in S3   |
-| **DataSync**        | Move/copy data                                | Migrate 50 TB from NAS to S3       |
-| **Transfer Family** | File upload/download using transfer protocols | Partner uploads files through SFTP |
+| Service             | Main purpose                  | Example                       |
+| ------------------- | ----------------------------- | ----------------------------- |
+| **Storage Gateway** | On-prem access to AWS storage | On-prem app accesses S3 files |
+| **DataSync**        | Move/copy data                | Migrate 50 TB NAS → S3        |
+| **Transfer Family** | File transfer protocols       | Partner uploads through SFTP  |
 
 ---
 
 # Storage Gateway types
 
-| Requirement                                     | Answer                      |
-| ----------------------------------------------- | --------------------------- |
-| Files in S3, accessed using NFS/SMB             | **S3 File Gateway**         |
-| SMB access to FSx for Windows                   | **FSx File Gateway**        |
-| Increase on-premises capacity, cloud is primary | **Volume Gateway – Cached** |
-| Entire dataset local + AWS backup               | **Volume Gateway – Stored** |
-| Replace physical tape backups                   | **Tape Gateway**            |
+| Requirement                                | Answer                      |
+| ------------------------------------------ | --------------------------- |
+| Files in S3 via NFS/SMB                    | **S3 File Gateway**         |
+| SMB access to FSx for Windows              | **FSx File Gateway**        |
+| Cloud is primary / increase local capacity | **Volume Gateway – Cached** |
+| Entire dataset local + AWS backup          | **Volume Gateway – Stored** |
+| Replace physical tape backups              | **Tape Gateway**            |
 
 ---
 
 # Common Exam Questions
 
-### "Replace physical tape backups"
+> **"Replace physical tape backups."**
+> → **Tape Gateway**
 
-→ **Tape Gateway**
+> **"Applications use NFS/SMB but files should be stored in S3."**
+> → **S3 File Gateway**
 
----
+> **"On-premises applications need SMB access to FSx for Windows."**
+> → **FSx File Gateway**
 
-### "Applications use NFS/SMB but files should be stored in S3"
+> **"On-premises storage is running out of space."**
+> → **Volume Gateway – Cached**
 
-→ **S3 File Gateway**
+> **"Entire dataset must remain local for low-latency access, but backups should go to AWS."**
+> → **Volume Gateway – Stored**
 
----
+> **"Migrate 50 TB from an on-premises NAS to S3."**
+> → **DataSync**
 
-### "On-premises applications need SMB access to FSx for Windows"
+> **"Copy files every night from an on-premises SMB server to EFS."**
+> → **DataSync**
 
-→ **FSx File Gateway**
+> **"Transfer data between S3 and EFS."**
+> → **DataSync**
 
----
-
-### "On-premises storage is running out of space"
-
-→ **Volume Gateway – Cached**
-
-Because the main data is stored in AWS.
-
----
-
-### "Entire dataset must remain local for low-latency access, but backups should go to AWS"
-
-→ **Volume Gateway – Stored**
+> **"Business partners upload files using SFTP."**
+> → **Transfer Family**
 
 ---
 
-### "Migrate 50 TB from an on-premises NAS to S3"
+# Pocket card
 
-→ **DataSync**
+| Keyword                      | Answer                    |
+| ---------------------------- | ------------------------- |
+| On-prem → AWS storage access | **Storage Gateway**       |
+| Move/copy/sync data          | **DataSync**              |
+| SFTP/FTPS/FTP/AS2            | **Transfer Family**       |
+| NFS/SMB → S3                 | **S3 File Gateway**       |
+| SMB → FSx Windows            | **FSx File Gateway**      |
+| Cloud primary                | **Volume Gateway Cached** |
+| Local primary + AWS backup   | **Volume Gateway Stored** |
+| Physical tape replacement    | **Tape Gateway**          |
+| DataSync on-prem             | **Agent**                 |
+| DataSync bandwidth control   | **Bandwidth throttling**  |
+| Transfer Family storage      | **S3 / EFS**              |
 
----
 
-### "Copy files every night from an on-premises SMB server to EFS"
+### One important extra service
 
-→ **DataSync**
-
-Scheduled transfer = DataSync.
-
----
-
-### "Transfer data between S3 and EFS"
-
-→ **DataSync**
-
-DataSync can also move data between AWS storage services.
-
----
-
-### "Business partners upload files using SFTP"
-
-→ **Transfer Family**
-
----
-
-# Final memory card
-
-```text
-Storage Gateway
-= ACCESS AWS storage from on-premises
-
-DataSync
-= MOVE / COPY data
-
-Transfer Family
-= SFTP / FTPS / FTP / AS2
-  for file transfer
-```
-
-### Storage Gateway
-
-```text
-S3 files       → S3 File Gateway
-FSx Windows    → FSx File Gateway
-Cloud primary  → Volume Gateway Cached
-Local primary  → Volume Gateway Stored
-Tape backups   → Tape Gateway
-```
-
-### The most important distinction
-
-```text
-"I need to MOVE the data"
-        ↓
-     DataSync
-
-"I need to KEEP USING the storage"
-        ↓
-  Storage Gateway
-
-"Someone needs to UPLOAD FILES using SFTP"
-        ↓
-  Transfer Family
-```
-
-### One more service to remember
-
-If the question says:
-
-> **No network / extremely large data / offline transfer**
-
-→ **Snow Family**
+> **No network / offline transfer / extremely large data**
+> → **Snow Family**
