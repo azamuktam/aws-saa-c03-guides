@@ -2,378 +2,262 @@
 
 ## The idea
 
-First, what *is* Active Directory?
-
 **Active Directory (AD)** is Microsoft's directory service for centrally managing:
 
-- Users
-- Computers
-- Groups
-- Password authentication
-- Permissions
-- Group policies
+* Users
+* Computers
+* Groups
+* Password authentication
+* Permissions
+* Group Policies
 
-A company might have an AD domain such as:
+Example domain:
 
-`corp.example.com`
-
-Windows computers can **join the domain**, which allows users to authenticate with their corporate AD accounts.
+```text
+corp.example.com
+```
 
 Related terms:
 
-- **LDAP** = a protocol used to communicate with directory services
-- **Domain join** = connecting a computer to an AD domain
-- **Domain Controller (DC)** = a server that runs AD and handles authentication
+* **LDAP** → protocol used by directory services
+* **Domain join** → connect a computer to an AD domain
+* **Domain Controller (DC)** → server running AD and handling authentication
 
----
-
-## The AWS problem
-
-A company has workloads in AWS, but those workloads may still need **Microsoft Active Directory** for authentication.
-
-Examples:
-
-- Windows EC2 instances
-- Amazon FSx for Windows File Server
-- Amazon WorkSpaces
-- Amazon RDS for SQL Server
-- Applications that use LDAP or Kerberos
-
-AWS provides three main Directory Service options:
+AWS provides three main options:
 
 1. **AWS Managed Microsoft AD**
 2. **AD Connector**
 3. **Simple AD**
 
-The main question is:
+The key question:
 
-> **Do I need a real AD in AWS, or do I only need AWS to use an existing AD?**
+> **Need a real AD in AWS, or only access to an existing AD?**
 
 ---
 
-## 1. AWS Managed Microsoft AD
+# AWS Managed Microsoft AD
 
-AWS runs a **real Microsoft Active Directory** for you in AWS.
+Runs a **real Microsoft Active Directory in AWS**.
+
+Supports:
+
+* Domain join
+* Group Policy
+* LDAP
+* Kerberos
+* Microsoft AD-compatible applications
+* MFA
+* Trust relationships with existing AD
 
 ```text
 AWS VPC
-┌─────────────────────────────┐
-│ AWS Managed Microsoft AD    │
-│                             │
-│ Users                       │
-│ Groups                      │
-│ Computers                   │
-│ Organizational Units        │
-│ Group Policies              │
-└─────────────────────────────┘
+└── Managed Microsoft AD
+    ├── Users
+    ├── Groups
+    ├── Computers
+    ├── OUs
+    └── Group Policies
 ```
 
-It supports standard Microsoft AD functionality such as:
+Can be:
 
-- Domain join
-- Group Policy
-- LDAP
-- Kerberos
-- Microsoft AD-compatible applications
-- MFA
-- Trust relationships with existing AD
-
-You can use it as an **independent AD in AWS**, or connect it to an existing on-premises AD using a trust.
+* Independent AD in AWS
+* Connected to on-premises AD through a **trust**
 
 ```text
-On-premises AD
-      │
-      │ Trust
-      │
-AWS Managed Microsoft AD
+On-prem AD
+    │
+   Trust
+    │
+Managed Microsoft AD
 ```
 
 ### Important
 
-**Managed Microsoft AD does not mean your on-premises users are automatically copied into AWS.**
-
-The AWS directory and on-premises directory can remain separate while a trust relationship allows supported authentication and access across the two environments.
+Managed Microsoft AD does **not automatically copy on-premises users into AWS**. The directories can remain separate while a trust allows supported authentication/access.
 
 ### Best for
 
-- Need a **real Microsoft AD in AWS**
-- Windows workloads need domain joining
-- Need full AD features
-- Need Group Policy
-- Need MFA
-- Need a trust with an existing AD
-- AWS services require Microsoft AD functionality
+* Real Microsoft AD in AWS
+* Domain joining Windows workloads
+* Full AD features
+* Group Policy
+* MFA
+* Trust with existing AD
+* AWS services requiring Microsoft AD functionality
 
-### Memory
-
-> **Managed Microsoft AD = real Microsoft AD running in AWS**
+> **Managed Microsoft AD = real Microsoft AD in AWS**
 
 ---
 
-## 2. AD Connector
+# AD Connector
 
-**AD Connector does not create another Active Directory.** AD Connector acts as a bridge between AWS and the existing AD.
+**AD Connector = bridge/proxy to an existing AD.**
 
-It is a **directory gateway/proxy** that connects AWS services to your existing on-premises AD.
+It does **not create another AD** and does **not cache directory information in AWS**.
 
 ```text
 AWS service
-     │
-     ▼
+    ↓
 AD Connector
-     │
-     ▼
-On-premises AD
+    ↓
+On-prem AD
 ```
 
-The users remain in the existing on-premises AD.
-
-AD Connector forwards authentication requests to that AD and does **not cache directory information in AWS**.
-
-### Example
-
-A company already has:
-
-```text
-corp.example.com
-```
-
-and wants AWS services to authenticate corporate users without creating another directory.
-
-Use:
-
-**AD Connector**
+Users remain in the existing on-premises AD.
 
 ### Best for
 
-- Existing on-premises AD
-- Keep identities on-premises
-- AWS services need to authenticate against that AD
-- Do not need a separate AD in AWS
+* Existing on-premises AD
+* Keep identities on-premises
+* AWS services authenticate against existing AD
+* No separate AD required in AWS
 
-### Important limitation
-
-Because authentication depends on the existing AD:
-
-```text
-AWS
- ↓
-AD Connector
- ↓
-On-premises AD
-```
-
-AWS needs network connectivity to the on-premises domain controllers.
-
-### Memory
+Requires network connectivity from AWS to the on-premises domain controllers.
 
 > **AD Connector = connect AWS to an existing AD**
 
 ---
 
-## 3. Simple AD
+# Simple AD
 
-**Simple AD** is a basic directory service based on **Samba** and provides a subset of Microsoft AD functionality.
+**Simple AD = basic Samba-based, AD-compatible directory.**
 
-It can provide:
+Provides:
 
-- Users
-- Groups
-- Basic domain functionality
-- Group Policy
-- Kerberos
-- EC2 domain joining
-- LDAP-compatible functionality
+* Users
+* Groups
+* Basic domain functionality
+* Group Policy
+* Kerberos
+* EC2 domain joining
+* LDAP-compatible functionality
 
-However, it does **not** provide the full capabilities of Microsoft AD.
+Does **not** provide full Microsoft AD capabilities such as:
 
-It does not support features such as:
+* Trust relationships
+* MFA
+* Active Directory Administrative Center
+* PowerShell support
+* Schema extensions
 
-- Trust relationships
-- MFA
-- Active Directory Administrative Center
-- PowerShell support
-- Schema extensions
+Sizes:
 
-Simple AD is available in Small and Large sizes, supporting up to approximately **500** and **5,000 users** respectively.
+* **Small** → up to ~500 users
+* **Large** → up to ~5,000 users
 
-### Important current AWS note
+### Current AWS note
 
-**Simple AD is no longer open to new customers.**
+Simple AD is **closed to new customers**. For new deployments, consider **Managed Microsoft AD** or **AD Connector**.
 
-For new deployments, AWS recommends considering **AWS Managed Microsoft AD** or **AD Connector**.
-
-For the SAA exam, however, you should still understand Simple AD because it can appear in questions.
-
-### Best for
-
-- Basic directory requirements
-- Small/simple workloads
-- No trust requirement
-- No MFA requirement
-- No advanced Microsoft AD features
-
-### Memory
-
-> **Simple AD = basic Samba-based directory**
+> **Simple AD = basic Samba directory**
 
 ---
 
 # The three options compared
 
-| | **Managed Microsoft AD** | **AD Connector** | **Simple AD** |
-|---|---|---|---|
-| What is it? | Real Microsoft AD in AWS | Directory gateway/proxy | Samba-based AD-compatible directory |
-| Directory stored in AWS? | Yes | No | Yes |
-| Existing on-premises AD required? | No | **Yes** | No |
-| Full Microsoft AD features? | **Yes** | Uses existing AD | No |
-| Domain join | Yes | Yes | Yes |
-| Group Policy | Yes | Uses on-premises AD | Basic |
-| MFA | **Yes** | Yes, through RADIUS | **No** |
-| Trust relationships | **Yes** | No | **No** |
-| Main purpose | Full AD in AWS | Use existing AD from AWS | Basic/simple directory |
-| Users stored in AWS? | Yes, in the AWS directory | **No** | Yes |
+|                               | **Managed Microsoft AD** | **AD Connector**             | **Simple AD**         |
+| ----------------------------- | ------------------------ | ---------------------------- | --------------------- |
+| What is it?                   | Real Microsoft AD        | Gateway/proxy to existing AD | Samba-based directory |
+| Directory stored in AWS?      | **Yes**                  | **No**                       | **Yes**               |
+| Existing on-prem AD required? | No                       | **Yes**                      | No                    |
+| Full Microsoft AD features?   | **Yes**                  | Uses existing AD             | No                    |
+| Domain join                   | Yes                      | Yes                          | Yes                   |
+| Group Policy                  | Yes                      | Uses on-prem AD              | Basic                 |
+| MFA                           | **Yes**                  | Yes, with RADIUS             | **No**                |
+| Trust relationships           | **Yes**                  | No                           | **No**                |
+| Main purpose                  | Full AD in AWS           | Use existing AD from AWS     | Basic directory       |
+| Users stored in AWS?          | Yes                      | **No**                       | Yes                   |
 
 ---
 
-# The easiest way to choose
+# Choosing the service
 
-### Do I need a real Microsoft AD in AWS?
+### Need a real AD in AWS?
 
 → **AWS Managed Microsoft AD**
 
 ```text
 Users
  ↓
-AWS Managed Microsoft AD
+Managed Microsoft AD
  ↓
 AWS workloads
 ```
 
----
-
-### Do I already have AD on-premises and just want AWS to use it?
+### Already have on-premises AD and want AWS to use it?
 
 → **AD Connector**
 
 ```text
 Users
  ↓
-On-premises AD
+On-prem AD
  ↑
 AD Connector
  ↑
 AWS workloads
 ```
 
-The users stay in the existing AD.
+Users stay in the existing AD.
 
----
-
-### Do I need only a basic/simple directory?
+### Need only a basic directory?
 
 → **Simple AD**
 
-```text
-Users
- ↓
-Simple AD
- ↓
-Basic AWS workloads
-```
-
-Remember that Simple AD is now closed to new customers.
+Remember: no new Simple AD deployments for new customers.
 
 ---
 
 # Trust relationships
 
-A **trust relationship** connects two separate Active Directory environments so that they can recognize identities from each other.
-
-For example:
+A **trust** connects separate AD environments so supported identities can be recognized across them.
 
 ```text
-On-premises AD
+On-prem AD
 corp.example.com
       │
-      │ Trust
+     Trust
       │
-AWS Managed Microsoft AD
+AWS Managed AD
 aws.example.com
 ```
 
-The directories remain separate.
-
-The trust allows supported AWS workloads to authenticate users from the trusted domain.
+Directories remain separate.
 
 ### Important
 
-**Managed Microsoft AD supports trust relationships.**
-
-**Simple AD does not support trust relationships.**
-
-**AD Connector does not create a trust.** It simply forwards authentication requests to the existing AD.
+* **Managed Microsoft AD** → supports trusts
+* **Simple AD** → no trusts
+* **AD Connector** → does not create a trust; forwards authentication to existing AD
 
 ---
 
 # Common exam patterns
 
-### Existing corporate AD + AWS services
+> **Existing corporate AD + AWS services + identities remain on-premises**
+> → **AD Connector**
 
-> The company already has an on-premises AD and wants AWS services to authenticate against it without storing directory information in AWS.
+> **Full Microsoft AD in AWS**
+> → **Managed Microsoft AD**
 
-→ **AD Connector**
+> **AWS workloads need identities from an existing AD through a trust**
+> → **Managed Microsoft AD**
 
----
+> **MFA required**
+> → **Managed Microsoft AD** or **AD Connector + RADIUS**
 
-### Full AD in AWS
+> **Basic/low-cost LDAP-compatible directory**
+> → **Simple AD**
 
-> Windows EC2 instances must join a domain and the company needs full Microsoft AD features in AWS.
-
-→ **AWS Managed Microsoft AD**
-
----
-
-### Trust with on-premises AD
-
-> AWS workloads need to use identities from an existing corporate AD through a trust relationship.
-
-→ **AWS Managed Microsoft AD**
+> **Simple AD trust required**
+> → **Not supported**
 
 ---
 
-### MFA
+# AWS Console + corporate AD
 
-> The company requires MFA for its directory.
-
-→ **AWS Managed Microsoft AD** or **AD Connector with RADIUS**
-
-Simple AD does not support MFA.
-
----
-
-### Basic/low-cost directory
-
-> A small workload needs a basic LDAP-compatible directory and does not need trust or MFA.
-
-→ **Simple AD**
-
-For new customers, remember that Simple AD is no longer available for new deployments.
-
----
-
-# AWS Console access with corporate AD
-
-This is a common exam pattern.
-
-Suppose:
-
-- Developers already exist in the company's **on-premises AD**
-- They are already organized into AD groups
-- The company wants them to access the **AWS Management Console**
-- Access must be **role-based**
-
-The important pieces are:
+For existing corporate users accessing AWS with role-based permissions:
 
 ```text
 Corporate AD
@@ -382,71 +266,49 @@ AD Connector
      ↓
 Federation
      ↓
-IAM Role
+IAM Role / IAM Identity Center
      ↓
-AWS Console
+AWS
 ```
 
-Here:
+### Important distinction
 
-**AD Connector**
+* **AD groups** → corporate directory groups
+* **IAM roles** → AWS permissions
+* **IAM groups** → groups for IAM users, not the normal solution for federated corporate identities
 
-→ allows AWS to use the existing corporate identities.
-
-**IAM Role**
-
-→ defines what those users are allowed to do in AWS.
-
-Do not confuse:
-
-- **AD groups** = groups in the corporate directory
-- **IAM roles** = AWS permissions
-- **IAM groups** = groups for IAM users, not the normal solution for federated corporate identities
-
-## Corporate users accessing AWS
-
-Corporate users such as Alice and Bob are stored in the company's **Active Directory**, not as IAM users.
-
-Federation allows those corporate identities to access AWS without creating a separate IAM user for each person.
+Corporate users do not need to become IAM users.
 
 ```text
-Corporate AD
-├── Alice
-├── Bob
-└── Developers
-        ↓
-   Federation
-        ↓
-       AWS
-        ↓
-IAM Role / IAM Identity Center
-        ↓
-AWS account & resources
+Alice
+→ Corporate AD user
 
+AWS account
+→ Separate AWS environment
+
+IAM Role
+→ AWS permissions
 ```
-The roles are on the AWS side, not inside Active Directory.
 
-**AD** → Who is the user?
+### Mental model
 
-**Federation** → Connects the corporate identity to AWS
+```text
+AD
+→ Who is the user?
 
-**IAM Role** / IAM Identity Center → What can the user do in AWS?
+Federation
+→ Connect corporate identity to AWS
 
-**AWS account/resources** → What they ultimately access
+IAM Role / IAM Identity Center
+→ What can the user do?
 
-**Important**
-
-AD users are not AWS accounts.
-
-**Alice** → corporate AD user
-
-**AWS account** → separate AWS environment
-
-**IAM role** → AWS permissions
+AWS resources
+→ What they access
+```
 
 ### Exam clue
 
-> Existing corporate AD + federation + role-based AWS Console access
+> Existing corporate AD + AWS Console + role-based access
 
 → **AD Connector + IAM Roles**
 
@@ -454,63 +316,35 @@ AD users are not AWS accounts.
 
 # Key traps
 
-### Trap 1
+> **"Create a trust with on-prem AD."**
+> → **Managed Microsoft AD**
 
-> "Create a trust with on-premises AD"
+> **"Keep identities only on-premises."**
+> → **AD Connector**
 
-→ **Managed Microsoft AD**
+> **"Need a full Microsoft AD in AWS."**
+> → **Managed Microsoft AD**
 
-Simple AD does not support trust relationships.
+> **"Basic LDAP + small/simple workload."**
+> → **Simple AD**
 
-### Trap 2
-
-> "Keep identities only on-premises"
-
-→ **AD Connector**
-
-It does not store directory information in AWS.
-
-### Trap 3
-
-> "Need a full Microsoft AD in AWS"
-
-→ **Managed Microsoft AD**
-
-### Trap 4
-
-> "Basic LDAP + small/simple workload"
-
-→ **Simple AD**
-
-### Trap 5
-
-> "Existing AD + AWS Console + role-based access"
-
-→ **AD Connector + IAM Roles**
+> **"Existing AD + AWS Console + role-based access."**
+> → **AD Connector + IAM Roles**
 
 ---
 
 # Pocket card
 
-| Requirement | Answer |
-|---|---|
-| Full Microsoft AD in AWS | **Managed Microsoft AD** |
-| Existing on-premises AD | **AD Connector** |
-| Keep identities on-premises | **AD Connector** |
-| Trust relationship | **Managed Microsoft AD** |
-| Full AD features | **Managed Microsoft AD** |
-| MFA | **Managed Microsoft AD** or AD Connector with RADIUS |
-| Basic/legacy directory | **Simple AD** |
-| Simple AD trust | **Not supported** |
-| AWS Console via corporate AD | **AD Connector + IAM Roles** |
+| Requirement                  | Answer                                                |
+| ---------------------------- | ----------------------------------------------------- |
+| Full Microsoft AD in AWS     | **Managed Microsoft AD**                              |
+| Existing on-prem AD          | **AD Connector**                                      |
+| Keep identities on-premises  | **AD Connector**                                      |
+| Trust relationship           | **Managed Microsoft AD**                              |
+| Full AD features             | **Managed Microsoft AD**                              |
+| MFA                          | **Managed Microsoft AD** or **AD Connector + RADIUS** |
+| Basic/legacy directory       | **Simple AD**                                         |
+| Simple AD trust              | **Not supported**                                     |
+| AWS Console via corporate AD | **AD Connector + IAM Roles**                          |
 
-## Memory hook
 
-**Managed Microsoft AD**  
-→ **Real AD in AWS**
-
-**AD Connector**  
-→ **Connect to existing AD**
-
-**Simple AD**  
-→ **Basic Samba directory**
