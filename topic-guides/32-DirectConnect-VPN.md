@@ -693,10 +693,12 @@ Transit Gateway
 **Core SAA rule:**
 
 > **One existing DX + many AWS accounts/VPCs → Direct Connect Gateway + Transit Gateway**
+
 | Situation                                                             | Think                                                  |
 | --------------------------------------------------------------------- | ------------------------------------------------------ |
 | Two VPCs have **non-overlapping CIDRs** and need general connectivity | **VPC Peering / Transit Gateway**                      |
 | VPCs have **overlapping CIDRs** but need access to a specific service | **PrivateLink**                                        |
 | Need entire network connectivity                                      | **Peering / TGW**, with non-overlapping address ranges |
 | Need only one service, not network-to-network access                  | **PrivateLink**                                        |
+
 
