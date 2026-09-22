@@ -2,7 +2,7 @@
 
 ## The idea
 
-These are AWS services that commonly appear in SAA questions involving **data lakes, ETL, metadata, schema discovery, data integration, and bulk operations on S3 objects**.
+These are AWS services that commonly appear in SAA questions involving **data lakes, ETL, metadata, schema discovery, data integration, incremental processing, and bulk operations on S3 objects**.
 
 You generally don't need deep knowledge of each one.
 
@@ -24,6 +24,9 @@ Store table/schema metadata
 
 Transform CSV → Parquet
 → Glue ETL
+
+Prevent Glue from reprocessing previously processed data
+→ Glue Job Bookmark
 
 Data lake + fine-grained permissions
 → Lake Formation
@@ -58,6 +61,7 @@ Glue can:
 * catalog schemas
 * transform data
 * prepare data for analytics
+* track previously processed data with **job bookmarks**
 
 It is especially useful when the requirement is **serverless ETL with low operational overhead**, especially for larger data-processing workloads.
 
@@ -72,6 +76,9 @@ Glue Data Catalog
 
 Glue ETL
 = performs data transformation
+
+Glue Job Bookmark
+= tracks previously processed data
 ```
 
 ### Mental model
@@ -79,10 +86,14 @@ Glue ETL
 ```text
              AWS Glue
                 │
-      ┌─────────┼─────────┐
-      ↓         ↓         ↓
-   Crawler    Catalog     ETL
-  discover    metadata   transform
+      ┌─────────┼─────────────┐
+      ↓         ↓             ↓
+   Crawler    Catalog         ETL
+  discover    metadata      transform
+                                │
+                                ↓
+                         Job Bookmark
+                         track progress
 ```
 
 ---
@@ -220,9 +231,150 @@ Glue ETL
 
 ---
 
+# Glue Job Bookmarks
+
+**Glue Job Bookmarks = track what a Glue ETL job has already processed.**
+
+They are useful for **incremental ETL** because they help Glue avoid processing the same old data again on later runs.
+
+### Typical problem
+
+Suppose an S3 bucket contains:
+
+```text
+Day 1:
+A
+B
+C
+```
+
+The Glue job processes all three objects.
+
+Later:
+
+```text
+Day 2:
+A
+B
+C
+D
+E
+```
+
+Without a mechanism to track previous progress, the job may process:
+
+```text
+A B C D E
+```
+
+again.
+
+With **job bookmarks**, Glue can track what was already processed and focus on the newly relevant data.
+
+```text
+Day 1:
+S3 → A B C
+     ↓
+Glue processes A B C
+     ↓
+Bookmark records progress
+
+
+Day 2:
+S3 → A B C D E
+     ↓
+Bookmark knows A B C were already processed
+     ↓
+Glue processes new/relevant data
+```
+
+### Signal
+
+> **"Glue ETL keeps reprocessing old data from previous runs."**
+
+→ **Enable Glue Job Bookmarks**
+
+### Main benefit
+
+**Operational efficiency.**
+
+You do not need to build custom logic just to remember which data was already processed.
+
+### Typical question
+
+> "A daily AWS Glue ETL job reads data from S3, but old data from previous runs is being reprocessed. What is the most operationally efficient solution?"
+
+→ **Enable Job Bookmarks**
+
+### Important distinction
+
+```text
+Job Bookmark
+= remember what the Glue job processed
+
+Crawler
+= discover schema
+
+Catalog
+= store metadata
+
+ETL
+= transform data
+```
+
+---
+
+# Glue Job Bookmarks vs Other Solutions
+
+## Job Bookmarks vs deleting old data
+
+Do **not** create custom Lambda logic just to delete previously processed source data unless the requirement explicitly calls for deletion.
+
+Deleting source data can:
+
+* destroy historical data
+* create additional operational complexity
+* make recovery harder
+* require extra monitoring and permissions
+
+If the problem is simply:
+
+> **"Don't process the same data again."**
+
+→ **Glue Job Bookmarks**
+
+---
+
+## Job Bookmarks vs partitioning
+
+Partitioning and bookmarks solve different problems.
+
+```text
+Partitioning
+= organize data for more efficient querying/processing
+
+Job Bookmark
+= track previously processed data
+```
+
+For example:
+
+```text
+S3 data organized by:
+year/month/day
+→ Partitioning
+
+Glue remembers which data was already processed
+→ Job Bookmark
+```
+
+They can be used together.
+
+---
+
 # Complete Glue Example
 
-Suppose CSV files arrive in an S3 bucket.
+Suppose CSV files arrive in an S3 bucket every day.
 
 A typical serverless data-processing workflow can look like:
 
@@ -239,12 +391,16 @@ Store metadata/table definition
       ↓
 Glue ETL job
       ↓
+Job Bookmark checks previous progress
+      ↓
+Process new/relevant data
+      ↓
 CSV → Parquet
       ↓
 S3 transformed bucket
 ```
 
-This separates the three roles:
+This separates the roles:
 
 ```text
 Crawler
@@ -255,6 +411,9 @@ Catalog
 
 ETL
 → Transform the data
+
+Job Bookmark
+→ Remember what the ETL job already processed
 ```
 
 ---
@@ -270,6 +429,8 @@ EventBridge
  ↓
 Glue ETL job
  ↓
+Job Bookmark
+ ↓
 CSV → Parquet
  ↓
 S3 transformed bucket
@@ -283,6 +444,7 @@ Glue is useful when the requirement is:
 * low operational overhead
 * processing larger datasets
 * preparing data for analytics
+* incremental processing without custom tracking
 
 ---
 
@@ -326,15 +488,25 @@ Glue
 
 Glue is the natural choice when the question emphasizes **serverless ETL** rather than generic compute.
 
+### Glue Job Bookmark
+
+```text
+Glue Job Bookmark
+→ Incremental processing
+```
+
+If the question specifically says that **previously processed data keeps getting processed again**, the key feature is the **Job Bookmark**, not simply Glue itself.
+
 ---
 
 # AWS Glue Service Comparison
 
-| Glue component        | Main job        | Signal                        |
-| --------------------- | --------------- | ----------------------------- |
-| **Glue Crawler**      | Discover schema | Automatically discover schema |
-| **Glue Data Catalog** | Store metadata  | Tables / schema / metadata    |
-| **Glue ETL**          | Transform data  | CSV → Parquet / ETL           |
+| Glue component        | Main job                  | Signal                                    |
+| --------------------- | ------------------------- | ----------------------------------------- |
+| **Glue Crawler**      | Discover schema           | Automatically discover schema             |
+| **Glue Data Catalog** | Store metadata            | Tables / schema / metadata                |
+| **Glue ETL**          | Transform data            | CSV → Parquet / ETL                       |
+| **Glue Job Bookmark** | Track processing progress | Prevent reprocessing previously read data |
 
 ### Quick memory
 
@@ -347,6 +519,9 @@ Store
 
 Transform
 → ETL
+
+Remember previous processing
+→ Job Bookmark
 ```
 
 ---
@@ -478,7 +653,7 @@ Glue
 
 **AWS Data Exchange = discover, subscribe to, share, and use third-party datasets in AWS.**
 
-It provides a way for data providers to make datasets available and for data recipients to discover and subscribe to them. Data products can be available through **AWS Marketplace**, and supported dataset types include files, APIs, Amazon S3, Amazon Redshift, and AWS Lake Formation data.
+It provides a way for data providers to make datasets available and for data recipients to discover and subscribe to them.
 
 Typical use case:
 
@@ -511,8 +686,6 @@ AppFlow
 Data Exchange
 = discover / subscribe to external datasets
 ```
-
-AWS Data Exchange can provide data through several forms, including files, APIs, S3 data, Redshift data, and Lake Formation data.
 
 ---
 
@@ -635,6 +808,10 @@ Glue Data Catalog                              │
    │                                            │
    ↓                                            │
 Glue ETL ───────────────→ transformed data ←───┘
+   │
+   ↓
+Job Bookmark
+tracks incremental processing
 ```
 
 The roles remain different:
@@ -654,6 +831,9 @@ Glue Data Catalog
 
 Glue ETL
 = transform data
+
+Glue Job Bookmark
+= track previously processed data
 
 Lake Formation
 = control data lake access
@@ -687,6 +867,18 @@ Lake Formation
 
 ---
 
+> **"A Glue ETL job keeps processing old S3 data from previous runs."**
+
+→ **Enable Glue Job Bookmarks**
+
+---
+
+> **"A daily Glue job should process newly arrived data without repeatedly processing old data."**
+
+→ **Glue Job Bookmarks**
+
+---
+
 > **"A company wants to build a data lake with fine-grained access control over tables, rows, and columns."**
 
 → **Lake Formation**
@@ -717,7 +909,7 @@ Lake Formation
 
 ---
 
-> **"Millions of existing S3 objects need to be processed in bulk."**
+> **"Millions/billions of existing S3 objects need to be processed in bulk."**
 
 → **S3 Batch Operations**
 
@@ -773,6 +965,30 @@ Glue Data Catalog
 = data types
 = S3 location
 = schema
+```
+
+---
+
+## Glue Job Bookmark vs Partitioning
+
+Do not confuse these.
+
+```text
+Partitioning
+= organize data to improve query/processing efficiency
+
+Job Bookmark
+= track what the Glue job already processed
+```
+
+Exam trigger:
+
+```text
+Data is hard to query efficiently
+→ Think partitioning
+
+Glue keeps reprocessing old data
+→ Think Job Bookmark
 ```
 
 ---
@@ -843,6 +1059,22 @@ Millions of existing objects
 
 ---
 
+## Job Bookmarks vs custom Lambda cleanup
+
+Do not overengineer a Glue incremental-processing problem.
+
+```text
+Glue reprocesses old data
+→ Job Bookmark
+
+Delete old source objects
+→ Not the default solution
+```
+
+If the question asks for the **most operationally efficient** way to prevent reprocessing, Job Bookmarks are usually the direct answer.
+
+---
+
 # Data Processing Decision Tree
 
 When you see a data-related question, first identify the operation.
@@ -861,6 +1093,11 @@ What does the question want?
           ├── Transform data
           │      ↓
           │   Glue ETL
+          │
+          ├── Prevent reprocessing
+          │   of previously processed data
+          │      ↓
+          │   Glue Job Bookmark
           │
           ├── Govern data lake permissions
           │      ↓
@@ -894,6 +1131,8 @@ What does the question want?
 | Store table/schema definitions         | **Glue Data Catalog**   |
 | Transform data                         | **Glue ETL**            |
 | CSV → Parquet                          | **Glue ETL**            |
+| Glue keeps reprocessing old data       | **Glue Job Bookmark**   |
+| Incremental Glue ETL processing        | **Glue Job Bookmark**   |
 | Data lake + fine-grained permissions   | **Lake Formation**      |
 | Table/row/column permissions           | **Lake Formation**      |
 | SaaS → S3                              | **AppFlow**             |
@@ -918,6 +1157,9 @@ Glue Data Catalog
 
 Glue ETL
 = TRANSFORM DATA
+
+Glue Job Bookmark
+= TRACK PREVIOUSLY PROCESSED DATA
 
 Lake Formation
 = DATA LAKE PERMISSIONS
@@ -947,6 +1189,9 @@ Store metadata
 Transform data
 → Glue ETL
 
+Glue keeps reprocessing old data
+→ Glue Job Bookmark
+
 Data lake + fine-grained permissions
 → Lake Formation
 
@@ -971,6 +1216,7 @@ ETL                    → Glue
 Discover schema        → Crawler
 Store metadata         → Catalog
 CSV → Parquet          → Glue ETL
+Reprocessing old data  → Job Bookmark
 Data lake access       → Lake Formation
 Salesforce → S3        → AppFlow
 Third-party datasets   → Data Exchange
