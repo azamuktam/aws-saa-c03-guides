@@ -152,6 +152,32 @@ AWS compliance documents
 > **Artifact = COMPLIANCE DOCUMENTS**
 
 ---
+### **37H — Specialized Services & Governance.md**
+
+**AWS ParallelCluster** is a **specialized HPC service**, rather than a core EC2 feature.
+
+Add it under:
+
+```text
+37H — Specialized Services & Governance
+
+AWS ParallelCluster
+AWS RAM
+Billing Conductor
+...
+```
+
+### AWS ParallelCluster
+
+**AWS ParallelCluster = deploy and manage HPC clusters on AWS**
+
+Commonly used with:
+
+* EC2
+* Slurm
+* EFS
+* FSx for Lustre
+
 
 # Amazon AppStream 2.0
 
