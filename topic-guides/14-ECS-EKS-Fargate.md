@@ -2,131 +2,766 @@
 
 ## The idea
 
-Before containers, shipping software was chaos. Your app worked on your laptop, then exploded on the server because the server had a different Python version, a missing library, a different OS. The dreaded phrase: **"but it works on my machine!"**
+Containers package an application together with everything it needs to run:
 
-Containers fix this the same way shipping containers fixed global trade. Before standardized steel boxes, dock workers hand-loaded barrels, crates, and sacks — slow, fragile, different for every ship. Then someone said: *put everything in an identical steel box, and every crane, ship, and truck in the world handles it the same way.* A software container is that steel box: your **app plus its entire environment** (runtime, libraries, config, OS dependencies) packaged into one **image**. If it runs in the container on your laptop, it runs identically anywhere.
+* Application code
+* Runtime
+* Libraries and dependencies
+* Configuration
+* OS-level dependencies
 
-On the compute spectrum, containers are the **middle ground between Lambda and EC2**: more control and longer-running than Lambda (no 15-minute limit), less babysitting than raw EC2.
+This package is called a **container image**.
 
-But now a new problem: real applications run *hundreds* of containers. Who restarts one when it crashes? Who spreads them across machines? Who wires them to the load balancer? Doing this by hand is like being a harbor master directing every crane manually. You need an **orchestrator** — a robotic harbor master. AWS gives you two: **ECS** (Elastic Container Service — AWS's own, simple) and **EKS** (Elastic Kubernetes Service — managed Kubernetes, the open-source industry standard).
+Instead of installing the application directly on a server, you run the image as a **container**.
 
-## ECS vocabulary — learn these four words cold
+Containers are useful when you want more control than Lambda but do not necessarily want to manage a full server for every application.
 
-| ECS term | What it is | Analogy |
-|---|---|---|
-| **Task Definition** | JSON blueprint: which image, CPU/RAM, ports, env vars, IAM roles | The recipe |
-| **Task** | One running copy of that definition | A dish cooked from the recipe |
-| **Service** | Keeps N tasks running, replaces crashed ones, wires them to an ALB | The babysitter |
-| **Cluster** | Logical grouping of the infrastructure the tasks run on | The kitchen |
+### The problem with containers
 
-## Launch types: EC2 vs Fargate
+One application may need only a few containers. A production system may need hundreds.
 
-```
-                 ECS or EKS (the orchestrator brain)
-                        /              \
-             EC2 launch type       Fargate launch type
-             ----------------      ---------------------
-             YOU manage the        NO instances visible.
-             instances (patch,     Declare CPU + RAM per
-             scale, choose type)   task. AWS runs it.
-             + GPUs possible       + zero server mgmt
-             + Spot instances      + Fargate Spot for
-               for cost tricks       interruptible work
-                                   - NO GPUs (!)
-```
+You need something that can:
 
-- **EC2 launch type**: containers run on EC2 instances *you* manage. You pick instance types, you patch, you can use **Spot instances** for cost savings, and — crucially — you can attach **GPUs**.
-- **Fargate**: **serverless containers**. You declare CPU and memory per task; AWS provisions invisible compute. The moment an exam question says **"no server management"** or "without managing infrastructure" for containers → **Fargate**.
+* Start containers
+* Stop and replace failed containers
+* Run multiple copies of an application
+* Distribute containers across compute resources
+* Connect containers to load balancers
+* Scale the number of running containers
 
-**THE trap: Fargate does NOT support GPUs.** "Containerized ML inference needing GPUs" → **EC2 launch type**, never Fargate. This nuance is tested.
+This is the job of a **container orchestrator**.
 
-**Misconception to kill:** Fargate is **not a third orchestrator**. It's a compute layer that plugs into **BOTH ECS and EKS**. ECS/EKS decide *what* runs; Fargate is one option for *where* it runs.
+AWS provides two major orchestration options:
 
-## When EKS? Only two signals
+| Service | What it provides                   |
+| ------- | ---------------------------------- |
+| **ECS** | AWS-native container orchestration |
+| **EKS** | Managed Kubernetes                 |
 
-Default to **ECS** unless the question says:
-1. **"Already using Kubernetes"** (on-prem k8s migration, existing k8s tooling/manifests), or
-2. **"Portability / multi-cloud / avoid vendor lock-in"** (Kubernetes runs anywhere; ECS is AWS-only).
-
-No k8s keyword? **ECS.** It's simpler and AWS-native.
-
-## ECR — the image warehouse
-
-**ECR (Elastic Container Registry)** stores your container images (like Docker Hub, but private and IAM-integrated). Bonus exam fact: ECR does **image vulnerability scanning** — "scan container images for CVEs" → **ECR scanning**.
-
-## THE role trap pair (guaranteed points)
-
-Two IAM roles per task, constantly confused:
-
-| Role | Used by | For | Symptom when wrong |
-|---|---|---|---|
-| **Task Execution Role** | ECS agent (plumbing) | **LAUNCHING**: pull image from ECR, write logs to CloudWatch | "Task fails to start / **can't pull image**" |
-| **Task Role** | Your app code inside | What the **app does once running**: S3, DynamoDB, SQS calls | "**App gets AccessDenied** calling DynamoDB" |
-
-Hook: **Execution = getting the container up. Task Role = what the app does once it's up.**
-
-## Networking and scaling facts
-
-- **awsvpc network mode**: every task gets its **own ENI** (Elastic Network Interface — its own private IP) and therefore its **own security group**. "Per-container security group" → awsvpc. (Required mode on Fargate.)
-- **ALB dynamic port mapping**: on the EC2 launch type, an Application Load Balancer can route to **multiple tasks of the same service on one instance**, each on a random host port. No manual port juggling.
-- **Service Auto Scaling**: scale task count on **CPU, memory, or SQS queue depth**.
-- **Fargate Spot**: discounted Fargate for **interruption-tolerant** workloads.
-
-# EKS Secrets Encryption with AWS KMS
-
-Amazon EKS stores Kubernetes objects, including **Kubernetes Secrets**, in the cluster's **etcd** datastore.
-
-By default, Kubernetes Secrets are not protected with customer-managed KMS encryption at the etcd layer.
-
-EKS supports **envelope encryption** to encrypt Kubernetes Secrets using an **AWS KMS key**.
+**Fargate is not an orchestrator.**
+Fargate is a **serverless compute option** that can run containers managed by ECS or EKS.
 
 ```text
-Kubernetes Secret
-      ↓
-      EKS
-      ↓
-AWS KMS encryption
-      ↓
-Encrypted in etcd
+                 Container orchestration
+                    ECS or EKS
+                       |
+            -------------------------
+            |                       |
+         EC2 compute             Fargate
+       You manage hosts       AWS manages hosts
 ```
-## The compute ladder (which service for which job)
 
-| Signal in question | Answer |
-|---|---|
-| Event-driven, runs **< 15 min** | Lambda |
-| Containers, **no infrastructure management** | Fargate |
-| Containers needing **GPU / deep instance control / Spot** | ECS on EC2 |
-| **Kubernetes** / multi-cloud portability | EKS |
-| Classic web app, "just deploy my code" | Elastic Beanstalk |
-| Full OS control, custom everything | EC2 |
+---
 
-## Question patterns
+# ECS vocabulary
 
-> *"Run containers without managing any servers or clusters of instances"* → **Fargate** (the phrase "no server management" is the trigger)
-> *"Company runs Kubernetes on-premises and wants to migrate to AWS with minimal changes"* → **EKS** ("already Kubernetes" is one of only two EKS signals)
-> *"ECS task fails to start; error pulling image from ECR"* → **Task Execution Role** (launch plumbing = execution role)
-> *"Application inside the container gets AccessDenied calling DynamoDB"* → **Task Role** (app-level permissions once running)
-> *"Containerized GPU-based ML inference, minimize management"* → **ECS on EC2 launch type** (Fargate has NO GPUs)
-> *"Automatically scan container images for vulnerabilities"* → **ECR image scanning** (built into the registry)
-> *"Assign a dedicated security group to each container/task"* → **awsvpc network mode** (per-task ENI = per-task SG)
-> *"Avoid vendor lock-in / portable across clouds"* → **EKS** (Kubernetes is the portability play)
-> *"Cost-optimize fault-tolerant containerized batch jobs on Fargate"* → **Fargate Spot** (interruptible = Spot)
-> *"Scale container count based on messages waiting in a queue"* → **ECS Service Auto Scaling on SQS queue depth**
+Learn these four terms clearly.
 
-## Pocket card
+| ECS term            | Meaning                                            |
+| ------------------- | -------------------------------------------------- |
+| **Task Definition** | Configuration that describes how a task should run |
+| **Task**            | A running instance of a task definition            |
+| **Service**         | Maintains a desired number of running tasks        |
+| **Cluster**         | Logical grouping used to organize ECS resources    |
 
-| Keyword | Answer |
-|---|---|
-| "No server management" + containers | Fargate |
-| "Already using Kubernetes" / "multi-cloud" | EKS |
-| GPUs for containers | EC2 launch type (never Fargate) |
-| Can't pull image / can't write logs | Task Execution Role |
-| App AccessDenied to AWS service | Task Role |
-| Recipe / blueprint | Task Definition |
-| Keeps N copies running + ALB | Service |
-| Image storage + CVE scanning | ECR |
-| Per-task ENI + security group | awsvpc mode |
-| Cheap interruptible Fargate | Fargate Spot |
-| Multiple same-service tasks, one instance | ALB dynamic port mapping |
+### Task Definition
 
-Once your containers are running, the next question is: what if you don't even want to think about containers — you just want to hand AWS your code? That's Elastic Beanstalk, up next.
+A **Task Definition** is the configuration for a containerized workload.
+
+It can specify:
+
+* Container image
+* CPU and memory
+* Ports
+* Environment variables
+* Logging
+* Task role
+* Task execution role
+* Network settings
+* Secrets
+
+Think:
+
+**Task Definition = "How should this container workload run?"**
+
+### Task
+
+A **Task** is an actual running instance of a task definition.
+
+```text
+Task Definition
+      ↓
+   run it
+      ↓
+    Task
+```
+
+For example:
+
+```text
+Task Definition: "web-app"
+
+Desired count: 3
+
+→ Task 1
+→ Task 2
+→ Task 3
+```
+
+### Service
+
+An ECS **Service** maintains a desired number of tasks.
+
+For example:
+
+```text
+Desired count = 3
+
+Task 1   Running
+Task 2   Running
+Task 3   Running
+```
+
+If Task 2 crashes:
+
+```text
+Task 2   ❌
+   ↓
+ECS starts replacement
+   ↓
+Task 4   ✅
+```
+
+A service can also integrate with load balancers and Service Auto Scaling.
+
+### Cluster
+
+An ECS **Cluster** is a logical grouping for ECS resources and workloads.
+
+For exam questions, remember:
+
+```text
+Cluster
+   ↓
+Service
+   ↓
+Tasks
+   ↓
+Containers
+```
+
+---
+
+# ECS launch options
+
+For ECS, the two important compute choices are:
+
+## ECS on EC2
+
+Containers run on EC2 instances that you manage.
+
+You control:
+
+* EC2 instance types
+* OS and AMI
+* Capacity
+* Scaling of instances
+* Installed software
+* GPUs
+* Spot usage
+
+Advantages:
+
+* More control
+* GPU support
+* Can use EC2 Spot Instances
+* Can choose specialized instance types
+
+Disadvantages:
+
+* You manage the underlying instances
+* You must think about EC2 capacity, patching, and scaling
+
+---
+
+# ECS on Fargate
+
+Fargate provides **serverless container compute**.
+
+You specify resources such as:
+
+* CPU
+* Memory
+* Networking
+* Container configuration
+
+AWS manages the underlying infrastructure.
+
+You do not manage the EC2 instances running your containers.
+
+### Main exam trigger
+
+> **"Run containers without managing servers/infrastructure"**
+
+→ **Fargate**
+
+### Important limitation
+
+Fargate does **not** support GPUs.
+
+Therefore:
+
+> **Containerized workload requires GPU**
+
+→ **ECS on EC2**
+
+```text
+Containers + no server management
+        → Fargate
+
+Containers + GPU
+        → ECS on EC2
+```
+
+---
+
+# Fargate vs EC2
+
+| Requirement                                |         ECS on EC2 |                Fargate |
+| ------------------------------------------ | -----------------: | ---------------------: |
+| Manage EC2 instances                       |                Yes |                     No |
+| Serverless containers                      |                 No |                    Yes |
+| GPUs                                       |            **Yes** |                 **No** |
+| EC2 Spot Instances                         |            **Yes** |                     No |
+| Maximum infrastructure control             |            **Yes** |                   Less |
+| Operational overhead                       |             Higher |                  Lower |
+| Good for interruptible container workloads | Yes, with EC2 Spot | Yes, with Fargate Spot |
+
+---
+
+# Fargate Spot
+
+**Fargate Spot** provides discounted Fargate capacity for workloads that can tolerate interruption.
+
+Good examples:
+
+* Batch processing
+* Background jobs
+* Fault-tolerant workers
+* Non-critical asynchronous workloads
+
+Exam trigger:
+
+> **"Cost optimize Fargate workloads that can tolerate interruptions"**
+
+→ **Fargate Spot**
+
+---
+
+# ECS vs EKS
+
+## ECS
+
+**ECS = AWS-native container orchestration.**
+
+Choose ECS when the question simply asks you to run containers on AWS and does not require Kubernetes-specific functionality.
+
+ECS is generally simpler when you want an AWS-native container platform.
+
+## EKS
+
+**EKS = managed Kubernetes.**
+
+Strong signals for EKS:
+
+1. The company already uses **Kubernetes**
+2. The workload requires **Kubernetes compatibility/portability**
+
+Examples:
+
+> "The company already runs Kubernetes on-premises and wants to migrate to AWS."
+
+→ **EKS**
+
+> "The company wants Kubernetes-based workloads that can be moved between cloud providers."
+
+→ **EKS**
+
+### Important
+
+Do not choose EKS simply because it is more powerful.
+
+For SAA questions, look for an explicit Kubernetes requirement.
+
+```text
+AWS-native containers
+→ ECS
+
+Already using Kubernetes
+→ EKS
+
+Kubernetes portability / compatibility
+→ EKS
+```
+
+---
+
+# ECR — Container Image Registry
+
+**Amazon ECR (Elastic Container Registry)** stores container images.
+
+Typical workflow:
+
+```text
+Developer
+   ↓
+Build Docker image
+   ↓
+Push image to ECR
+   ↓
+ECS / EKS pulls image
+   ↓
+Container starts
+```
+
+ECR is similar to a private container registry such as Docker Hub, but integrates with AWS IAM and other AWS services.
+
+## ECR vulnerability scanning
+
+ECR can scan container images for vulnerabilities.
+
+There are two important scanning concepts:
+
+* **Basic scanning** — detects vulnerabilities in supported OS packages
+* **Enhanced scanning** — integrates with Amazon Inspector and also scans programming-language packages
+
+Exam trigger:
+
+> **"Scan container images for vulnerabilities"**
+
+→ **ECR image scanning**
+
+---
+
+# ECS IAM roles
+
+This is one of the most important ECS exam topics.
+
+There are two roles you must distinguish:
+
+| Role                    | Used by                          | Purpose                                                |
+| ----------------------- | -------------------------------- | ------------------------------------------------------ |
+| **Task Execution Role** | ECS/Fargate agent                | Infrastructure operations needed to start/run the task |
+| **Task Role**           | Application inside the container | Permissions used by your application                   |
+
+## Task Execution Role
+
+The **Task Execution Role** gives ECS/Fargate permission to perform actions needed to run the task.
+
+Common examples:
+
+* Pull image from private ECR
+* Send logs to CloudWatch Logs
+* Retrieve certain secrets referenced by the task
+
+Think:
+
+> **"Can ECS get the container running?"**
+
+### Typical question
+
+> "The ECS task cannot pull its image from ECR."
+
+→ **Task Execution Role**
+
+> "The ECS task cannot send logs to CloudWatch."
+
+→ **Task Execution Role**
+
+AWS documents these as responsibilities of the task execution role.
+
+---
+
+# Task Role
+
+The **Task Role** gives the application running inside the container permission to call AWS services.
+
+Examples:
+
+```text
+Application
+   ↓
+S3
+DynamoDB
+SQS
+SNS
+Secrets Manager
+```
+
+### Typical question
+
+> "The application inside the container receives AccessDenied when calling DynamoDB."
+
+→ **Task Role**
+
+> "The application needs permission to upload files to S3."
+
+→ **Task Role**
+
+AWS explicitly separates these application permissions from the task execution role.
+
+## Easy memory rule
+
+```text
+Execution Role
+→ ECS infrastructure / task startup
+
+Task Role
+→ Your application
+```
+
+---
+
+# ECS networking
+
+## awsvpc network mode
+
+With **`awsvpc`**:
+
+* Each task gets its own ENI
+* Each task gets its own private IP address
+* You can assign security groups directly to the task
+
+```text
+VPC
+ |
+ +-- Task 1
+ |    └── ENI + private IP + Security Group
+ |
+ +-- Task 2
+      └── ENI + private IP + Security Group
+```
+
+This is especially important for Fargate because `awsvpc` is the required networking model for Fargate tasks.
+
+Exam trigger:
+
+> **"Give each ECS task its own security group"**
+
+→ **`awsvpc`**
+
+> **"Each task should have its own ENI/private IP"**
+
+→ **`awsvpc`**
+
+AWS documents `awsvpc` as the mode that provides a separate ENI and allows security groups to be assigned at the task level.
+
+---
+
+# ALB and ECS
+
+An ECS service can integrate with an **Application Load Balancer (ALB)**.
+
+Typical architecture:
+
+```text
+Users
+  ↓
+ALB
+  ↓
+ECS Service
+  ↓
+Task 1
+Task 2
+Task 3
+```
+
+The ALB distributes traffic across healthy tasks.
+
+## Dynamic port mapping
+
+With ECS on EC2, dynamic port mapping can allow multiple copies of a service to run on the same EC2 instance while using different host ports.
+
+For example:
+
+```text
+EC2 instance
+ ├── Task 1 → host port 32768
+ ├── Task 2 → host port 32769
+ └── Task 3 → host port 32770
+```
+
+The ALB keeps track of the appropriate target port.
+
+With `awsvpc`, each task has its own IP address, so host-port management is much less important because traffic can be sent directly to the task's IP and port.
+
+---
+
+# ECS Service Auto Scaling
+
+ECS Service Auto Scaling changes the **number of running tasks**.
+
+You can scale based on metrics such as:
+
+* CPU utilization
+* Memory utilization
+* Application-specific CloudWatch metrics
+* Queue workload
+
+For queue workers:
+
+```text
+SQS queue grows
+      ↓
+More work waiting
+      ↓
+ECS increases task count
+      ↓
+More workers process messages
+```
+
+Exam trigger:
+
+> **"Increase the number of ECS tasks when an SQS queue contains more work."**
+
+→ **ECS Service Auto Scaling**
+
+For SQS-based workloads, AWS recommends scaling using backlog-per-task rather than blindly using raw queue depth.
+
+---
+
+# EKS and Kubernetes
+
+Kubernetes has its own terminology and architecture.
+
+The important SAA-level distinction is:
+
+```text
+ECS
+→ AWS container orchestration
+
+EKS
+→ Managed Kubernetes
+```
+
+Choose EKS when Kubernetes itself is part of the requirement.
+
+Typical examples:
+
+* Existing Kubernetes cluster
+* Existing Kubernetes manifests/tools
+* Kubernetes-based application platform
+* Kubernetes portability requirements
+
+You do not need to memorize the entire Kubernetes architecture for basic SAA questions.
+
+---
+
+# EKS Secrets encryption with AWS KMS
+
+EKS stores Kubernetes API data in the managed Kubernetes control plane, with etcd used as the datastore.
+
+For **Kubernetes 1.28 and later**, Amazon EKS provides **default envelope encryption for all Kubernetes API data**.
+
+This includes Kubernetes resources such as:
+
+* Secrets
+* ConfigMaps
+* Other Kubernetes API objects
+
+EKS uses AWS KMS as part of this encryption architecture.
+
+```text
+Kubernetes API data
+        ↓
+Envelope encryption
+        ↓
+Kubernetes control plane / etcd
+```
+
+For clusters using a **customer-managed KMS key**, that key can provide customer-controlled encryption of Kubernetes API data.
+
+### Exam takeaway
+
+Older questions may specifically mention:
+
+> **"Encrypt Kubernetes Secrets in EKS using AWS KMS."**
+
+→ **KMS envelope encryption**
+
+For modern EKS, remember that encryption of Kubernetes API data is already enabled by default for Kubernetes 1.28+; a customer-managed KMS key is an additional control rather than something required simply to obtain encryption.
+
+---
+
+# Compute decision ladder
+
+Use the workload requirements rather than memorizing product names.
+
+| Requirement                                        | Answer                |
+| -------------------------------------------------- | --------------------- |
+| Event-driven code, maximum **15 minutes**          | **Lambda**            |
+| Containers, no server management                   | **Fargate**           |
+| Containers + GPU                                   | **ECS on EC2**        |
+| Containers + EC2-level control                     | **ECS on EC2**        |
+| Kubernetes                                         | **EKS**               |
+| Kubernetes portability / existing Kubernetes       | **EKS**               |
+| "Just deploy my application" with managed platform | **Elastic Beanstalk** |
+| Full operating-system control                      | **EC2**               |
+
+---
+
+# High-value question patterns
+
+### 1. No server management
+
+> "Run containers without managing servers."
+
+**Answer: Fargate**
+
+---
+
+### 2. Existing Kubernetes
+
+> "The company already runs Kubernetes on-premises and wants to migrate to AWS."
+
+**Answer: EKS**
+
+---
+
+### 3. Kubernetes portability
+
+> "The company wants Kubernetes workloads that can run across different cloud providers."
+
+**Answer: EKS**
+
+---
+
+### 4. Task cannot pull image
+
+> "An ECS task fails because it cannot pull the image from ECR."
+
+**Answer: Task Execution Role**
+
+---
+
+### 5. Application gets AccessDenied
+
+> "The application inside the ECS container receives AccessDenied when accessing DynamoDB."
+
+**Answer: Task Role**
+
+---
+
+### 6. GPU workload
+
+> "Run GPU-based ML inference in containers."
+
+**Answer: ECS on EC2**
+
+**Not Fargate.**
+
+---
+
+### 7. Container vulnerability scanning
+
+> "Automatically scan container images for vulnerabilities."
+
+**Answer: ECR image scanning**
+
+---
+
+### 8. Per-task security groups
+
+> "Each ECS task needs its own security group."
+
+**Answer: `awsvpc`**
+
+---
+
+### 9. Cheap interruptible containers
+
+> "Run fault-tolerant containerized batch processing at lower cost."
+
+**Answer: Fargate Spot**
+
+---
+
+### 10. Scale workers from SQS
+
+> "Increase the number of container workers as the SQS workload increases."
+
+**Answer: ECS Service Auto Scaling**
+
+---
+
+# Pocket card
+
+| Keyword                                                    | Answer                            |
+| ---------------------------------------------------------- | --------------------------------- |
+| **No server management + containers**                      | Fargate                           |
+| **Already using Kubernetes**                               | EKS                               |
+| **Kubernetes portability**                                 | EKS                               |
+| **GPU containers**                                         | ECS on EC2                        |
+| **Can't pull image**                                       | Task Execution Role               |
+| **Can't write ECS logs**                                   | Task Execution Role               |
+| **Application AccessDenied to AWS service**                | Task Role                         |
+| **Recipe / configuration**                                 | Task Definition                   |
+| **Running copy**                                           | Task                              |
+| **Keeps desired number of tasks running**                  | Service                           |
+| **Container image storage**                                | ECR                               |
+| **Image vulnerability scanning**                           | ECR                               |
+| **Per-task ENI / security group**                          | `awsvpc`                          |
+| **Cheap interruptible Fargate**                            | Fargate Spot                      |
+| **Scale tasks based on workload**                          | ECS Service Auto Scaling          |
+| **Kubernetes API-data encryption**                         | EKS envelope encryption / AWS KMS |
+| **Multiple tasks on one EC2 host with dynamic host ports** | ALB + dynamic port mapping        |
+
+---
+
+# The most important distinctions
+
+```text
+ECS vs EKS
+──────────
+ECS = AWS-native
+EKS = Kubernetes
+
+
+ECS EC2 vs Fargate
+──────────────────
+EC2 = manage instances
+Fargate = no instance management
+
+
+Execution Role vs Task Role
+────────────────────────────
+Execution Role = ECS/Fargate can run the task
+Task Role      = application can access AWS services
+
+
+Task Definition vs Task
+───────────────────────
+Task Definition = configuration
+Task             = running instance
+
+
+Service vs Task
+───────────────
+Task     = one running workload
+Service  = maintains the desired number of tasks
+
+
+ECR vs ECS
+──────────
+ECR = stores container images
+ECS = runs and manages containers
+```
+
+The key idea is simple:
+
+**ECS/EKS decide how containers are orchestrated.
+EC2/Fargate provide the compute.
+ECR stores the images.
+IAM roles control what ECS and the application can access.**
+
+Next: **Elastic Beanstalk** — a higher-level option where you deploy application code without directly managing containers or the underlying infrastructure.
