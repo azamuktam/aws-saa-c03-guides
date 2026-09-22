@@ -42,6 +42,7 @@ AWS Region
 * Multi-AZ → multiple subnets
 * Subnets contain resources
 * **Route tables determine traffic paths**
+* newly created subnet is, by default, linked to the **main route table** of the VPC.
 
 > Route table = **"Traffic to X goes through Y."**
 
