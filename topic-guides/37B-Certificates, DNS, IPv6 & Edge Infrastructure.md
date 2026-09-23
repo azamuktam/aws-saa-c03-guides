@@ -2,49 +2,27 @@
 
 ## The idea
 
-These are smaller AWS networking and infrastructure services that usually appear in SAA questions as **specific use cases**.
+These are smaller AWS networking and infrastructure services that usually appear as **specific-use-case questions**.
 
-You generally don't need deep knowledge of each one.
+> **Requirement → unique keyword → service**
 
-The best strategy is:
-
-> **Read the requirement → identify the unique keyword → choose the service.**
-
-For example:
-
-```text
-TLS / HTTPS certificates
-→ ACM
-
-CloudFront TLS certificate
-→ ACM in us-east-1
-
-IPv6 outbound-only Internet access
-→ Egress-Only Internet Gateway
-
-On-premises → AWS DNS queries
-→ Route 53 Resolver inbound endpoint
-
-AWS → on-premises DNS queries
-→ Route 53 Resolver outbound endpoint
-
-AWS infrastructure in your own data center
-→ Outposts
-
-Very low latency for a specific metropolitan area
-→ Local Zones
-
-5G / mobile edge
-→ Wavelength
-```
+| Requirement / keyword                                | Answer                                  |
+| ---------------------------------------------------- | --------------------------------------- |
+| TLS / HTTPS certificates                             | **ACM**                                 |
+| CloudFront TLS certificate                           | **ACM in us-east-1**                    |
+| Multiple unrelated domains on one ALB HTTPS listener | **Multiple ACM certificates + SNI**     |
+| IPv6 outbound-only Internet access                   | **Egress-Only Internet Gateway**        |
+| On-premises → AWS DNS queries                        | **Route 53 Resolver inbound endpoint**  |
+| AWS → on-premises DNS queries                        | **Route 53 Resolver outbound endpoint** |
+| AWS infrastructure in your own data center           | **Outposts**                            |
+| Very low latency for a specific metropolitan area    | **Local Zones**                         |
+| 5G / mobile edge                                     | **Wavelength**                          |
 
 ---
 
 # ACM — AWS Certificate Manager
 
 **ACM = TLS/SSL certificates for AWS services.**
-
-Use it when you need HTTPS.
 
 Common integrations:
 
@@ -63,13 +41,13 @@ Common integrations:
 ### Public certificates
 
 * Public ACM certificates are provided at **no additional charge**.
-* ACM can automatically renew certificates that meet the renewal requirements.
+* ACM can **automatically renew** certificates that meet the renewal requirements.
 
 ### Regional behavior
 
 ACM certificates are generally **Regional resources**.
 
-For services such as an ALB:
+For services such as ALB:
 
 ```text
 ALB in us-east-1
@@ -86,15 +64,13 @@ A certificate used by **CloudFront** must be in:
 us-east-1
 ```
 
-This is a very common SAA exam trap.
-
-So:
+Common exam trap:
 
 ```text
-HTTPS on ALB
+ALB
 → ACM certificate in the SAME REGION as the ALB
 
-HTTPS on CloudFront
+CloudFront
 → ACM certificate in us-east-1
 ```
 
@@ -102,11 +78,11 @@ HTTPS on CloudFront
 
 ## ACM and EC2
 
-You generally cannot export an **ACM public certificate's private key** for installation on an EC2 server.
+You generally cannot export an **ACM public certificate's private key** for direct installation on an EC2 server.
 
-So if a question says the certificate must be installed directly on an EC2 instance and requires access to the private key, ACM public certificates are not the normal solution.
+If the certificate must be installed directly on EC2 and the private key must be accessible, ACM public certificates are not the normal solution.
 
-The common AWS-native pattern is to terminate TLS on an AWS service such as:
+Common AWS-native pattern:
 
 ```text
 Internet
@@ -115,6 +91,57 @@ ALB / CloudFront / API Gateway
    ↓
 ACM certificate
 ```
+
+---
+
+## ALB HTTPS Certificates & SNI
+
+**SNI (Server Name Indication)** allows an ALB HTTPS listener to use **multiple SSL/TLS certificates on the same listener**.
+
+The client sends the requested hostname during the TLS handshake, and the ALB selects the matching certificate.
+
+Example:
+
+```text
+ALB :443
+ ├── i-love-manila.com      → Certificate A
+ ├── i-love-boracay.com     → Certificate B
+ ├── i-love-cebu.com        → Certificate C
+ └── another-domain.com     → Certificate D
+```
+
+Useful when **multiple unrelated domains** share the same ALB.
+
+A new domain can be supported by **adding another certificate** to the listener instead of replacing the existing certificates.
+
+### Certificate choices
+
+| Requirement                                    | Best fit                        |
+| ---------------------------------------------- | ------------------------------- |
+| Multiple subdomains of one domain              | **Wildcard certificate**        |
+| Multiple names in one certificate              | **SAN certificate**             |
+| Multiple unrelated domains on one ALB listener | **Multiple certificates + SNI** |
+
+Example:
+
+```text
+*.example.com
+→ www.example.com
+→ api.example.com
+→ shop.example.com
+```
+
+A wildcard is **not** for unrelated domains such as:
+
+```text
+i-love-manila.com
+i-love-boracay.com
+i-love-cebu.com
+```
+
+### Exam pattern
+
+> **Many unrelated domains + one ALB HTTPS listener → SNI**
 
 ---
 
@@ -130,11 +157,7 @@ ACM certificate
 
 > "A company needs to configure a TLS certificate for a CloudFront distribution."
 
-→ **ACM**
-
-But remember:
-
-> **CloudFront certificate → ACM in us-east-1**
+→ **ACM in us-east-1**
 
 ---
 
@@ -142,17 +165,15 @@ But remember:
 
 **Egress-Only Internet Gateway = outbound-only Internet access for IPv6.**
 
-It allows instances using IPv6 to initiate outbound Internet connections, while preventing unsolicited inbound connections from the Internet.
+Allows IPv6 instances to initiate outbound Internet connections while preventing **unsolicited inbound connections**.
 
 ### Signal
 
-> **IPv6 instances need outbound Internet access but must block unsolicited inbound connections.**
+> **IPv6 + outbound Internet + block unsolicited inbound**
 
 → **Egress-Only Internet Gateway**
 
----
-
-## Mental model
+### Mental model
 
 ```text
 IPv6 instance
@@ -162,36 +183,23 @@ Egress-Only Internet Gateway
 Internet
 ```
 
-Outbound connections are allowed:
+Allowed:
 
 ```text
 EC2 → Internet
 ```
 
-But unsolicited inbound connections are not allowed:
+Not allowed:
 
 ```text
 Internet → EC2
 ```
 
----
+### Important distinction
 
-## Important distinction
+**Internet Gateway (IGW)** = normal Internet connectivity.
 
-An **Internet Gateway (IGW)** is the normal gateway for Internet connectivity.
-
-An **Egress-Only Internet Gateway** is specifically designed for **IPv6 outbound-only access**.
-
-The key exam signal is:
-
-```text
-IPv6
-+
-Outbound Internet
-+
-No unsolicited inbound
-→ Egress-Only Internet Gateway
-```
+**Egress-Only Internet Gateway** = specifically for **IPv6 outbound-only access**.
 
 ### Memory
 
@@ -201,9 +209,7 @@ No unsolicited inbound
 
 # Route 53 Resolver
 
-AWS provides **Route 53 Resolver endpoints** for DNS resolution between AWS and external/on-premises DNS environments.
-
-There are two important directions to remember:
+Route 53 Resolver endpoints provide DNS resolution between AWS and external/on-premises DNS environments.
 
 ```text
 On-premises → AWS
@@ -219,7 +225,7 @@ The direction is based on **where the DNS query starts**.
 
 # Route 53 Resolver Inbound Endpoint
 
-A **Route 53 Resolver inbound endpoint** allows DNS queries from on-premises networks to be sent into AWS.
+Allows DNS queries from **on-premises into AWS**.
 
 ### Signal
 
@@ -227,7 +233,7 @@ A **Route 53 Resolver inbound endpoint** allows DNS queries from on-premises net
 
 → **Route 53 Resolver inbound endpoint**
 
-### Mental model
+### Pattern
 
 ```text
 On-premises
@@ -240,8 +246,6 @@ AWS / Route 53 private DNS
 ```
 
 ### Example
-
-Suppose an on-premises application needs to resolve an internal AWS hostname.
 
 ```text
 On-premises application
@@ -257,7 +261,7 @@ AWS private DNS
 
 # Route 53 Resolver Outbound Endpoint
 
-A **Route 53 Resolver outbound endpoint** allows DNS queries originating in AWS to be forwarded to DNS servers outside AWS, such as corporate/on-premises DNS servers.
+Allows DNS queries originating in **AWS** to be forwarded to external DNS servers, such as corporate/on-premises DNS servers.
 
 ### Signal
 
@@ -265,7 +269,7 @@ A **Route 53 Resolver outbound endpoint** allows DNS queries originating in AWS 
 
 → **Route 53 Resolver outbound endpoint**
 
-### Mental model
+### Pattern
 
 ```text
 AWS workload
@@ -280,8 +284,6 @@ Corporate / on-premises DNS
 ---
 
 # Inbound vs Outbound
-
-This is one of the easiest ways to memorize it:
 
 ```text
 INBOUND
@@ -305,22 +307,22 @@ AWS → On-prem DNS
 → Resolver outbound endpoint
 ```
 
+Do not interpret inbound/outbound from the corporate network's perspective. Think from **AWS's perspective**.
+
 ---
 
 # AWS Outposts
 
 **AWS Outposts = AWS infrastructure physically installed in your data center.**
 
-It extends AWS infrastructure and services into your own on-premises environment.
-
 Use it when:
 
 * data must remain on-premises
-* you need very low latency to local systems
+* very low latency to local systems is required
 * local workloads must use AWS APIs/services
-* the workload must physically run in your own data center
+* workloads must physically run in your own data center
 
-### Typical pattern
+### Pattern
 
 ```text
 Your data center
@@ -334,19 +336,13 @@ AWS-style infrastructure
 
 > **AWS infrastructure on-premises → Outposts**
 
----
-
-## Example
+### Example
 
 > "A company must keep workloads in its own data center because of local requirements but wants to use AWS infrastructure and APIs."
 
 → **AWS Outposts**
 
----
-
-## Important distinction
-
-Outposts is different from services that simply provide low latency near users.
+### Important distinction
 
 ```text
 Your own data center
@@ -365,19 +361,13 @@ AWS infrastructure inside a 5G network
 
 **AWS Local Zones = AWS infrastructure placed closer to users in a metropolitan area.**
 
-Use it when an application needs very low latency for users in a specific city or metropolitan area.
+Use it when an application needs **very low latency for users in a specific city or metropolitan area**.
 
 ### Signal
 
 > **City-level low latency → Local Zones**
 
----
-
-## Typical scenario
-
-A company has an application deployed in an AWS Region, but users in a particular metropolitan area need extremely low latency.
-
-Instead of having the workload run only in the main AWS Region:
+### Pattern
 
 ```text
 Main AWS Region
@@ -393,9 +383,7 @@ Users in the nearby metropolitan area
 
 → **AWS Local Zones**
 
----
-
-## Memory
+### Memory
 
 > **Local Zones = AWS CLOSER TO A CITY**
 
@@ -405,22 +393,20 @@ Users in the nearby metropolitan area
 
 **AWS Wavelength = AWS infrastructure inside telecom 5G networks.**
 
-It places AWS compute and storage resources at the edge of a telecommunications provider's 5G network.
+Places AWS compute and storage at the edge of a telecommunications provider's 5G network.
 
 Use it for:
 
 * mobile applications
 * 5G applications
 * extremely low-latency mobile workloads
-* workloads that need to process data close to mobile users
+* workloads that process data close to mobile users
 
 ### Signal
 
 > **5G → Wavelength**
 
----
-
-## Typical pattern
+### Pattern
 
 ```text
 Mobile device
@@ -432,11 +418,9 @@ Wavelength Zone
 AWS resources at the telecom edge
 ```
 
-This minimizes the network distance between mobile users and the application.
+This minimizes network distance between mobile users and the application.
 
----
-
-## Example
+### Example
 
 > "A mobile application needs extremely low-latency processing over a 5G network."
 
@@ -446,13 +430,11 @@ This minimizes the network distance between mobile users and the application.
 
 # Outposts vs Local Zones vs Wavelength
 
-These three are easy to mix up.
-
-| Service         | Where AWS infrastructure is located | Main signal                    |
-| --------------- | ----------------------------------- | ------------------------------ |
-| **Outposts**    | Your own data center                | AWS **on-premises**            |
-| **Local Zones** | Near users in a metropolitan area   | Very low latency to a **city** |
-| **Wavelength**  | Inside a telecom 5G network         | **5G / mobile edge**           |
+| Service         | AWS infrastructure location       | Main signal                    |
+| --------------- | --------------------------------- | ------------------------------ |
+| **Outposts**    | Your own data center              | AWS **on-premises**            |
+| **Local Zones** | Near users in a metropolitan area | Very low latency to a **city** |
+| **Wavelength**  | Inside a telecom 5G network       | **5G / mobile edge**           |
 
 ### Easy memory
 
@@ -471,53 +453,36 @@ Wavelength
 
 # Network & Edge Decision Tree
 
-When you see one of these questions, identify the location requirement first.
+### Infrastructure location
 
 ```text
-Where does the infrastructure need to be?
-
-                ┌───────────────────────┐
-                │ Your own data center? │
-                └───────────┬───────────┘
-                            ↓
-                         Outposts
+Your own data center?
+→ Outposts
 ```
 
 ```text
-                ┌─────────────────────────┐
-                │ Near users in a city?   │
-                └────────────┬────────────┘
-                             ↓
-                        Local Zones
+Near users in a city?
+→ Local Zones
 ```
 
 ```text
-                ┌─────────────────────────┐
-                │ Inside a 5G network?    │
-                └────────────┬────────────┘
-                             ↓
-                         Wavelength
+Inside a 5G network?
+→ Wavelength
 ```
 
-For DNS:
+### DNS direction
 
 ```text
-DNS query starts where?
-
-On-premises
-     ↓
-AWS
+On-premises → AWS
 → Resolver inbound endpoint
 ```
 
 ```text
-AWS
- ↓
-On-premises
+AWS → On-premises
 → Resolver outbound endpoint
 ```
 
-For Internet connectivity:
+### Internet connectivity
 
 ```text
 IPv6
@@ -528,7 +493,7 @@ Block unsolicited inbound
 → Egress-Only Internet Gateway
 ```
 
-For certificates:
+### Certificates
 
 ```text
 TLS / HTTPS
@@ -543,51 +508,39 @@ TLS / HTTPS
 
 → **AWS Certificate Manager (ACM)**
 
----
-
 > **"Need HTTPS certificate for an ALB."**
 
 → **ACM**
 
 Use the ACM certificate in the **same Region as the ALB**.
 
----
-
 > **"Need HTTPS certificate for CloudFront."**
 
 → **ACM in us-east-1**
 
----
+> **"Multiple unrelated domains share one ALB HTTPS listener."**
+
+→ **Multiple certificates + SNI**
 
 > **"IPv6 instances need outbound Internet access but must block unsolicited inbound connections."**
 
 → **Egress-Only Internet Gateway**
 
----
-
 > **"On-premises servers need to resolve private AWS DNS names."**
 
 → **Route 53 Resolver inbound endpoint**
-
----
 
 > **"AWS resources need to resolve internal corporate DNS names."**
 
 → **Route 53 Resolver outbound endpoint**
 
----
-
 > **"Workloads must run in the company's own data center but use AWS infrastructure/services."**
 
 → **AWS Outposts**
 
----
-
 > **"Need very low latency for users in a specific metropolitan area."**
 
 → **AWS Local Zones**
-
----
 
 > **"Application needs extremely low-latency processing over a 5G network."**
 
@@ -599,10 +552,6 @@ Use the ACM certificate in the **same Region as the ALB**.
 
 ## ACM Region trap
 
-A frequent exam mistake is assuming an ACM certificate can be used from any Region.
-
-Remember:
-
 ```text
 ALB
 → ACM certificate in same Region
@@ -613,22 +562,46 @@ CloudFront
 
 ---
 
+## ALB certificate trap
+
+```text
+Many unrelated domains
++
+One ALB HTTPS listener
+→ Multiple certificates + SNI
+```
+
+Do not confuse:
+
+```text
+Subdomains of one domain
+→ Wildcard
+
+Multiple names in one certificate
+→ SAN
+
+Multiple unrelated domains on one ALB
+→ SNI
+```
+
+---
+
 ## Egress-Only vs Internet Gateway
 
-The most important clue is **IPv6 outbound-only**.
+The key clue is **IPv6 outbound-only**.
 
 ```text
 IPv6 + outbound-only
 → Egress-Only Internet Gateway
 ```
 
-Do not choose it simply because IPv6 appears in the question. The outbound-only requirement matters.
+Do not choose it simply because IPv6 appears; the **outbound-only** requirement matters.
 
 ---
 
 ## Resolver inbound vs outbound
 
-Look at the direction of the query.
+Look at **where the DNS query starts**:
 
 ```text
 On-prem → AWS
@@ -638,17 +611,17 @@ AWS → On-prem
 → Outbound
 ```
 
-Don't interpret "inbound" and "outbound" from the perspective of the corporate network. Think from the perspective of **AWS**.
+Think from **AWS's perspective**.
 
 ---
 
 ## Outposts vs Local Zones
 
 ```text
-Physical AWS infrastructure in your own facility
+AWS infrastructure in your own facility
 → Outposts
 
-Physical AWS infrastructure near users in a metro area
+AWS infrastructure near users in a metro area
 → Local Zones
 ```
 
@@ -668,89 +641,20 @@ Specific city / metropolitan low latency
 
 # Pocket Card
 
-| Keyword                                | Answer                                  |
-| -------------------------------------- | --------------------------------------- |
-| TLS/SSL certificates                   | **ACM**                                 |
-| HTTPS                                  | **ACM**                                 |
-| ALB certificate                        | **ACM in same Region as ALB**           |
-| CloudFront certificate                 | **ACM in us-east-1**                    |
-| IPv6 outbound-only Internet            | **Egress-Only Internet Gateway**        |
-| On-prem → AWS DNS queries              | **Route 53 Resolver inbound endpoint**  |
-| AWS → on-prem DNS queries              | **Route 53 Resolver outbound endpoint** |
-| AWS infrastructure in your data center | **Outposts**                            |
-| Low latency to a specific city         | **Local Zones**                         |
-| 5G edge                                | **Wavelength**                          |
+| Keyword                                  | Answer                                  |
+| ---------------------------------------- | --------------------------------------- |
+| TLS/SSL certificates                     | **ACM**                                 |
+| HTTPS                                    | **ACM**                                 |
+| ALB certificate                          | **ACM in same Region as ALB**           |
+| CloudFront certificate                   | **ACM in us-east-1**                    |
+| Multiple unrelated domains on one ALB    | **SNI + multiple certificates**         |
+| Multiple subdomains of one domain        | **Wildcard certificate**                |
+| Multiple domain names in one certificate | **SAN certificate**                     |
+| IPv6 outbound-only Internet              | **Egress-Only Internet Gateway**        |
+| On-prem → AWS DNS queries                | **Route 53 Resolver inbound endpoint**  |
+| AWS → on-prem DNS queries                | **Route 53 Resolver outbound endpoint** |
+| AWS infrastructure in your data center   | **Outposts**                            |
+| Low latency to a specific city           | **Local Zones**                         |
+| 5G edge                                  | **Wavelength**                          |
 
 ---
-
-# Final Memory
-
-```text
-ACM
-= HTTPS CERTIFICATES
-= TLS / SSL
-= CLOUDFRONT → us-east-1
-
-Egress-Only Internet Gateway
-= IPv6 OUTBOUND ONLY
-
-Route 53 Resolver inbound endpoint
-= ON-PREM → AWS DNS
-
-Route 53 Resolver outbound endpoint
-= AWS → ON-PREM DNS
-
-Outposts
-= AWS IN YOUR DATA CENTER
-
-Local Zones
-= AWS CLOSER TO A CITY
-
-Wavelength
-= AWS ON 5G
-```
-
-# The Golden Rule
-
-```text
-TLS / HTTPS
-→ ACM
-
-CloudFront certificate
-→ ACM in us-east-1
-
-IPv6 outbound-only
-→ Egress-Only IGW
-
-On-prem → AWS DNS
-→ Resolver inbound
-
-AWS → on-prem DNS
-→ Resolver outbound
-
-AWS in your own data center
-→ Outposts
-
-Low latency to a city
-→ Local Zones
-
-5G / mobile edge
-→ Wavelength
-```
-
-> **Don't memorize the implementation.**
->
-> **Memorize the unique signal.**
-
-For example:
-
-```text
-TLS              → ACM
-CloudFront       → ACM us-east-1
-IPv6 outbound    → Egress-Only IGW
-On-prem → AWS DNS → Resolver inbound
-AWS → on-prem DNS → Resolver outbound
-Own data center  → Outposts
-Specific city    → Local Zones
-5G               → Wavelength
-```
