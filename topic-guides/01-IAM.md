@@ -45,7 +45,7 @@ A group cannot contain:
 
 * another group
 * a role
-
+Role can not be attached to group but only policy
 Groups are mainly used to manage permissions for multiple IAM users.
 
 ### IAM role
