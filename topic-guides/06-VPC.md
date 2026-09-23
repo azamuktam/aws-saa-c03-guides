@@ -401,6 +401,34 @@ NACLs may need these ports for return traffic.
 
 > **Request leaves but response does not return → check NACL / ephemeral ports**
 
+### NACL rule precedence
+
+NACLs **do not use rule specificity** to choose a winner.
+
+> **Lowest rule number → first matching rule wins → stop evaluation**
+
+Example:
+
+```text
+100 → ALLOW  0.0.0.0/0
+101 → DENY   110.238.109.37/32
+```
+
+Traffic from `110.238.109.37` is **ALLOWED**, because Rule 100 matches first.
+
+If the rules are reversed:
+
+```text
+100 → DENY   110.238.109.37/32
+101 → ALLOW  0.0.0.0/0
+```
+
+The traffic is **DENIED**.
+
+> **NACL:** first matching rule wins — a more specific rule does **not** override an earlier rule.
+
+> **IAM:** explicit **Deny overrides Allow**.
+
 ---
 
 # Security Group vs NACL memory
