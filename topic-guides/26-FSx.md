@@ -5,7 +5,7 @@
 **Amazon FSx** provides managed file systems for specific file-system technologies and workloads. AWS offers four main FSx types:
 
 * **FSx for Windows File Server** → Windows workloads
-* **FSx for Lustre** → HPC, ML, high-performance/S3 workloads
+* **FSx for Lustre** → HPC, ML, high-performance/S3 workloads.doesn't support Windows-based applications as well as Windows servers
 * **FSx for NetApp ONTAP** → NetApp and multi-protocol storage
 * **FSx for OpenZFS** → ZFS/Linux/NFS workloads
 
