@@ -33,6 +33,9 @@ Need Cassandra-compatible wide-column storage
 
 Need full-text / fuzzy search
 → OpenSearch
+
+Need a simple older non-relational datastore
+→ SimpleDB
 ```
 
 ---
@@ -189,6 +192,7 @@ RMAN
 | **DocumentDB**                | **MongoDB**                                                | MongoDB-compatible document database                     |
 | **Keyspaces**                 | **Cassandra**                                              | Managed Apache Cassandra-compatible wide-column database |
 | **OpenSearch**                | **Full-text / fuzzy search / logs**                        | Search and log analytics service                         |
+| **SimpleDB**                  | **Simple non-relational data**                             | Older/simple managed non-relational datastore            |
 | **Amazon Managed Blockchain** | **Blockchain / multiple parties / decentralized networks** | Managed blockchain infrastructure and blockchain access  |
 | **QLDB**                      | **Legacy — do not study as a current service**             | AWS ended support on **July 31, 2025**                   |
 
@@ -475,6 +479,69 @@ Amazon Keyspaces is **serverless** and automatically scales the tables based on 
 
 ---
 
+## Amazon SimpleDB
+
+**Amazon SimpleDB = a simple managed non-relational datastore for structured data.**
+
+It stores data using:
+
+```text
+Domain
+  ↓
+Items
+  ↓
+Attributes
+```
+
+For example:
+
+```text
+Customers
+├── Customer1
+│   ├── Name = Alice
+│   └── Country = UK
+│
+└── Customer2
+    ├── Name = Bob
+    └── Country = US
+```
+
+AWS describes domains as collections similar to tables, items as individual objects, and attributes as name-value pairs. SimpleDB also supports `Select` queries over a domain.
+
+### When to think of SimpleDB
+
+For SAA-style questions, think:
+
+> **Simple / basic non-relational structured data → SimpleDB**
+
+It is an older AWS datastore, so **DynamoDB is usually the service you should think of first for modern key-value/document workloads** unless the question specifically points to SimpleDB.
+
+### SimpleDB vs DynamoDB
+
+```text
+Modern scalable key-value/document application
+→ DynamoDB
+
+Simple older non-relational datastore
+→ SimpleDB
+```
+
+Do not confuse:
+
+```text
+SimpleDB
+≠
+DynamoDB
+```
+
+SimpleDB is still an AWS service; AWS documentation and API references remain current, including documentation updates in March 2026.
+
+### Remember
+
+> **Simple non-relational datastore → SimpleDB**
+
+---
+
 ## OpenSearch
 
 **Amazon OpenSearch Service = search and log analytics.**
@@ -668,6 +735,20 @@ Example:
 
 ---
 
+## SimpleDB vs DynamoDB
+
+```text
+Simple / older non-relational datastore
+→ SimpleDB
+
+Modern scalable key-value/document database
+→ DynamoDB
+```
+
+The question needs to specifically point toward **SimpleDB** before choosing it.
+
+---
+
 ## The decision algorithm
 
 When you see an "other database" question, first identify the **workload**.
@@ -693,6 +774,9 @@ MongoDB-compatible documents
 
 Cassandra-compatible wide-column
 → Keyspaces
+
+Simple non-relational datastore
+→ SimpleDB
 
 Blockchain / multiple parties / shared ledger
 → Managed Blockchain
@@ -726,6 +810,10 @@ Blockchain / multiple parties / shared ledger
 
 > *"Several companies need to maintain shared blockchain records"* → **Amazon Managed Blockchain**
 
+> *"The application needs a simple managed non-relational datastore for structured data"* → **SimpleDB**
+
+> *"Data is organized into domains, items, and attributes"* → **SimpleDB**
+
 > *"Analytical queries are slowing down the production OLTP database"* → **Move the analytical workload away from the production database**, typically to **Redshift** or **Athena** depending on where the data is and the workload.
 
 ---
@@ -744,6 +832,8 @@ Blockchain / multiple parties / shared ledger
 | Cassandra-compatible                         | **Keyspaces**                                        |
 | Full-text / fuzzy search                     | **OpenSearch**                                       |
 | Log analytics / search dashboards            | **OpenSearch**                                       |
+| Simple non-relational datastore              | **SimpleDB**                                         |
+| Domains / items / attributes                 | **SimpleDB**                                         |
 | DynamoDB + full-text search                  | **DynamoDB Streams → Lambda → OpenSearch**           |
 | Multiple parties + blockchain                | **Managed Blockchain**                               |
 | QLDB                                         | **Legacy — ended support July 31, 2025**             |
@@ -773,6 +863,9 @@ DocumentDB
 Keyspaces
 = CASSANDRA
 
+SimpleDB
+= SIMPLE NON-RELATIONAL DATA
+
 OpenSearch
 = SEARCH
 
@@ -797,4 +890,7 @@ Need to understand relationships
 
 Need timestamped measurements
 → Timestream
+
+Need a simple older non-relational datastore
+→ SimpleDB
 ```
