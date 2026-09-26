@@ -68,7 +68,7 @@ For load balancers, remember:
 
 ### Why does this matter?
 
-A Layer 4 load balancer cannot understand:
+A Layer 4 load balancer cannot make decisions based on:
 
 ```text
 /api/orders
@@ -82,7 +82,7 @@ A Layer 7 load balancer can.
 So:
 
 ```text
-Need URL/path/host routing
+Need URL/path/host/header routing
 → Layer 7 → ALB
 
 Need TCP/UDP + very high performance
@@ -93,16 +93,18 @@ Need TCP/UDP + very high performance
 
 ## The four load balancers
 
-|          | Layer | Protocols           | Main feature                              | Exam keyword                        |
-| -------- | ----- | ------------------- | ----------------------------------------- | ----------------------------------- |
-| **ALB**  | 7     | HTTP, HTTPS, gRPC   | Content-based routing                     | Path, host, header, web apps        |
-| **NLB**  | 4     | TCP, UDP, TLS       | High performance + static IP              | UDP, millions of requests, fixed IP |
-| **GWLB** | 3     | IP packets / GENEVE | Sends traffic through security appliances | Firewall, IDS, IPS                  |
-| **CLB**  | 4/7   | Legacy              | Older load balancer                       | Usually wrong answer                |
+|          | Layer | Protocols           | Main feature                                          | Exam keyword                     |
+| -------- | ----- | ------------------- | ----------------------------------------------------- | -------------------------------- |
+| **ALB**  | 7     | HTTP, HTTPS, gRPC   | Content-based routing + weighted target groups        | Path, host, header, web apps     |
+| **NLB**  | 4     | TCP, UDP, TLS       | High performance + static IP + weighted target groups | UDP, very high traffic, fixed IP |
+| **GWLB** | 3     | IP packets / GENEVE | Sends traffic through security appliances             | Firewall, IDS, IPS               |
+| **CLB**  | 4/7   | Legacy              | Older load balancer                                   | Usually wrong answer             |
+
+> **Important current AWS update:** NLB gained **Weighted Target Groups on November 19, 2025**. Therefore, do not memorize “weighted target groups = ALB only.” Both **ALB and NLB** can now distribute traffic between weighted target groups.
 
 ---
 
-## ALB — Application Load Balancer
+# ALB — Application Load Balancer
 
 ALB works at **Layer 7**, so it understands HTTP/HTTPS traffic.
 
@@ -144,8 +146,91 @@ Admin servers
 * ALB performs health checks on targets.
 * ALB can integrate with **AWS WAF**.
 * ALB has a **DNS name**, not a fixed static IP.
+* ALB supports **Weighted Target Groups**.
 
-### Client IP behind ALB
+---
+
+## ALB Weighted Target Groups
+
+ALB can forward traffic to multiple target groups and assign each group a weight.
+
+Example:
+
+```text
+                ALB
+                 |
+       +---------+---------+
+       |                   |
+   Weight 50            Weight 50
+       |                   |
+    AWS app           On-prem app
+```
+
+Or:
+
+```text
+AWS version    → weight 90
+New version    → weight 10
+```
+
+The weights determine the relative proportion of traffic sent to the target groups. AWS supports weights from **0 to 999**.
+
+For example:
+
+```text
+Target Group A = 80
+Target Group B = 20
+```
+
+approximately produces:
+
+```text
+80% → A
+20% → B
+```
+
+This is useful for:
+
+* blue/green deployments
+* canary deployments
+* A/B testing
+* gradual application migration
+* hybrid/on-premises-to-AWS migration
+
+AWS specifically documents weighted ALB target groups as a way to perform zero-downtime migration between **on-premises and cloud** environments.
+
+### Gradual migration example
+
+```text
+On-premises   AWS
+    90%        10%
+
+     ↓
+
+    70%        30%
+
+     ↓
+
+    50%        50%
+
+     ↓
+
+    10%        90%
+
+     ↓
+
+     0%       100%
+```
+
+### Important exam distinction
+
+**Weighted target groups** split traffic **inside the load balancer**.
+
+This is different from **Route 53 Weighted Routing**, which splits traffic at the **DNS level**.
+
+---
+
+## Client IP behind ALB
 
 The target normally sees the ALB connection.
 
@@ -161,7 +246,9 @@ So:
 
 → **X-Forwarded-For**
 
-### Sticky sessions
+---
+
+## Sticky sessions
 
 Sticky sessions can keep a client connected to the same target.
 
@@ -175,13 +262,18 @@ ALB
 EC2-A
 ```
 
-The ALB can continue sending that user to EC2-A.
+The ALB can continue sending that user's requests to EC2-A.
 
 Use this when the application keeps session state locally on the instance.
 
-A better architecture is often to store session state externally, for example in ElastiCache or DynamoDB.
+A better architecture is often to store session state externally, for example in:
 
-### ECS dynamic port mapping
+* ElastiCache
+* DynamoDB
+
+---
+
+## ECS dynamic port mapping
 
 If several containers run on the same EC2 instance, each container can use a different port.
 
@@ -189,9 +281,11 @@ ALB can discover and route to those ports.
 
 This is useful with ECS.
 
-### Fixed IP requirement
+---
 
-ALB does **not** provide a fixed static IP.
+## Fixed IP requirement
+
+ALB does **not** provide fixed static IP addresses for clients to whitelist.
 
 If the requirement is:
 
@@ -207,17 +301,24 @@ or:
 
 ---
 
-## NLB — Network Load Balancer
+# NLB — Network Load Balancer
 
-NLB works at **Layer 4**.
+NLB works mainly at **Layer 4**.
 
-It mainly looks at:
+It primarily handles:
 
 * IP address
 * port
 * TCP/UDP/TLS connection information
 
-It does not use HTTP URL paths like ALB.
+It does not use HTTP URL paths like:
+
+```text
+/api/*
+/images/*
+```
+
+for normal application routing.
 
 ### Main characteristics
 
@@ -230,6 +331,7 @@ It does not use HTTP URL paths like ALB.
 * Provides a **static IP per Availability Zone**
 * Can use **Elastic IP addresses**
 * Preserves the client source IP by default
+* Supports **Weighted Target Groups**
 
 ### Use NLB for
 
@@ -239,6 +341,7 @@ It does not use HTTP URL paths like ALB.
 * custom TCP protocols
 * extremely high traffic
 * fixed IP requirements
+* TCP/TLS services where Layer 4 routing is sufficient
 
 ### Example
 
@@ -248,7 +351,79 @@ It does not use HTTP URL paths like ALB.
 
 ---
 
-## GWLB — Gateway Load Balancer
+# NLB Weighted Target Groups
+
+**Since November 19, 2025, NLB supports Weighted Target Groups.**
+
+You can assign each target group a weight from **0 to 999**.
+
+Example:
+
+```text
+                NLB
+                 |
+       +---------+---------+
+       |                   |
+   Weight 50            Weight 50
+       |                   |
+    AWS app           On-prem app
+```
+
+or:
+
+```text
+Old application → 90
+New application → 10
+```
+
+Then gradually:
+
+```text
+90 / 10
+→ 70 / 30
+→ 50 / 50
+→ 20 / 80
+→ 0 / 100
+```
+
+AWS specifically identifies **application migration, blue/green deployments, and canary deployments** as use cases for NLB weighted target groups.
+
+### Important behavior
+
+When weights change:
+
+* **new connections** are routed according to the new weights
+* **existing connections** are not immediately moved
+* a target group with weight `0` receives no new connections
+
+### ALB vs NLB weighted target groups
+
+The concept is similar:
+
+|                        | ALB                   | NLB |
+| ---------------------- | --------------------- | --- |
+| Weighted target groups | ✅                     | ✅   |
+| Main layer             | L7                    | L4  |
+| HTTP path routing      | ✅                     | ❌   |
+| TCP/UDP                | ❌/limited by protocol | ✅   |
+| Static IP              | ❌                     | ✅   |
+| Application migration  | ✅                     | ✅   |
+
+So the question should first be interpreted as:
+
+> **Can this application use Layer 7 HTTP routing or does it require Layer 4 networking?**
+
+If HTTP/HTTPS application-level routing is appropriate:
+
+→ **ALB**
+
+If TCP/UDP/static-IP requirements are important:
+
+→ **NLB**
+
+---
+
+# GWLB — Gateway Load Balancer
 
 Gateway Load Balancer is used to send network traffic through **security appliances**.
 
@@ -279,7 +454,7 @@ You are not using GWLB to distribute normal web traffic like ALB.
 
 ---
 
-## CLB — Classic Load Balancer
+# CLB — Classic Load Balancer
 
 Classic Load Balancer is the **older generation**.
 
@@ -293,9 +468,182 @@ If CLB appears as a distractor in a modern architecture question, it is usually 
 
 ---
 
-## Shared ELB features worth points
+# Traffic splitting and migration
 
-### Cross-zone load balancing
+A very common exam scenario is:
+
+> An application currently runs on-premises. A new version is running in AWS. The company wants to move traffic gradually without downtime.
+
+The important concept is:
+
+> **Traffic splitting**
+
+Possible AWS mechanisms include:
+
+### 1. ALB Weighted Target Groups
+
+```text
+                    ALB
+                     |
+          +----------+----------+
+          |                     |
+       Weight 50             Weight 50
+          |                     |
+       AWS app              On-prem app
+```
+
+This is especially appropriate for an HTTP/HTTPS application.
+
+ALB weighted target groups support application migration between on-premises and AWS.
+
+---
+
+### 2. NLB Weighted Target Groups
+
+For an application appropriate for Layer 4 load balancing:
+
+```text
+                    NLB
+                     |
+          +----------+----------+
+          |                     |
+       Weight 50             Weight 50
+          |                     |
+       AWS app              On-prem app
+```
+
+This capability is available because NLB supports weighted target groups since November 2025.
+
+---
+
+### 3. Route 53 Weighted Routing
+
+Route 53 can also distribute traffic between resources using different weights.
+
+Example:
+
+```text
+example.com
+     |
+     +---- Weight 50 → AWS
+     |
+     +---- Weight 50 → On-prem
+```
+
+You can gradually change the weights:
+
+```text
+50 / 50
+→ 80 / 20
+→ 100 / 0
+```
+
+Route 53 Weighted Routing is explicitly designed to route traffic to multiple resources in proportions you specify.
+
+### Important difference
+
+Route 53 works at the **DNS level**.
+
+Therefore, it is not the same as a load balancer making a decision for every HTTP request.
+
+DNS caching and TTL behavior mean the actual distribution seen by users can be approximate rather than an exact per-request 50/50 split.
+
+So:
+
+```text
+ALB/NLB weighted target groups
+→ Load-balancer traffic splitting
+
+Route 53 weighted routing
+→ DNS-level traffic splitting
+```
+
+---
+
+## Weighted vs Failover routing
+
+This is a major exam trap.
+
+### Weighted routing
+
+Use when you want traffic to go to **multiple resources simultaneously**.
+
+Example:
+
+```text
+AWS       → 50%
+On-prem   → 50%
+```
+
+→ **Weighted**
+
+AWS defines Weighted Routing as routing traffic to multiple resources in specified proportions.
+
+### Failover routing
+
+Use for **active-passive** architecture.
+
+Example:
+
+```text
+Primary AWS
+    ↓
+takes traffic
+
+If unhealthy
+    ↓
+Secondary on-prem
+```
+
+→ **Failover**
+
+Route 53 documents Failover Routing as an active-passive mechanism.
+
+### Memory trick
+
+```text
+50% + 50%
+→ Weighted
+
+Primary + Backup
+→ Failover
+```
+
+---
+
+## Direct Connect + on-premises application
+
+If an application is running on-premises and needs private connectivity to AWS:
+
+```text
+On-premises network
+        |
+        | Direct Connect
+        |
+      AWS VPC
+```
+
+Direct Connect provides a dedicated network connection between the on-premises environment and AWS.
+
+This allows AWS resources to communicate with private on-premises resources.
+
+### Exam pattern
+
+> **"AWS VPC must privately communicate with the company's data center."**
+
+Think:
+
+→ **Direct Connect**
+
+or:
+
+→ **Site-to-Site VPN**
+
+depending on the requirement.
+
+---
+
+## Cross-zone load balancing
 
 Without cross-zone load balancing, a load balancer node normally sends traffic to targets in its own AZ.
 
@@ -326,7 +674,7 @@ With cross-zone balancing, traffic can be distributed across targets in other AZ
 
 ---
 
-### Deregistration delay / connection draining
+## Deregistration delay / connection draining
 
 When an instance is being removed, the load balancer should not immediately kill existing connections.
 
@@ -349,9 +697,11 @@ Use it when:
 
 > **"Users receive errors when instances are removed during scale-in."**
 
+→ **Deregistration delay / connection draining**
+
 ---
 
-### SNI
+## SNI
 
 **SNI (Server Name Indication)** allows one HTTPS listener to use multiple certificates.
 
@@ -367,13 +717,13 @@ One ALB can serve different certificates based on the requested hostname.
 
 ### Exam pattern
 
-> **"Host multiple HTTPS domains with different certificates on one load balancer."**
+> **"Host multiple HTTPS domains with different certificates on one ALB."**
 
 → **SNI**
 
 ---
 
-### TLS termination
+## TLS termination
 
 The load balancer can terminate HTTPS.
 
@@ -429,7 +779,9 @@ Use:
 
 for modern designs.
 
-### Min / Desired / Max
+---
+
+## Min / Desired / Max
 
 Example:
 
@@ -527,7 +879,7 @@ This prevents repeated scaling actions while a new instance is still starting.
 
 ---
 
-## THE health-check trap
+# THE health-check trap
 
 By default, an ASG uses **EC2 health checks**.
 
@@ -566,7 +918,7 @@ ASG replaces instance
 
 ---
 
-## ASG + SQS pattern
+# ASG + SQS pattern
 
 Suppose EC2 workers process jobs from SQS.
 
@@ -596,13 +948,13 @@ This is better than simply looking at CPU when the real problem is the number of
 
 ---
 
-## Termination policy — who is terminated first?
+# Termination policy — who is terminated first?
 
 When an ASG needs to scale in, it has to decide **which instance to remove**.
 
 With the default termination policy, the ASG first tries to keep the Availability Zones balanced.
 
-Then it prefers instances using **older launch configurations or launch template versions/configurations**.
+It then prefers instances using **older launch configurations or older launch template versions/configurations**.
 
 The important exam idea is:
 
@@ -634,18 +986,18 @@ OldestInstance policy
 
 ---
 
-## The layered HA picture
+# The layered HA picture
 
 Different AWS services solve different failure levels.
 
 ```text
 Route 53
    ↓
-Region-level failover
+DNS-level traffic routing / failover
    ↓
 Load Balancer
    ↓
-Instance-level traffic failover
+Instance-level traffic distribution
    ↓
 Auto Scaling Group
    ↓
@@ -654,11 +1006,17 @@ Replace failed instance
 
 ### Route 53
 
-Route 53 can direct users to another Region using DNS-based routing/failover.
+Route 53 can direct users between resources using DNS-based routing policies such as:
+
+* Weighted
+* Failover
+* Latency
+* Geolocation
+* Geoproximity
 
 ### Load Balancer
 
-The load balancer quickly stops sending traffic to unhealthy instances.
+The load balancer quickly stops sending traffic to unhealthy targets.
 
 ### Auto Scaling Group
 
@@ -668,7 +1026,7 @@ So:
 
 ```text
 Load Balancer
-= stop sending traffic to bad instance
+= stop sending traffic to bad target
 
 ASG
 = replace bad instance
@@ -678,7 +1036,7 @@ These are different jobs.
 
 ---
 
-## Question patterns
+# Question patterns
 
 > *"Route `/api/*` to one target group and `/images/*` to another"* → **ALB path-based routing**
 
@@ -688,7 +1046,15 @@ These are different jobs.
 
 > *"Millions of TCP connections with very low latency"* → **NLB**
 
-> *"Inspect traffic using third-party firewall/IDS/IPS appliances"* → **Gateway Load Balancer**
+> *"Third-party firewall/IDS/IPS appliances"* → **Gateway Load Balancer**
+
+> *"Split traffic 50/50 between two application versions"* → **Weighted Target Groups** or **Route 53 Weighted Routing**, depending on where the traffic split should occur
+
+> *"Gradually migrate an HTTP application from on-premises to AWS"* → **ALB Weighted Target Groups** or **Route 53 Weighted Routing**
+
+> *"Gradually migrate a TCP/UDP application from on-premises to AWS"* → **NLB Weighted Target Groups** or **Route 53 Weighted Routing**
+
+> *"Primary application receives traffic; secondary receives traffic only if primary fails"* → **Failover routing**
 
 > *"The load balancer marks an instance unhealthy but the ASG doesn't replace it"* → **Enable ELB health checks on the ASG**
 
@@ -712,85 +1078,49 @@ These are different jobs.
 
 > *"Need to preserve AZ balance during scale-in"* → **Default ASG termination policy**
 
-> *"Terminate the instance that has been running the longest"* → **OldestInstance termination policy**
+> *"Terminate the instance that has been running the longest"* → **OldestInstance policy**
 
-## Pocket card
+> *"AWS VPC needs private connectivity to an on-premises data center"* → **Direct Connect or Site-to-Site VPN**, depending on the requirement
 
-| Keyword                                         | Answer                                             |
-| ----------------------------------------------- | -------------------------------------------------- |
-| Path / host / header routing                    | **ALB**                                            |
-| HTTP / HTTPS / gRPC                             | **ALB**                                            |
-| WAF on load balancer                            | **ALB**                                            |
-| UDP                                             | **NLB**                                            |
-| Very high performance / millions of connections | **NLB**                                            |
-| Static IP / Elastic IP                          | **NLB**                                            |
-| Preserve client source IP                       | **NLB**                                            |
-| PrivateLink endpoint service                    | **NLB**                                            |
-| Third-party firewall / IDS / IPS                | **GWLB**                                           |
-| GENEVE 6081                                     | **GWLB**                                           |
-| Classic Load Balancer                           | **Legacy / usually wrong**                         |
-| Multiple HTTPS certificates                     | **SNI**                                            |
-| Errors during scale-in                          | **Deregistration delay**                           |
-| Uneven traffic across AZs                       | **Cross-zone load balancing**                      |
-| Client IP behind ALB                            | **X-Forwarded-For**                                |
-| Keep CPU at X%                                  | **Target Tracking**                                |
-| Different scaling steps                         | **Step Scaling**                                   |
-| Known traffic schedule                          | **Scheduled Scaling**                              |
-| Predict future demand                           | **Predictive Scaling**                             |
-| ASG ignores application failure                 | **Enable ELB health checks**                       |
-| Scale workers on jobs                           | **SQS queue metric**                               |
-| Default scale-in                                | **Keep AZs balanced + prefer older configuration** |
-| Oldest running instance                         | **OldestInstance policy**                          |
-| Traffic failover within a Region                | **Load Balancer**                                  |
-| Replace failed EC2                              | **Auto Scaling Group**                             |
-| Cross-Region DNS failover                       | **Route 53**                                       |
+---
 
-## Final memory
+# Pocket card
 
-```text
-ALB
-= HTTP/HTTPS
-= Layer 7
-= path / host / header routing
+| Keyword                                  | Answer                                             |
+| ---------------------------------------- | -------------------------------------------------- |
+| Path / host / header routing             | **ALB**                                            |
+| HTTP / HTTPS / gRPC                      | **ALB**                                            |
+| WAF on load balancer                     | **ALB**                                            |
+| Weighted target groups                   | **ALB or NLB**                                     |
+| Blue/green migration                     | **Weighted Target Groups**                         |
+| Canary deployment                        | **Weighted Target Groups**                         |
+| Gradual on-prem → AWS migration          | **Weighted Target Groups / Route 53 Weighted**     |
+| UDP                                      | **NLB**                                            |
+| Very high performance / many connections | **NLB**                                            |
+| Static IP / Elastic IP                   | **NLB**                                            |
+| Preserve client source IP                | **NLB**                                            |
+| PrivateLink endpoint service             | **NLB**                                            |
+| Third-party firewall / IDS / IPS         | **GWLB**                                           |
+| GENEVE 6081                              | **GWLB**                                           |
+| Classic Load Balancer                    | **Legacy / usually wrong**                         |
+| Multiple HTTPS certificates              | **SNI**                                            |
+| Errors during scale-in                   | **Deregistration delay**                           |
+| Uneven traffic across AZs                | **Cross-zone load balancing**                      |
+| Client IP behind ALB                     | **X-Forwarded-For**                                |
+| Keep CPU at X%                           | **Target Tracking**                                |
+| Different scaling steps                  | **Step Scaling**                                   |
+| Known traffic schedule                   | **Scheduled Scaling**                              |
+| Predict future demand                    | **Predictive Scaling**                             |
+| ASG ignores application failure          | **Enable ELB health checks**                       |
+| Scale workers on jobs                    | **SQS queue metric**                               |
+| Default scale-in                         | **Keep AZs balanced + prefer older configuration** |
+| Oldest running instance                  | **OldestInstance policy**                          |
+| 50/50 traffic split                      | **Weighted routing**                               |
+| Primary + backup                         | **Failover routing**                               |
+| DNS-level traffic split                  | **Route 53 Weighted Routing**                      |
+| Load-balancer-level traffic split        | **Weighted Target Groups**                         |
+| Private AWS ↔ on-prem connectivity       | **Direct Connect / VPN**                           |
+| Traffic failover within a Region         | **Load Balancer**                                  |
+| Replace failed EC2                       | **Auto Scaling Group**                             |
+| Cross-Region DNS failover                | **Route 53**                                       |
 
-NLB
-= TCP/UDP/TLS
-= Layer 4
-= high performance + static IP
-
-GWLB
-= security appliances
-= firewall / IDS / IPS
-
-ASG
-= add/remove instances
-= replace failed instances
-
-Target Tracking
-= keep metric at target
-
-Step Scaling
-= different amounts for different thresholds
-
-Scheduled Scaling
-= known schedule
-
-Predictive Scaling
-= forecast future demand
-
-ELB health check
-= detect application failure
-
-ASG
-= replace unhealthy instances
-```
-
-The key distinction to remember is:
-
-```text
-Load Balancer
-= "Which healthy instance should receive this request?"
-
-Auto Scaling Group
-= "How many instances should exist?"
-```
