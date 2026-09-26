@@ -398,8 +398,6 @@ When weights change:
 
 ### ALB vs NLB weighted target groups
 
-The concept is similar:
-
 |                        | ALB                   | NLB |
 | ---------------------- | --------------------- | --- |
 | Weighted target groups | ✅                     | ✅   |
@@ -813,69 +811,249 @@ This is one of the main purposes of an ASG.
 
 ---
 
-## Scaling policies
+# ASG Lifecycle Hooks
 
-Choose the scaling policy based on the requirement.
+**Lifecycle hooks let you pause an EC2 instance during an Auto Scaling lifecycle transition and perform custom actions before the instance continues.** AWS provides lifecycle hooks for both launching and terminating instances. ([docs.aws.amazon.com](https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks-overview.html?utm_source=chatgpt.com))
 
-| Policy                 | What it does                                         | Exam keyword                       |
-| ---------------------- | ---------------------------------------------------- | ---------------------------------- |
-| **Target Tracking**    | Keeps a metric around a target value                 | "Keep CPU around 40%"              |
-| **Step Scaling**       | Different scaling amounts for different alarm levels | "If CPU > 70%, add 2; >90%, add 4" |
-| **Simple Scaling**     | Fixed adjustment after an alarm                      | Basic scaling                      |
-| **Scheduled Scaling**  | Scales at known times                                | "Every Monday 9 AM"                |
-| **Predictive Scaling** | Uses ML to predict future demand                     | "Scale before expected traffic"    |
+The two important wait states are:
 
-### Target Tracking
+```text
+Launch:
+Pending
+   ↓
+Pending:Wait
+   ↓
+Pending:Proceed
+   ↓
+InService
+```
 
-Example:
+and:
 
-> Keep average CPU at **40%**.
+```text
+Terminate:
+Terminating
+   ↓
+Terminating:Wait
+   ↓
+Terminating:Proceed
+   ↓
+Terminated
+```
 
-→ **Target Tracking**
+The instance remains in the wait state until you complete the lifecycle action or the timeout expires. ([docs.aws.amazon.com](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-lifecycle.html?utm_source=chatgpt.com))
 
-This is usually the simplest choice when the question asks to maintain a specific metric.
+---
 
-### Step Scaling
+## Pending:Wait
+
+Used during **instance launch**.
 
 Example:
 
 ```text
-CPU > 60% → add 1
-CPU > 80% → add 2
-CPU > 90% → add 4
+New EC2 instance
+      ↓
+Pending
+      ↓
+Pending:Wait
+      ↓
+Install/configure application
+      ↓
+Complete lifecycle action
+      ↓
+Pending:Proceed
+      ↓
+InService
 ```
 
-→ **Step Scaling**
+Typical use:
 
-### Scheduled Scaling
+* bootstrap the instance
+* install software
+* configure the application
+* perform initialization before allowing normal traffic
 
-Use when demand is predictable.
+### Exam clue
 
-Example:
+> **"Perform custom setup before the new instance enters service."**
 
-> Traffic increases every weekday at 9 AM.
-
-→ **Scheduled Scaling**
-
-### Predictive Scaling
-
-Use when traffic follows patterns that can be predicted.
-
-It uses machine learning to anticipate demand and scale **before** the traffic arrives.
+→ **Launch lifecycle hook → `Pending:Wait`**
 
 ---
 
-## Warm-up and cooldown
+## Terminating:Wait
 
-After launching or terminating instances, ASG may need time before evaluating the system again.
+Used during **instance termination**.
 
-This prevents repeated scaling actions while a new instance is still starting.
+This is the important state for preserving logs or other local data before an EC2 instance disappears.
 
-### Exam pattern
+```text
+EC2 instance
+     ↓
+Selected for termination
+     ↓
+Terminating
+     ↓
+Terminating:Wait  ← PAUSE HERE
+     ↓
+Collect logs / cleanup / other actions
+     ↓
+Complete lifecycle action
+     ↓
+Terminating:Proceed
+     ↓
+Terminated
+```
 
-> **"ASG keeps launching more instances before the previous instances are fully ready."**
+AWS specifically describes using a termination lifecycle hook to pause an instance before termination and download **logs or other data** while the instance is still available. ([docs.aws.amazon.com](https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks.html?utm_source=chatgpt.com))
 
-→ Check **instance warm-up / cooldown settings**.
+### Exam clue
+
+> **"Need to collect logs before an EC2 instance is terminated."**
+
+→ **Termination lifecycle hook → `Terminating:Wait`**
+
+---
+
+## Lifecycle Hook + EventBridge
+
+When a lifecycle hook puts an instance into a wait state, EC2 Auto Scaling sends an event to **Amazon EventBridge**.
+
+The termination event type is:
+
+```text
+EC2 Instance-terminate Lifecycle Action
+```
+
+EventBridge can then invoke services such as:
+
+* AWS Lambda
+* Amazon SNS
+* Amazon SQS
+* other supported targets
+
+([docs.aws.amazon.com](https://docs.aws.amazon.com/eventbridge/latest/ref/events-ref-autoscaling.html?utm_source=chatgpt.com))
+
+Typical pattern:
+
+```text
+ASG
+ ↓
+Terminating:Wait
+ ↓
+EventBridge
+ ↓
+Lambda
+ ↓
+Perform custom action
+ ↓
+Complete lifecycle action
+ ↓
+Terminate
+```
+
+The EventBridge lifecycle event contains information such as the **EC2 instance ID**, Auto Scaling group name, lifecycle hook name, and lifecycle action token. ([docs.aws.amazon.com](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-event-reference.html?utm_source=chatgpt.com))
+
+---
+
+## Log collection before termination
+
+Suppose local application logs exist only on the EC2 instance.
+
+If ASG terminates the instance immediately:
+
+```text
+EC2
+ ↓
+Terminate
+ ↓
+Local logs lost ❌
+```
+
+Instead:
+
+```text
+EC2
+ ↓
+Terminating:Wait
+ ↓
+EventBridge
+ ↓
+Lambda
+ ↓
+CloudWatch Agent / log collection
+ ↓
+CloudWatch Logs
+ ↓
+CompleteLifecycleAction
+ ↓
+Terminate
+```
+
+This gives the system time to collect the logs before the instance disappears.
+
+### Example
+
+> "Instances are automatically terminated after failing ALB health checks, but application logs are stored locally. The company needs the logs for root cause analysis."
+
+Think:
+
+**Termination lifecycle hook + `Terminating:Wait` + EventBridge/Lambda + CloudWatch Logs**
+
+### Important trap
+
+Do **not** wait for:
+
+```text
+EC2 Instance Terminate Successful
+```
+
+That event happens after termination has completed.
+
+By then, local logs may already be gone.
+
+Instead, use:
+
+```text
+EC2 Instance-terminate Lifecycle Action
+```
+
+while the instance is in the lifecycle-hook wait state. ([docs.aws.amazon.com](https://docs.aws.amazon.com/eventbridge/latest/ref/events-ref-autoscaling.html?utm_source=chatgpt.com))
+
+---
+
+## Complete lifecycle action
+
+After the custom action has finished, the workflow must tell Auto Scaling to continue.
+
+Conceptually:
+
+```text
+Collect logs
+     ↓
+Success
+     ↓
+CompleteLifecycleAction
+     ↓
+Terminating:Proceed
+     ↓
+Terminated
+```
+
+If more time is needed, the lifecycle action can be extended using a heartbeat.
+
+AWS documents `CompleteLifecycleAction` for completing the lifecycle action and `RecordLifecycleActionHeartbeat` for extending the wait period. ([docs.aws.amazon.com](https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_CompleteLifecycleAction.html?utm_source=chatgpt.com))
+
+### Memory
+
+```text
+Pending:Wait
+→ do something BEFORE instance enters service
+
+Terminating:Wait
+→ do something BEFORE instance is terminated
+```
 
 ---
 
@@ -1080,47 +1258,86 @@ These are different jobs.
 
 > *"Terminate the instance that has been running the longest"* → **OldestInstance policy**
 
+> *"Need to collect logs before ASG terminates an unhealthy instance"* → **Termination lifecycle hook → `Terminating:Wait`**
+
+> *"Perform custom actions before an EC2 instance enters service"* → **Launch lifecycle hook → `Pending:Wait`**
+
+> *"React when an instance enters a termination lifecycle hook"* → **EventBridge `EC2 Instance-terminate Lifecycle Action`**
+
+> *"Automatically collect logs before termination"* → **Lifecycle hook + EventBridge/Lambda + CloudWatch Logs**
+
+> *"Primary application receives traffic; secondary receives traffic only if primary fails"* → **Failover routing**
+
 > *"AWS VPC needs private connectivity to an on-premises data center"* → **Direct Connect or Site-to-Site VPN**, depending on the requirement
 
 ---
 
 # Pocket card
 
-| Keyword                                  | Answer                                             |
-| ---------------------------------------- | -------------------------------------------------- |
-| Path / host / header routing             | **ALB**                                            |
-| HTTP / HTTPS / gRPC                      | **ALB**                                            |
-| WAF on load balancer                     | **ALB**                                            |
-| Weighted target groups                   | **ALB or NLB**                                     |
-| Blue/green migration                     | **Weighted Target Groups**                         |
-| Canary deployment                        | **Weighted Target Groups**                         |
-| Gradual on-prem → AWS migration          | **Weighted Target Groups / Route 53 Weighted**     |
-| UDP                                      | **NLB**                                            |
-| Very high performance / many connections | **NLB**                                            |
-| Static IP / Elastic IP                   | **NLB**                                            |
-| Preserve client source IP                | **NLB**                                            |
-| PrivateLink endpoint service             | **NLB**                                            |
-| Third-party firewall / IDS / IPS         | **GWLB**                                           |
-| GENEVE 6081                              | **GWLB**                                           |
-| Classic Load Balancer                    | **Legacy / usually wrong**                         |
-| Multiple HTTPS certificates              | **SNI**                                            |
-| Errors during scale-in                   | **Deregistration delay**                           |
-| Uneven traffic across AZs                | **Cross-zone load balancing**                      |
-| Client IP behind ALB                     | **X-Forwarded-For**                                |
-| Keep CPU at X%                           | **Target Tracking**                                |
-| Different scaling steps                  | **Step Scaling**                                   |
-| Known traffic schedule                   | **Scheduled Scaling**                              |
-| Predict future demand                    | **Predictive Scaling**                             |
-| ASG ignores application failure          | **Enable ELB health checks**                       |
-| Scale workers on jobs                    | **SQS queue metric**                               |
-| Default scale-in                         | **Keep AZs balanced + prefer older configuration** |
-| Oldest running instance                  | **OldestInstance policy**                          |
-| 50/50 traffic split                      | **Weighted routing**                               |
-| Primary + backup                         | **Failover routing**                               |
-| DNS-level traffic split                  | **Route 53 Weighted Routing**                      |
-| Load-balancer-level traffic split        | **Weighted Target Groups**                         |
-| Private AWS ↔ on-prem connectivity       | **Direct Connect / VPN**                           |
-| Traffic failover within a Region         | **Load Balancer**                                  |
-| Replace failed EC2                       | **Auto Scaling Group**                             |
-| Cross-Region DNS failover                | **Route 53**                                       |
+| Keyword                                     | Answer                                                    |
+| ------------------------------------------- | --------------------------------------------------------- |
+| Path / host / header routing                | **ALB**                                                   |
+| HTTP / HTTPS / gRPC                         | **ALB**                                                   |
+| WAF on load balancer                        | **ALB**                                                   |
+| Weighted target groups                      | **ALB or NLB**                                            |
+| Blue/green migration                        | **Weighted Target Groups**                                |
+| Canary deployment                           | **Weighted Target Groups**                                |
+| Gradual on-prem → AWS migration             | **Weighted Target Groups / Route 53 Weighted**            |
+| UDP                                         | **NLB**                                                   |
+| Very high performance / many connections    | **NLB**                                                   |
+| Static IP / Elastic IP                      | **NLB**                                                   |
+| Preserve client source IP                   | **NLB**                                                   |
+| PrivateLink endpoint service                | **NLB**                                                   |
+| Third-party firewall / IDS / IPS            | **GWLB**                                                  |
+| GENEVE 6081                                 | **GWLB**                                                  |
+| Classic Load Balancer                       | **Legacy / usually wrong**                                |
+| Multiple HTTPS certificates                 | **SNI**                                                   |
+| Errors during scale-in                      | **Deregistration delay**                                  |
+| Uneven traffic across AZs                   | **Cross-zone load balancing**                             |
+| Client IP behind ALB                        | **X-Forwarded-For**                                       |
+| Keep CPU at X%                              | **Target Tracking**                                       |
+| Different scaling steps                     | **Step Scaling**                                          |
+| Known traffic schedule                      | **Scheduled Scaling**                                     |
+| Predict future demand                       | **Predictive Scaling**                                    |
+| ASG ignores application failure             | **Enable ELB health checks**                              |
+| Scale workers on jobs                       | **SQS queue metric**                                      |
+| Need to preserve AZ balance during scale-in | **Default ASG termination policy**                        |
+| Oldest running instance                     | **OldestInstance policy**                                 |
+| Need action before launch                   | **`Pending:Wait` lifecycle hook**                         |
+| Need action before termination              | **`Terminating:Wait` lifecycle hook**                     |
+| React to termination lifecycle event        | **EventBridge**                                           |
+| Collect logs before termination             | **Lifecycle Hook + EventBridge/Lambda + CloudWatch Logs** |
+| Termination event                           | **`EC2 Instance-terminate Lifecycle Action`**             |
+| 50/50 traffic split                         | **Weighted routing**                                      |
+| Primary + backup                            | **Failover routing**                                      |
+| DNS-level traffic split                     | **Route 53 Weighted Routing**                             |
+| Load-balancer-level traffic split           | **Weighted Target Groups**                                |
+| Private AWS ↔ on-prem connectivity          | **Direct Connect / VPN**                                  |
+| Traffic failover within a Region            | **Load Balancer**                                         |
+| Replace failed EC2                          | **Auto Scaling Group**                                    |
 
+---
+
+# Lifecycle hook decision rule
+
+```text
+Need to do something BEFORE a new instance enters service?
+→ Launch lifecycle hook
+→ Pending:Wait
+
+Need to do something BEFORE an instance is terminated?
+→ Termination lifecycle hook
+→ Terminating:Wait
+
+Need to react to lifecycle events externally?
+→ EventBridge
+
+Need custom code / automation?
+→ Lambda
+
+Need to preserve local logs before termination?
+→ Terminating:Wait
+→ EventBridge / Lambda
+→ CloudWatch Logs
+→ CompleteLifecycleAction
+```
