@@ -275,22 +275,6 @@ This can be useful when a single API request needs to coordinate several backend
 
 ---
 
-## Important distinction: AppSync Pipeline vs CI/CD Pipeline
-
-The word **pipeline** here does **not** mean CI/CD.
-
-```text
-AppSync Pipeline Resolver
-= request-time data orchestration
-
-AWS CodePipeline
-= CI/CD deployment
-```
-
-Do not automatically associate the word **pipeline** with deployment. The service determines the meaning.
-
----
-
 ## Example
 
 > "A healthcare application needs to efficiently retrieve and write data from multiple DynamoDB tables."
