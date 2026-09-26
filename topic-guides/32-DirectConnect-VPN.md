@@ -31,7 +31,7 @@ AWS Site-to-Site VPN creates an **encrypted IPsec connection** between an on-pre
 * Can usually be deployed much faster than Direct Connect
 * Lower cost than dedicated connectivity
 * Network performance and latency depend on the internet path
-* Each VPN connection normally consists of **two tunnels** for redundancy
+* Each VPN connection consists of **two tunnels** for redundancy/high availability.
 
 ### Main components
 
@@ -61,11 +61,200 @@ Virtual Private Gateway
 
 A standard Site-to-Site VPN tunnel supports up to approximately **1.25 Gbps**.
 
-AWS also supports **Large Bandwidth Tunnels** with higher throughput in supported configurations. ([docs.aws.amazon.com](https://docs.aws.amazon.com/vpn/latest/s2svpn/VPNTunnels.html))
+AWS also supports **Large Bandwidth Tunnels** with up to **5 Gbps per tunnel** in supported configurations. Large Bandwidth Tunnels are available for VPN connections attached to **Transit Gateway or Cloud WAN**, not Virtual Private Gateway attachments.
 
 For SAA questions, the more important distinction is usually:
 
 > **VPN = encrypted, fast to deploy, internet-based**
+
+---
+
+# Scaling VPN Throughput with ECMP
+
+A common SAA requirement is:
+
+> **"VPN connections are too slow during peak hours. Increase the VPN throughput."**
+
+The solution is to use **multiple VPN connections with an AWS Transit Gateway and ECMP (Equal-Cost Multi-Path)**.
+
+AWS explicitly supports ECMP for Site-to-Site VPN connections attached to a **Transit Gateway** to increase VPN bandwidth by aggregating multiple VPN tunnels. The VPN connections must use **dynamic routing/BGP**; ECMP is not supported for statically routed VPN connections.
+
+```text
+On-premises
+     │
+     ├── VPN Connection 1
+     │     ├── Tunnel 1
+     │     └── Tunnel 2
+     │
+     ├── VPN Connection 2
+     │     ├── Tunnel 1
+     │     └── Tunnel 2
+     │
+     └── VPN Connection 3
+           ├── Tunnel 1
+           └── Tunnel 2
+                 │
+                 ▼
+          Transit Gateway
+                 │
+                VPCs
+```
+
+### Signal
+
+> **Need higher VPN bandwidth / aggregate throughput → Transit Gateway + ECMP + multiple VPN connections**
+
+---
+
+## Why Transit Gateway?
+
+ECMP for Site-to-Site VPN is supported on **Transit Gateway**.
+
+It is **not** supported for VPN connections attached to a Virtual Private Gateway. AWS specifically recommends exploring ECMP when you want to use more than one VPN tunnel, because a Virtual Private Gateway does not support ECMP for Site-to-Site VPN.
+
+```text
+VGW
+→ VPN connectivity
+→ no ECMP aggregation
+
+Transit Gateway
+→ VPN connectivity
+→ ECMP supported
+```
+
+---
+
+## Important: more tunnels vs more VPN connections
+
+A single Site-to-Site VPN connection already contains **two tunnels**. You do not simply turn one VPN connection into an arbitrary number of tunnels.
+
+For throughput scaling:
+
+```text
+❌ One VPN connection
+   → add more tunnels
+
+✅ Multiple VPN connections
+   → Transit Gateway
+   → ECMP
+   → aggregate the VPN tunnels
+```
+
+AWS documents that each VPN connection includes two tunnels, and ECMP can aggregate multiple VPN tunnels across VPN connections attached to a Transit Gateway.
+
+---
+
+## ECMP requires dynamic routing
+
+For Site-to-Site VPN ECMP:
+
+```text
+VPN
++
+Transit Gateway
++
+BGP / dynamic routing
++
+ECMP
+```
+
+Static routing does **not** support ECMP for Site-to-Site VPN.
+
+### Memory
+
+> **TGW + BGP + multiple VPN connections → ECMP**
+
+---
+
+## Example
+
+Suppose the requirement is:
+
+> "The company has multiple VPN connections, but employees experience slow connectivity during peak hours. Increase the VPN throughput."
+
+Think:
+
+```text
+Multiple VPN connections
+        ↓
+Transit Gateway
+        ↓
+ECMP
+        ↓
+Use multiple VPN tunnels
+        ↓
+Higher aggregate VPN throughput
+```
+
+→ **Transit Gateway + ECMP**
+
+---
+
+## Large Bandwidth Tunnels
+
+AWS now supports **Large Bandwidth Tunnels (LBT)** with up to **5 Gbps per tunnel** for supported Transit Gateway or Cloud WAN VPN connections. Both tunnels in a VPN connection must use the same bandwidth configuration.
+
+```text
+Standard tunnel
+→ up to 1.25 Gbps
+
+Large Bandwidth Tunnel
+→ up to 5 Gbps
+```
+
+### Scaling beyond 5 Gbps
+
+AWS specifically documents using **ECMP across multiple VPN connections** when bandwidth requirements exceed 5 Gbps per tunnel.
+
+For example:
+
+```text
+VPN Connection 1
+├── 5 Gbps
+└── 5 Gbps
+
+VPN Connection 2
+├── 5 Gbps
+└── 5 Gbps
+
+        ↓
+      ECMP
+        ↓
+    20 Gbps
+```
+
+This is an example of aggregating multiple VPN tunnels using ECMP.
+
+For SAA questions, however, the key concept is:
+
+> **Need higher aggregate VPN throughput → multiple VPN connections + Transit Gateway + ECMP**
+
+---
+
+## Throughput vs Redundancy
+
+Do not confuse these two requirements.
+
+### Need higher throughput
+
+```text
+Transit Gateway
++
+ECMP
++
+multiple VPN connections
+```
+
+### Need redundancy
+
+```text
+Multiple VPN paths / customer gateways
+→ failover
+```
+
+A second Customer Gateway can improve **resilience**, but the SAA pattern for **scaling aggregate VPN throughput** is:
+
+> **Transit Gateway + ECMP + multiple VPN connections**
 
 ---
 
@@ -105,7 +294,7 @@ Employee laptop
 * Usually takes longer to provision than a VPN
 * **Does not encrypt traffic by default**
 
-Common Direct Connect speeds include **1 Gbps, 10 Gbps, and 100 Gbps**, depending on the connection type and location. ([docs.aws.amazon.com](https://docs.aws.amazon.com/directconnect/latest/UserGuide/Welcome.html))
+Common Direct Connect speeds depend on the connection type and location. AWS Direct Connect supports multiple connection capacities, including dedicated connections such as 1 Gbps, 10 Gbps, and 100 Gbps.
 
 ### Basic architecture
 
@@ -159,6 +348,10 @@ There are three important VIF types:
 | **Private VIF** | Access to VPC resources using private IP addresses         |
 | **Public VIF**  | Access to AWS public services using public IP addresses    |
 | **Transit VIF** | Access to Transit Gateway through a Direct Connect Gateway |
+
+AWS documents these three VIF types and their purposes.
+
+---
 
 ### Private VIF
 
@@ -229,6 +422,8 @@ Typical clue:
 
 → **Transit VIF + Direct Connect Gateway + Transit Gateway**
 
+AWS documents that a transit VIF is used to access one or more Transit Gateways associated with Direct Connect gateways.
+
 ---
 
 # Direct Connect Gateway
@@ -259,6 +454,8 @@ Direct Connect Gateway
   VPC       VPC
 ```
 
+AWS supports associating a Direct Connect gateway with a **Transit Gateway** or with multiple **Virtual Private Gateways**, depending on the architecture.
+
 ---
 
 # Direct Connect Gateway + Transit Gateway
@@ -288,7 +485,11 @@ For a large multi-account environment, a common architecture is:
 
 This allows multiple VPCs and AWS accounts to use the same Direct Connect connectivity to reach on-premises services.
 
-### Example
+AWS documents the Transit VIF → Direct Connect Gateway → Transit Gateway path for accessing VPCs or VPNs attached to the Transit Gateway.
+
+---
+
+## Example
 
 Suppose the company has:
 
@@ -541,6 +742,26 @@ This allows the organization to establish connectivity quickly and move to dedic
 
 ---
 
+# VPN Throughput vs Direct Connect
+
+A useful distinction:
+
+```text
+Need higher VPN throughput
+→ Transit Gateway + ECMP + multiple VPN connections
+
+Need dedicated high-capacity connectivity
+→ Direct Connect
+```
+
+Do not automatically choose Direct Connect just because VPN throughput is insufficient.
+
+If the question specifically asks to **scale existing Site-to-Site VPN throughput**, look for:
+
+> **Transit Gateway + ECMP**
+
+---
+
 # Question patterns
 
 > **"Transferring 5 TB nightly and VPN performance is inconsistent."**
@@ -548,6 +769,14 @@ This allows the organization to establish connectivity quickly and move to dedic
 → **Direct Connect**
 
 Large and predictable data transfers are a common use case for dedicated connectivity.
+
+---
+
+> **"VPN connections are slow during peak hours. Increase VPN throughput."**
+
+→ **Transit Gateway + ECMP + additional VPN connections**
+
+The goal is to aggregate multiple VPN tunnels for higher bandwidth.
 
 ---
 
@@ -617,28 +846,39 @@ Direct Connect normally takes longer to provision.
 
 ---
 
+> **"On-premises VPN connections must use more than one tunnel simultaneously to increase bandwidth."**
+
+→ **Transit Gateway + ECMP**
+
+---
+
 # Pocket card
 
-| Keyword                                | Answer                           |
-| -------------------------------------- | -------------------------------- |
-| Encrypted tunnel over internet         | **Site-to-Site VPN**             |
-| Fast to deploy                         | **Site-to-Site VPN**             |
-| VGW + CGW                              | **Site-to-Site VPN**             |
-| Dedicated private connection           | **Direct Connect**               |
-| Consistent network performance         | **Direct Connect**               |
-| Large steady transfers                 | **Direct Connect**               |
-| Direct Connect is encrypted by default | **❌ No**                         |
-| Encrypt Direct Connect traffic         | **VPN/IPsec over DX**            |
-| Cost-effective DX backup               | **Site-to-Site VPN**             |
-| Individual users/laptops → AWS         | **Client VPN**                   |
-| One DX → multiple VPCs                 | **Direct Connect Gateway**       |
-| One DX → many VPCs through TGW         | **DX Gateway + Transit Gateway** |
-| Central hub for many VPCs              | **Transit Gateway**              |
-| Private VIF                            | **Private VPC resources**        |
-| Public VIF                             | **AWS public services**          |
-| Transit VIF                            | **Transit Gateway**              |
-| Many AWS accounts need on-prem access  | **DX Gateway + Transit Gateway** |
-| Point-to-point VPC connectivity        | **VPC Peering**                  |
+| Keyword                                | Answer                              |
+| -------------------------------------- | ----------------------------------- |
+| Encrypted tunnel over internet         | **Site-to-Site VPN**                |
+| Fast to deploy                         | **Site-to-Site VPN**                |
+| VGW + CGW                              | **Site-to-Site VPN**                |
+| Dedicated private connection           | **Direct Connect**                  |
+| Consistent network performance         | **Direct Connect**                  |
+| Large steady transfers                 | **Direct Connect**                  |
+| Direct Connect is encrypted by default | **❌ No**                            |
+| Encrypt Direct Connect traffic         | **VPN/IPsec over DX**               |
+| Cost-effective DX backup               | **Site-to-Site VPN**                |
+| Individual users/laptops → AWS         | **Client VPN**                      |
+| One DX → multiple VPCs                 | **Direct Connect Gateway**          |
+| One DX → many VPCs through TGW         | **DX Gateway + Transit Gateway**    |
+| Central hub for many VPCs              | **Transit Gateway**                 |
+| Private VIF                            | **Private VPC resources**           |
+| Public VIF                             | **AWS public services**             |
+| Transit VIF                            | **Transit Gateway**                 |
+| Many AWS accounts need on-prem access  | **DX Gateway + Transit Gateway**    |
+| Point-to-point VPC connectivity        | **VPC Peering**                     |
+| VPN throughput too low                 | **Transit Gateway + ECMP**          |
+| Aggregate multiple VPN tunnels         | **ECMP**                            |
+| ECMP VPN routing                       | **BGP / dynamic routing**           |
+| One VPN connection                     | **2 tunnels**                       |
+| Scale VPN throughput                   | **Multiple VPN connections + ECMP** |
 
 ---
 
@@ -665,6 +905,12 @@ Direct Connect Gateway
 
 Transit Gateway
 → Central hub for many VPCs/accounts
+
+ECMP
+→ Aggregate multiple equal-cost VPN paths
+
+TGW + ECMP
+→ Scale VPN throughput
 ```
 
 ## Multi-account Direct Connect pattern
@@ -694,6 +940,10 @@ Transit Gateway
 
 > **One existing DX + many AWS accounts/VPCs → Direct Connect Gateway + Transit Gateway**
 
+---
+
+# VPC Connectivity: Peering vs Transit Gateway vs PrivateLink
+
 | Situation                                                             | Think                                                  |
 | --------------------------------------------------------------------- | ------------------------------------------------------ |
 | Two VPCs have **non-overlapping CIDRs** and need general connectivity | **VPC Peering / Transit Gateway**                      |
@@ -701,4 +951,125 @@ Transit Gateway
 | Need entire network connectivity                                      | **Peering / TGW**, with non-overlapping address ranges |
 | Need only one service, not network-to-network access                  | **PrivateLink**                                        |
 
+---
 
+# Final Decision Tree
+
+```text
+What is the requirement?
+             │
+             ├── Individual users/laptops → AWS?
+             │        ↓
+             │     Client VPN
+             │
+             ├── On-premises network → AWS quickly?
+             │        ↓
+             │   Site-to-Site VPN
+             │
+             ├── Need encrypted connectivity?
+             │        ↓
+             │   Site-to-Site VPN
+             │
+             ├── Need dedicated/private connectivity?
+             │        ↓
+             │   Direct Connect
+             │
+             ├── Need higher VPN throughput?
+             │        ↓
+             │   Transit Gateway
+             │        ↓
+             │      ECMP
+             │        ↓
+             │   Multiple VPN connections
+             │
+             ├── One DX → multiple VPCs?
+             │        ↓
+             │   Direct Connect Gateway
+             │
+             ├── One DX → VPCs through Transit Gateway?
+             │        ↓
+             │   Transit VIF
+             │        +
+             │   DX Gateway
+             │        +
+             │   Transit Gateway
+             │
+             ├── On-premises → AWS public services?
+             │        ↓
+             │   Public VIF
+             │
+             ├── On-premises → private VPC resources?
+             │        ↓
+             │   Private VIF
+             │
+             └── Need central connectivity for many VPCs?
+                      ↓
+                 Transit Gateway
+```
+
+# Final Memory
+
+```text
+VPN
+= fast + encrypted + internet
+
+Direct Connect
+= dedicated + private + predictable
+
+Client VPN
+= individual users
+
+Private VIF
+= private VPC resources
+
+Public VIF
+= AWS public services
+
+Transit VIF
+= Transit Gateway
+
+DX Gateway
+= Direct Connect → multiple AWS networks
+
+Transit Gateway
+= central network hub
+
+ECMP
+= multiple equal-cost paths
+
+TGW + ECMP
+= scale VPN throughput
+```
+
+> **Don't memorize every architecture first.**
+>
+> **Memorize the unique signal.**
+
+```text
+Fast + encrypted
+→ Site-to-Site VPN
+
+Dedicated + predictable
+→ Direct Connect
+
+Individual users
+→ Client VPN
+
+Private VPC resources
+→ Private VIF
+
+AWS public services
+→ Public VIF
+
+Transit Gateway
+→ Transit VIF
+
+Many VPCs through DX
+→ Direct Connect Gateway
+
+Many VPCs/accounts centrally
+→ Transit Gateway
+
+Higher VPN throughput
+→ TGW + ECMP + multiple VPN connections
+```
