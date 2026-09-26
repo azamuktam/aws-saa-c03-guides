@@ -60,7 +60,7 @@ On-premises → SMB → FSx File Gateway → FSx for Windows
 
 # Volume Gateway
 
-Provides **block storage via iSCSI** to on-premises applications.
+Provides **block storage via iSCSI** not NFS or SMB to on-premises applications.
 
 Two types:
 
