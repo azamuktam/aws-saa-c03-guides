@@ -22,6 +22,12 @@ GraphQL
 GraphQL + real-time subscriptions
 → AWS AppSync
 
+GraphQL + offline synchronization
+→ AWS AppSync
+
+Multiple data sources / multiple DynamoDB tables in one GraphQL operation
+→ AWS AppSync Pipeline Resolver
+
 Quick web/mobile application development
 → AWS Amplify
 
@@ -166,6 +172,7 @@ Use it when the question says:
 * real-time subscriptions
 * real-time application updates
 * offline synchronization for applications
+* multiple data sources / multiple DynamoDB tables in one GraphQL operation
 
 ### Signal
 
@@ -203,7 +210,7 @@ This is one of the strongest service keywords to memorize.
 
 ---
 
-# AppSync real-time subscriptions
+# AppSync Real-Time Subscriptions
 
 AppSync supports **real-time subscriptions**, which are useful when clients need to receive updates as backend data changes.
 
@@ -225,7 +232,7 @@ User B
 
 ---
 
-# AppSync offline synchronization
+# AppSync Offline Synchronization
 
 AppSync can also support **offline synchronization** for applications.
 
@@ -239,7 +246,62 @@ The application can continue working with local data and synchronize changes whe
 
 ---
 
-# Example
+# AppSync Pipeline Resolvers
+
+An **AppSync pipeline resolver** allows multiple resolver functions to be executed in sequence as part of a single GraphQL operation.
+
+Each function can interact with a different data source, such as DynamoDB, Lambda, or other supported AppSync data sources.
+
+Typical pattern:
+
+```text
+Client
+  ↓
+AppSync
+  ↓
+Pipeline Resolver
+  ├── Function 1 → DynamoDB Table A
+  ├── Function 2 → DynamoDB Table B
+  └── Function 3 → DynamoDB Table C
+  ↓
+Response
+```
+
+### Signal
+
+> **Multiple data sources / multiple DynamoDB tables in one GraphQL operation → AppSync Pipeline Resolver**
+
+This can be useful when a single API request needs to coordinate several backend operations.
+
+---
+
+## Important distinction: AppSync Pipeline vs CI/CD Pipeline
+
+The word **pipeline** here does **not** mean CI/CD.
+
+```text
+AppSync Pipeline Resolver
+= request-time data orchestration
+
+AWS CodePipeline
+= CI/CD deployment
+```
+
+Do not automatically associate the word **pipeline** with deployment. The service determines the meaning.
+
+---
+
+## Example
+
+> "A healthcare application needs to efficiently retrieve and write data from multiple DynamoDB tables."
+
+→ **AWS AppSync Pipeline Resolver**
+
+A pipeline resolver can coordinate multiple resolver functions and data-source operations as part of the GraphQL request.
+
+---
+
+# AppSync Examples
 
 > "A mobile application needs a managed GraphQL API with real-time subscriptions."
 
@@ -253,18 +315,29 @@ The application can continue working with local data and synchronize changes whe
 
 ---
 
-# AppSync memory
+> "A serverless application needs to retrieve and write data across multiple DynamoDB tables through one GraphQL operation."
+
+→ **AWS AppSync Pipeline Resolver**
+
+---
+
+# AppSync Memory
 
 ```text
 AppSync
 = GRAPHQL
 = REAL-TIME SUBSCRIPTIONS
 = OFFLINE SYNCHRONIZATION
+= PIPELINE RESOLVERS
 ```
 
 The strongest keyword remains:
 
 > **GraphQL → AppSync**
+
+For pipeline questions, remember:
+
+> **Multiple data sources / multiple operations → AppSync Pipeline Resolver**
 
 ---
 
@@ -357,7 +430,7 @@ Common examples include:
 
 ---
 
-# SES examples
+# SES Examples
 
 ### Verification email
 
@@ -447,7 +520,7 @@ Application
 
 ---
 
-# SES vs SNS exam trap
+# SES vs SNS Exam Trap
 
 A question may say:
 
@@ -471,12 +544,13 @@ The key is the required communication pattern.
 
 # Application Service Comparison
 
-| Service         | What it does                                    | Signal keyword         |
-| --------------- | ----------------------------------------------- | ---------------------- |
-| **AWS Batch**   | Runs large / long-running batch workloads       | Batch jobs             |
-| **AWS AppSync** | Managed GraphQL APIs                            | GraphQL                |
-| **AWS Amplify** | Rapid web/mobile app development and deployment | Web/mobile development |
-| **Amazon SES**  | Sends application email                         | Email                  |
+| Service                           | What it does                                          | Signal keyword                     |
+| --------------------------------- | ----------------------------------------------------- | ---------------------------------- |
+| **AWS Batch**                     | Runs large / long-running batch workloads             | Batch jobs                         |
+| **AWS AppSync**                   | Managed GraphQL APIs                                  | GraphQL                            |
+| **AWS AppSync Pipeline Resolver** | Orchestrates multiple resolver/data-source operations | Multiple data sources / operations |
+| **AWS Amplify**                   | Rapid web/mobile app development and deployment       | Web/mobile development             |
+| **Amazon SES**                    | Sends application email                               | Email                              |
 
 ---
 
@@ -507,6 +581,18 @@ Build/deploy web or mobile application
 ```
 
 They can be used together.
+
+---
+
+## AppSync Pipeline Resolver vs CodePipeline
+
+```text
+AppSync Pipeline Resolver
+= request-time data orchestration
+
+AWS CodePipeline
+= CI/CD deployment
+```
 
 ---
 
@@ -554,6 +640,12 @@ Notifications / pub-sub
 
 ---
 
+> **"A serverless application needs to retrieve and write data from multiple DynamoDB tables through a GraphQL operation."**
+
+→ **AWS AppSync Pipeline Resolver**
+
+---
+
 > **"Quickly build and deploy a web/mobile application."**
 
 → **AWS Amplify**
@@ -589,7 +681,7 @@ What is the requirement?
           │
           ├── GraphQL?
           │       ↓
-          │    AppSync
+          │    AWS AppSync
           │
           ├── GraphQL + real-time subscriptions?
           │       ↓
@@ -598,6 +690,11 @@ What is the requirement?
           ├── GraphQL + offline synchronization?
           │       ↓
           │    AppSync
+          │
+          ├── Multiple data sources / multiple DynamoDB tables
+          │   in one GraphQL operation?
+          │       ↓
+          │    AppSync Pipeline Resolver
           │
           ├── Quickly build/deploy web or mobile app?
           │       ↓
@@ -612,77 +709,23 @@ What is the requirement?
 
 # Pocket Card
 
-| Keyword                                  | Answer        |
-| ---------------------------------------- | ------------- |
-| Long-running batch jobs                  | **AWS Batch** |
-| Large-scale batch workloads              | **AWS Batch** |
-| Batch containers                         | **AWS Batch** |
-| GraphQL                                  | **AppSync**   |
-| GraphQL + subscriptions                  | **AppSync**   |
-| GraphQL + real-time updates              | **AppSync**   |
-| GraphQL + offline synchronization        | **AppSync**   |
-| Quick web/mobile application development | **Amplify**   |
-| Web/mobile app deployment                | **Amplify**   |
-| Application email                        | **SES**       |
-| Verification emails                      | **SES**       |
-| Email receipts                           | **SES**       |
-| Email notifications                      | **SES**       |
+| Keyword                                           | Answer                        |
+| ------------------------------------------------- | ----------------------------- |
+| Long-running batch jobs                           | **AWS Batch**                 |
+| Large-scale batch workloads                       | **AWS Batch**                 |
+| Batch containers                                  | **AWS Batch**                 |
+| GraphQL                                           | **AppSync**                   |
+| GraphQL + subscriptions                           | **AppSync**                   |
+| GraphQL + real-time updates                       | **AppSync**                   |
+| GraphQL + offline synchronization                 | **AppSync**                   |
+| Multiple data sources in one GraphQL operation    | **AppSync Pipeline Resolver** |
+| Multiple DynamoDB tables in one GraphQL operation | **AppSync Pipeline Resolver** |
+| Quick web/mobile application development          | **Amplify**                   |
+| Web/mobile app deployment                         | **Amplify**                   |
+| Application email                                 | **SES**                       |
+| Verification emails                               | **SES**                       |
+| Email receipts                                    | **SES**                       |
+| Email notifications                               | **SES**                       |
 
 ---
 
-# Final Memory
-
-```text
-AWS Batch
-= BATCH COMPUTING
-= LONG-RUNNING BATCH JOBS
-
-AppSync
-= GRAPHQL
-= REAL-TIME SUBSCRIPTIONS
-= OFFLINE SYNCHRONIZATION
-
-Amplify
-= WEB / MOBILE APP DEVELOPMENT
-= RAPID APP BUILD + DEPLOYMENT
-
-SES
-= APPLICATION EMAIL
-```
-
-# The Golden Rule
-
-```text
-Long-running batch jobs
-→ AWS Batch
-
-GraphQL
-→ AppSync
-
-GraphQL + real-time subscriptions
-→ AppSync
-
-GraphQL + offline synchronization
-→ AppSync
-
-Quick web/mobile development
-→ Amplify
-
-Application needs to send email
-→ SES
-```
-
-> **Don't memorize the implementation.**
->
-> **Memorize the unique signal.**
-
-For example:
-
-```text
-Batch jobs           → AWS Batch
-GraphQL              → AppSync
-GraphQL subscriptions → AppSync
-Offline sync         → AppSync
-Web/mobile app       → Amplify
-Application email    → SES
-```
