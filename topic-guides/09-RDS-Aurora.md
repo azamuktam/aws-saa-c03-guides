@@ -4,6 +4,7 @@
 
 **Amazon RDS** is a managed relational database service. AWS manages infrastructure, OS maintenance, backups, patching, and database setup.
 
+
 Supported engines:
 
 * MySQL
@@ -318,7 +319,8 @@ Cluster / Writer endpoint points to new primary
 ```
 
 Aurora promotes an existing Aurora Replica to become the new primary. Failover is much faster than creating a new DB instance.
-
+**Aurora flips the canonical name record (CNAME) for your DB Instance to point at the healthy replica, which in turn is promoted to become the new primary.
+**
 > **Primary failure + Aurora Replica** → **Promote the Aurora Replica**
 
 For high availability, Aurora Replicas should ideally be placed in different Availability Zones.
