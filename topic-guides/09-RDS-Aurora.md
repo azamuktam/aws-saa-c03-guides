@@ -268,7 +268,7 @@ Aurora supports:
 
 > Always connect to the current Aurora writer → **Cluster / Writer endpoint**
 
-The endpoint follows the writer after failover.
+The endpoint continues to provide access to the current writer after failover.
 
 ## Reader endpoint
 
@@ -294,6 +294,90 @@ Reader C + D → Reporting
 ```
 
 > Different workloads should use different Aurora instance groups → **Custom endpoint**
+
+---
+
+# Aurora Failover
+
+Aurora failover behavior depends on whether the cluster has an **Aurora Replica**.
+
+## Aurora with an Aurora Replica
+
+If the primary DB instance fails:
+
+```text
+Primary fails
+     ↓
+Aurora Replica
+     ↓
+Replica is promoted
+     ↓
+New primary
+     ↓
+Cluster / Writer endpoint points to new primary
+```
+
+Aurora promotes an existing Aurora Replica to become the new primary. Failover is much faster than creating a new DB instance.
+
+> **Primary failure + Aurora Replica** → **Promote the Aurora Replica**
+
+For high availability, Aurora Replicas should ideally be placed in different Availability Zones.
+
+---
+
+## Aurora with only one DB instance
+
+If there is **no Aurora Replica**:
+
+```text
+Primary fails
+     ↓
+No Replica to promote
+     ↓
+Aurora recreates the primary
+     ↓
+Same Availability Zone
+     ↓
+Service becomes available again
+```
+
+Aurora automatically attempts to create a new primary DB instance in the **same Availability Zone** when there are no Aurora Replicas.
+
+> **Single Aurora instance + failure** → **Create replacement DB instance in the same AZ**
+
+This recovery is significantly slower than promoting an existing Replica.
+
+### Very important distinction
+
+```text
+Aurora storage
+→ distributed across multiple AZs
+
+Aurora DB instance
+→ database compute
+
+Replica exists
+→ fast failover by promotion
+
+No Replica
+→ recreate the DB instance
+```
+
+The distributed Aurora storage **does not mean another DB instance automatically exists in every AZ**.
+
+### Exam pattern
+
+> **Aurora primary fails + Replica exists**
+
+→ **Promote Replica**
+
+> **Aurora primary fails + only one DB instance**
+
+→ **Create replacement instance in the same AZ**
+
+> **Aurora has distributed storage**
+
+→ **Does NOT mean a DB instance automatically exists in each AZ**
 
 ---
 
@@ -444,6 +528,26 @@ It is:
 
 Readers use the shared Aurora storage rather than maintaining independent full database copies.
 
+```text
+Aurora DB instances
+        ↓
+Shared cluster volume
+        ↓
+Copies across multiple AZs
+```
+
+The storage layer and database-instance layer are separate:
+
+```text
+Storage
+→ distributed and highly durable
+
+DB instances
+→ compute
+```
+
+This is why Aurora can have highly durable storage even when only one DB instance exists. However, a Replica is still needed for **fast instance failover**.
+
 ---
 
 # Question patterns
@@ -481,6 +585,10 @@ Readers use the shared Aurora storage rather than maintaining independent full d
 > **One Aurora instance** → **Instance endpoint**
 
 > **Different Aurora instance groups for workloads** → **Custom endpoint**
+
+> **Aurora primary failure + Replica exists** → **Promote Aurora Replica**
+
+> **Aurora primary failure + no Replica** → **Recreate primary DB instance**
 
 > **Unpredictable Aurora workload** → **Aurora Serverless v2**
 
@@ -522,6 +630,8 @@ Readers use the shared Aurora storage rather than maintaining independent full d
 | Aurora read balancing                     | **Reader endpoint**                     |
 | One Aurora instance                       | **Instance endpoint**                   |
 | Different Aurora instance groups          | **Custom endpoint**                     |
+| Aurora failure + Replica exists           | **Promote Replica**                     |
+| Aurora failure + no Replica               | **Recreate primary instance**           |
 | Spiky/unpredictable Aurora workload       | **Serverless v2**                       |
 | Aurora cross-Region DR                    | **Global Database**                     |
 | Quick Aurora copy                         | **Cloning**                             |
@@ -529,48 +639,3 @@ Readers use the shared Aurora storage rather than maintaining independent full d
 | Multi-Region NoSQL                        | **DynamoDB Global Tables**              |
 | Time-series database                      | **Timestream**                          |
 
----
-
-# Core mental model
-
-```text
-AZ failure
-→ Multi-AZ
-
-Need more read capacity
-→ Read Replica
-
-Too many DB connections
-→ RDS Proxy
-
-Cross-Region RDS DR
-→ Cross-Region Read Replica
-
-Aurora cross-Region DR
-→ Aurora Global Database
-
-Spiky Aurora capacity
-→ Aurora Serverless v2
-
-Different Aurora workloads → different instance groups
-→ Custom Endpoint
-
-Quick Aurora copy
-→ Aurora Clone
-
-Undo Aurora MySQL changes
-→ Backtrack
-```
-
-**Main SAA distinction:**
-
-```text
-Multi-AZ
-→ High availability within a Region
-
-Read Replica
-→ Read scaling / DR copy
-
-Aurora Global Database
-→ Aurora cross-Region DR + very low replication lag
-```
