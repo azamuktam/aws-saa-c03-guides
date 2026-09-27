@@ -122,6 +122,122 @@ Typical EKS signals:
 
 ---
 
+# EKS IAM authentication and Kubernetes RBAC
+
+There are **two different access problems** to recognize.
+
+## 1. IAM user/role → EKS cluster
+
+This is about a person or AWS IAM principal accessing the Kubernetes API.
+
+Modern EKS uses **Access Entries** to connect IAM users or roles to Kubernetes access.
+
+```text
+IAM user / role
+       ↓
+EKS Access Entry
+       ↓
+Kubernetes access
+       ↓
+RBAC permissions
+```
+
+For custom Kubernetes RBAC permissions, an Access Entry can associate the IAM principal with a Kubernetes group.
+
+Then Kubernetes RBAC can use:
+
+* **Role** — permissions within a namespace
+* **ClusterRole** — cluster-wide permissions
+* **RoleBinding** — attaches permissions to a user/group in a namespace
+* **ClusterRoleBinding** — attaches permissions cluster-wide
+
+### Important exam distinction
+
+> **"Give an IAM role/user access to an EKS cluster."**
+
+→ **EKS Access Entry**
+
+Older questions may mention the **`aws-auth` ConfigMap** instead.
+
+```text
+IAM user / role
+       ↓
+aws-auth ConfigMap
+       ↓
+Kubernetes RBAC
+```
+
+Know `aws-auth` because it appears in older exam material, but it is **deprecated** in modern EKS.
+
+---
+
+## 2. Pod → AWS services
+
+This is a different problem.
+
+Suppose a Kubernetes pod needs to access:
+
+* S3
+* DynamoDB
+* SQS
+* Secrets Manager
+
+Do not confuse this with human access to the EKS cluster.
+
+The pod needs an IAM role:
+
+```text
+Pod
+ ↓
+Kubernetes Service Account
+ ↓
+EKS Pod Identity
+ ↓
+IAM Role
+ ↓
+AWS service
+```
+
+### EKS Pod Identity
+
+**EKS Pod Identity** is the modern way to give Kubernetes workloads IAM permissions.
+
+It allows a pod to use an IAM role without giving that role to the entire worker node.
+
+### IRSA
+
+**IAM Roles for Service Accounts (IRSA)** is the older/alternative mechanism.
+
+Conceptually:
+
+```text
+Pod
+ ↓
+Service Account
+ ↓
+OIDC
+ ↓
+IAM Role
+ ↓
+AWS service
+```
+
+### Easy rule
+
+```text
+IAM user/role → EKS cluster
+→ Access Entry
+→ Kubernetes RBAC
+
+Pod → AWS service
+→ EKS Pod Identity / IRSA
+→ IAM Role
+```
+
+This distinction is important for SAA questions.
+
+---
+
 # EKS Secrets encryption with AWS KMS
 
 EKS stores Kubernetes API data in the managed Kubernetes control plane, with **etcd** used as the datastore.
@@ -134,8 +250,6 @@ This includes Kubernetes resources such as:
 * ConfigMaps
 * Other Kubernetes API objects
 
-EKS uses AWS KMS as part of this encryption architecture.
-
 ```text
 Kubernetes API data
         ↓
@@ -144,7 +258,9 @@ Envelope encryption
 Kubernetes control plane / etcd
 ```
 
-For clusters using a **customer-managed KMS key**, that key can provide customer-controlled encryption of Kubernetes API data.
+EKS uses AWS KMS as part of this encryption architecture.
+
+By default, EKS uses an **AWS-owned KMS key**. You can optionally use your own **customer-managed KMS key** for customer-controlled encryption.
 
 ### Exam takeaway
 
@@ -154,7 +270,14 @@ Older questions may specifically mention:
 
 → **KMS envelope encryption**
 
-For modern EKS, remember that encryption of Kubernetes API data is already enabled by default for Kubernetes 1.28+; a customer-managed KMS key is an additional control rather than something required simply to obtain encryption.
+For modern EKS, remember:
+
+```text
+Kubernetes 1.28+
+→ All Kubernetes API data is encrypted by default
+```
+
+You do not need to configure KMS just to obtain the default envelope encryption. A customer-managed KMS key is an additional option when you need control over the key.
 
 ---
 
@@ -214,32 +337,84 @@ If not, ECS is the AWS-native container orchestration option.
 
 ---
 
-### 5. Kubernetes API-data encryption
+### 5. IAM user/role needs cluster access
+
+> "A developer needs to use `kubectl` against an EKS cluster."
+
+**Answer: EKS Access Entry**
+
+Older questions may use:
+
+**`aws-auth` ConfigMap**
+
+---
+
+### 6. Pod needs AWS service access
+
+> "A Kubernetes pod needs permission to read from S3."
+
+**Answer: EKS Pod Identity**
+
+Know **IRSA** as the older/alternative approach.
+
+---
+
+### 7. Kubernetes RBAC
+
+> "An IAM role should only be allowed to read Pods in a specific namespace."
+
+Think:
+
+**EKS access + Kubernetes RBAC**
+
+Typically:
+
+```text
+IAM Role
+   ↓
+EKS Access Entry
+   ↓
+Kubernetes group
+   ↓
+Role
+   ↓
+RoleBinding
+```
+
+---
+
+### 8. Kubernetes API-data encryption
 
 > "The company wants to encrypt Kubernetes API data using AWS KMS."
 
-**Answer: EKS envelope encryption / AWS KMS**
+**Answer: EKS envelope encryption**
 
 ---
 
 # Pocket card
 
-| Keyword                                  | Answer                       |
-| ---------------------------------------- | ---------------------------- |
-| **Managed Kubernetes**                   | EKS                          |
-| **Already using Kubernetes**             | EKS                          |
-| **Kubernetes portability**               | EKS                          |
-| **Kubernetes manifests/tools**           | EKS                          |
-| **Kubernetes + serverless compute**      | EKS + Fargate                |
-| **Kubernetes + EC2 control**             | EKS on EC2                   |
-| **Encrypt Kubernetes API data**          | EKS envelope encryption      |
-| **Customer-controlled encryption key**   | Customer-managed AWS KMS key |
-| **Kubernetes datastore**                 | etcd                         |
-| **Kubernetes 1.28+ API-data encryption** | Enabled by default           |
+| Keyword                                    | Answer                           |
+| ------------------------------------------ | -------------------------------- |
+| **Managed Kubernetes**                     | EKS                              |
+| **Already using Kubernetes**               | EKS                              |
+| **Kubernetes portability**                 | EKS                              |
+| **Kubernetes manifests/tools**             | EKS                              |
+| **Kubernetes + serverless compute**        | EKS + Fargate                    |
+| **Kubernetes + EC2 control**               | EKS on EC2                       |
+| **IAM user/role → EKS cluster**            | EKS Access Entry                 |
+| **Older IAM → EKS mechanism**              | `aws-auth` ConfigMap             |
+| **Pod → AWS services**                     | EKS Pod Identity                 |
+| **Older pod IAM mechanism**                | IRSA                             |
+| **Namespace-level Kubernetes permissions** | Role + RoleBinding               |
+| **Cluster-wide Kubernetes permissions**    | ClusterRole + ClusterRoleBinding |
+| **Encrypt Kubernetes API data**            | EKS envelope encryption          |
+| **Customer-controlled encryption key**     | Customer-managed AWS KMS key     |
+| **Kubernetes datastore**                   | etcd                             |
+| **Kubernetes 1.28+ API-data encryption**   | Enabled by default               |
 
 ---
 
-# The most important distinction
+# The most important distinctions
 
 ```text
 ECS vs EKS
@@ -260,14 +435,38 @@ EC2     = manage worker infrastructure
 Fargate = AWS manages underlying infrastructure
 
 
+IAM user/role → EKS
+───────────────────
+Access Entry = modern method
+aws-auth     = legacy method
+
+
+Pod → AWS services
+──────────────────
+EKS Pod Identity = modern method
+IRSA             = older/alternative method
+
+
+Kubernetes RBAC
+───────────────
+Role + RoleBinding
+→ namespace permissions
+
+ClusterRole + ClusterRoleBinding
+→ cluster-wide permissions
+
+
 KMS encryption
 ──────────────
-EKS can use AWS KMS for envelope encryption
-of Kubernetes API data.
+EKS 1.28+
+→ all Kubernetes API data encrypted by default
 ```
 
 The key idea is simple:
 
 **EKS provides managed Kubernetes.
 EC2 or Fargate provides the compute for Kubernetes workloads.
-AWS KMS can be used for envelope encryption of Kubernetes API data.**
+IAM users/roles access the EKS cluster through EKS access management.
+Kubernetes RBAC controls what those identities can do.
+Pods use EKS Pod Identity or IRSA to access AWS services.
+AWS KMS provides the encryption layer for Kubernetes API data.**
