@@ -4,7 +4,6 @@
 
 **Amazon RDS** is a managed relational database service. AWS manages infrastructure, OS maintenance, backups, patching, and database setup.
 
-
 Supported engines:
 
 * MySQL
@@ -25,15 +24,51 @@ Need:
 
 ---
 
+# RDS vs Aurora
+
+|                      | **RDS**                                        | **Aurora**                               |
+| -------------------- | ---------------------------------------------- | ---------------------------------------- |
+| Type                 | Managed relational database service            | AWS relational database engine           |
+| Engines              | MySQL, PostgreSQL, MariaDB, Oracle, SQL Server | MySQL-compatible / PostgreSQL-compatible |
+| Storage architecture | Traditional DB storage                         | Distributed shared cluster storage       |
+| Storage scaling      | Depends on engine/storage configuration        | Automatically grows                      |
+| Maximum storage      | Depends on engine                              | Up to **256 TiB** for supported versions |
+| Replicas             | Read Replicas                                  | Aurora Replicas                          |
+| Fast DB failover     | Multi-AZ                                       | Promote Aurora Replica                   |
+| Cross-Region DR      | Cross-Region Read Replica                      | Aurora Global Database                   |
+
+### Simple decision rule
+
+```text
+Standard relational database
+→ RDS
+
+Very large / rapidly growing relational workload
+→ Aurora
+
+OLTP + complex SQL
+→ RDS or Aurora
+
+Analytics / data warehouse
+→ Redshift
+
+NoSQL
+→ DynamoDB
+```
+
+**Important:** OLTP, ACID, and complex SQL alone do **not** automatically mean Aurora. Both RDS and Aurora can support these workloads. Very large and growing storage requirements can be an important reason to choose Aurora.
+
+---
+
 # Multi-AZ vs Read Replicas
 
-|                    | **Multi-AZ**                       | **Read Replica**                                               |
-| ------------------ | ---------------------------------- | -------------------------------------------------------------- |
-| Main purpose       | High availability                  | Read scaling                                                   |
-| Replication        | Synchronous for standard Multi-AZ  | Asynchronous                                                   |
-| Read from standby? | **No**                             | **Yes**                                                        |
-| Automatic failover | **Yes**                            | **No** as normal RR feature                                    |
-| Location           | Another AZ / depends on deployment | Same Region, another AZ, or another Region depending on engine |
+|                    | **Multi-AZ**                            | **Read Replica**                                               |
+| ------------------ | --------------------------------------- | -------------------------------------------------------------- |
+| Main purpose       | High availability                       | Read scaling                                                   |
+| Replication        | Synchronous for standard Multi-AZ       | Asynchronous                                                   |
+| Read from standby? | **No** for traditional Multi-AZ standby | **Yes**                                                        |
+| Automatic failover | **Yes**                                 | **No** as normal RR feature                                    |
+| Location           | Another AZ / depends on deployment      | Same Region, another AZ, or another Region depending on engine |
 
 ### Multi-AZ
 
@@ -319,8 +354,9 @@ Cluster / Writer endpoint points to new primary
 ```
 
 Aurora promotes an existing Aurora Replica to become the new primary. Failover is much faster than creating a new DB instance.
-**Aurora flips the canonical name record (CNAME) for your DB Instance to point at the healthy replica, which in turn is promoted to become the new primary.
-**
+
+**Aurora flips the canonical name record (CNAME) for your DB Instance to point at the healthy replica, which in turn is promoted to become the new primary.**
+
 > **Primary failure + Aurora Replica** → **Promote the Aurora Replica**
 
 For high availability, Aurora Replicas should ideally be placed in different Availability Zones.
@@ -640,4 +676,3 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 | Rewind Aurora MySQL                       | **Backtrack**                           |
 | Multi-Region NoSQL                        | **DynamoDB Global Tables**              |
 | Time-series database                      | **Timestream**                          |
-
