@@ -19,6 +19,174 @@ EKS lets you run Kubernetes workloads on AWS while AWS manages the Kubernetes co
      You manage hosts       AWS manages hosts
 ```
 
+---
+
+# EKS → Nodes → Pods → Containers → Application
+
+This is the basic Kubernetes structure you should understand.
+
+```text
+EKS Cluster
+     ↓
+   Nodes
+     ↓
+    Pods
+     ↓
+ Containers
+     ↓
+Application
+```
+
+## Node
+
+A **Node** is compute capacity where Kubernetes runs Pods.
+
+With **EKS on EC2**, a node is usually an **EC2 instance**.
+
+```text
+EKS
+ ↓
+EC2 Node
+ ↓
+Pods
+```
+
+The node provides CPU, memory, networking, and other resources needed by the Pods.
+
+Think:
+
+> **Node = the machine that runs Pods**
+
+---
+
+## Pod
+
+A **Pod** is the **smallest deployable unit in Kubernetes**.
+
+A Pod contains one or more containers that are meant to run together.
+
+```text
+Node
+ |
+ +-- Pod 1
+ |    └── Container
+ |
+ +-- Pod 2
+      └── Container
+```
+
+Most simple applications use **one main container per Pod**.
+
+Think:
+
+> **Pod = the Kubernetes wrapper around your container(s)**
+
+A Pod is **not** the same thing as a container.
+
+```text
+Pod
+ ↓
+Container
+ ↓
+Application
+```
+
+---
+
+## Container
+
+A **container** runs the actual application process.
+
+For example:
+
+```text
+Pod
+ ↓
+Container
+ ↓
+Nginx
+```
+
+Or:
+
+```text
+Pod
+ ↓
+Container
+ ↓
+PHP application
+```
+
+The container is created from a **container image**, typically stored in a registry such as Amazon ECR.
+
+---
+
+## Application
+
+Your actual application code runs inside the container.
+
+For example:
+
+```text
+EKS Cluster
+    ↓
+EC2 Node
+    ↓
+Pod
+    ↓
+Container
+    ↓
+Laravel application
+```
+
+### Easy mental model
+
+```text
+Node
+= machine
+
+Pod
+= Kubernetes unit running on the machine
+
+Container
+= process environment running inside the Pod
+
+Application
+= your actual software
+```
+
+---
+
+## Important Fargate difference
+
+With **EKS on Fargate**, you don't manage the underlying EC2 nodes.
+
+You still think in terms of:
+
+```text
+EKS
+ ↓
+Pod
+ ↓
+Container
+ ↓
+Application
+```
+
+But AWS manages the underlying compute.
+
+So:
+
+```text
+EKS on EC2
+→ You manage Nodes
+
+EKS on Fargate
+→ AWS manages the underlying compute
+```
+
+---
+
 ### When should you choose EKS?
 
 Strong signals for EKS:
@@ -82,7 +250,7 @@ You can choose:
 
 ### EKS on Fargate
 
-EKS can run supported Kubernetes pods using Fargate.
+EKS can run supported Kubernetes Pods using Fargate.
 
 AWS manages the underlying compute infrastructure.
 
@@ -119,6 +287,171 @@ Typical EKS signals:
 * Existing Kubernetes tools
 * Kubernetes-based application platform
 * Kubernetes portability requirements
+
+---
+
+# EKS Autoscaling
+
+EKS can scale at different levels.
+
+The most important distinction is:
+
+```text
+HPA
+→ scales Pods
+
+VPA
+→ changes Pod resource requests
+
+Karpenter / Cluster Autoscaler
+→ scales Nodes
+```
+
+## Horizontal Pod Autoscaler (HPA)
+
+**HPA increases or decreases the number of Pods** based on workload demand.
+
+For example:
+
+```text
+Traffic increases
+      ↓
+More CPU usage
+      ↓
+HPA
+      ↓
+More Pods
+```
+
+HPA commonly uses CPU or memory metrics provided by the **Kubernetes Metrics Server**.
+
+Example:
+
+```text
+Before:
+Node
+ ├── Pod
+ └── Pod
+
+After traffic increases:
+Node
+ ├── Pod
+ ├── Pod
+ ├── Pod
+ └── Pod
+```
+
+### Exam trigger
+
+> **"Automatically increase the number of Pods based on CPU utilization."**
+
+→ **HPA**
+
+---
+
+## Vertical Pod Autoscaler (VPA)
+
+**VPA changes the resource requests of Pods**, such as CPU and memory.
+
+Think:
+
+```text
+HPA
+→ more Pods
+
+VPA
+→ bigger/smaller Pods
+```
+
+### Exam trigger
+
+> **"Automatically adjust CPU and memory resources assigned to Pods."**
+
+→ **VPA**
+
+---
+
+## Karpenter
+
+**Karpenter scales the underlying EC2 nodes** when Pods need more compute capacity.
+
+For example:
+
+```text
+Traffic increases
+      ↓
+HPA creates more Pods
+      ↓
+Not enough node capacity
+      ↓
+Karpenter
+      ↓
+New EC2 nodes
+      ↓
+Pods are scheduled
+```
+
+When demand decreases, Karpenter can remove or consolidate unnecessary capacity.
+
+### Exam trigger
+
+> **"Automatically provision EC2 capacity when Pods cannot be scheduled."**
+
+→ **Karpenter**
+
+---
+
+## Cluster Autoscaler
+
+**Cluster Autoscaler also scales the number of worker nodes**, typically by changing the size of existing node groups.
+
+```text
+Pods need more capacity
+      ↓
+Cluster Autoscaler
+      ↓
+Increase node group
+      ↓
+More EC2 nodes
+```
+
+It can also scale down nodes when they are no longer needed.
+
+### Karpenter vs Cluster Autoscaler
+
+For SAA, remember:
+
+```text
+Karpenter
+→ dynamically provisions node capacity
+
+Cluster Autoscaler
+→ adjusts existing node groups
+```
+
+When a question emphasizes **least operational overhead and flexible node provisioning**, Karpenter is often the intended choice.
+
+---
+
+## The complete autoscaling picture
+
+```text
+              Application demand
+                     ↓
+                    HPA
+                     ↓
+                More Pods
+                     ↓
+          Not enough node capacity
+                     ↓
+                 Karpenter
+                     ↓
+                 More Nodes
+```
+
+This is the key relationship:
+
+> **HPA scales the application layer. Karpenter scales the infrastructure layer.**
 
 ---
 
@@ -175,7 +508,7 @@ Know `aws-auth` because it appears in older exam material, but it is **deprecate
 
 This is a different problem.
 
-Suppose a Kubernetes pod needs to access:
+Suppose a Kubernetes Pod needs to access:
 
 * S3
 * DynamoDB
@@ -184,7 +517,7 @@ Suppose a Kubernetes pod needs to access:
 
 Do not confuse this with human access to the EKS cluster.
 
-The pod needs an IAM role:
+The Pod needs an IAM role:
 
 ```text
 Pod
@@ -202,7 +535,7 @@ AWS service
 
 **EKS Pod Identity** is the modern way to give Kubernetes workloads IAM permissions.
 
-It allows a pod to use an IAM role without giving that role to the entire worker node.
+It allows a Pod to use an IAM role without giving that role to the entire worker node.
 
 ### IRSA
 
@@ -331,13 +664,33 @@ If not, ECS is the AWS-native container orchestration option.
 
 ### 4. Kubernetes + no server management
 
-> "The company wants to run Kubernetes pods without managing the underlying servers."
+> "The company wants to run Kubernetes Pods without managing the underlying servers."
 
 **Answer: EKS with Fargate**
 
 ---
 
-### 5. IAM user/role needs cluster access
+### 5. Scale Pods based on demand
+
+> "The application needs more Pods when traffic or CPU utilization increases."
+
+**Answer: HPA**
+
+---
+
+### 6. Scale EKS infrastructure
+
+> "Pods cannot be scheduled because there is not enough node capacity."
+
+**Answer: Karpenter / Cluster Autoscaler**
+
+For least operational overhead and flexible node provisioning:
+
+**Karpenter**
+
+---
+
+### 7. IAM user/role needs cluster access
 
 > "A developer needs to use `kubectl` against an EKS cluster."
 
@@ -349,9 +702,9 @@ Older questions may use:
 
 ---
 
-### 6. Pod needs AWS service access
+### 8. Pod needs AWS service access
 
-> "A Kubernetes pod needs permission to read from S3."
+> "A Kubernetes Pod needs permission to read from S3."
 
 **Answer: EKS Pod Identity**
 
@@ -359,7 +712,7 @@ Know **IRSA** as the older/alternative approach.
 
 ---
 
-### 7. Kubernetes RBAC
+### 9. Kubernetes RBAC
 
 > "An IAM role should only be allowed to read Pods in a specific namespace."
 
@@ -383,7 +736,7 @@ RoleBinding
 
 ---
 
-### 8. Kubernetes API-data encryption
+### 10. Kubernetes API-data encryption
 
 > "The company wants to encrypt Kubernetes API data using AWS KMS."
 
@@ -393,23 +746,29 @@ RoleBinding
 
 # Pocket card
 
-| Keyword                                    | Answer                           |
-| ------------------------------------------ | -------------------------------- |
-| **Managed Kubernetes**                     | EKS                              |
-| **Already using Kubernetes**               | EKS                              |
-| **Kubernetes portability**                 | EKS                              |
-| **Kubernetes manifests/tools**             | EKS                              |
-| **Kubernetes + serverless compute**        | EKS + Fargate                    |
-| **Kubernetes + EC2 control**               | EKS on EC2                       |
-| **IAM user/role → EKS cluster**            | EKS Access Entry                 |
-| **Older IAM → EKS mechanism**              | `aws-auth` ConfigMap             |
-| **Pod → AWS services**                     | EKS Pod Identity                 |
-| **Older pod IAM mechanism**                | IRSA                             |
-| **Namespace-level Kubernetes permissions** | Role + RoleBinding               |
-| **Cluster-wide Kubernetes permissions**    | ClusterRole + ClusterRoleBinding |
-| **Encrypt Kubernetes API data**            | EKS envelope encryption          |
-| **Customer-controlled encryption key**     | Customer-managed AWS KMS key     |
-| **Kubernetes datastore**                   | etcd                             |
-| **Kubernetes 1.28+ API-data encryption**   | Enabled by default               |
+| Keyword                                    | Answer                              |
+| ------------------------------------------ | ----------------------------------- |
+| **Managed Kubernetes**                     | EKS                                 |
+| **Node**                                   | Compute capacity that runs Pods     |
+| **Pod**                                    | Smallest deployable Kubernetes unit |
+| **Container**                              | Runs the application process        |
+| **Already using Kubernetes**               | EKS                                 |
+| **Kubernetes portability**                 | EKS                                 |
+| **Kubernetes manifests/tools**             | EKS                                 |
+| **Kubernetes + serverless compute**        | EKS + Fargate                       |
+| **Kubernetes + EC2 control**               | EKS on EC2                          |
+| **More Pods**                              | HPA                                 |
+| **Change Pod CPU/memory**                  | VPA                                 |
+| **More/fewer Nodes**                       | Karpenter / Cluster Autoscaler      |
+| **IAM user/role → EKS cluster**            | EKS Access Entry                    |
+| **Older IAM → EKS mechanism**              | `aws-auth` ConfigMap                |
+| **Pod → AWS services**                     | EKS Pod Identity                    |
+| **Older pod IAM mechanism**                | IRSA                                |
+| **Namespace-level Kubernetes permissions** | Role + RoleBinding                  |
+| **Cluster-wide Kubernetes permissions**    | ClusterRole + ClusterRoleBinding    |
+| **Encrypt Kubernetes API data**            | EKS envelope encryption             |
+| **Customer-controlled encryption key**     | Customer-managed AWS KMS key        |
+| **Kubernetes datastore**                   | etcd                                |
+| **Kubernetes 1.28+ API-data encryption**   | Enabled by default                  |
 
 ---
