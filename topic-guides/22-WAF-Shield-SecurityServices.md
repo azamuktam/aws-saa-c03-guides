@@ -2,133 +2,177 @@
 
 ## The idea
 
-Picture your application as a nightclub. Traffic pours in from the internet — most of it friendly, some of it trying to sneak SQL injection through the front door, some of it a mob of 10 million bots trying to trample the entrance. AWS gives you a **layered security crew**: a smart bouncer at the door who reads every ID (WAF), riot police who handle mobs (Shield), a head of security who makes sure *every* club in your chain follows the same door policy (Firewall Manager), and a whole back office of detectives watching camera feeds for suspicious behavior (GuardDuty, Macie, Inspector, and friends).
+This section is mainly a **service-matching game**. Identify the service from the scenario:
 
-The exam loves this section because it's mostly a **matching game**: read the scenario, name the right crew member. Let's meet them.
+* **WAF** → Layer 7 HTTP filtering
+* **Shield** → DDoS protection
+* **Firewall Manager** → centralized security policies across AWS Organizations
+* **Network Firewall** → VPC-wide traffic inspection
+* **GuardDuty / Macie / Inspector / Security Hub / Detective / Artifact** → detection, discovery, scanning, aggregation, investigation, and compliance reports
 
-### WAF — the Layer 7 bouncer
+### WAF — the Layer 7 firewall
 
-**AWS WAF** (Web Application Firewall) works at **Layer 7** — the application layer — meaning it actually *reads HTTP requests*: URLs, headers, query strings, body content. Jargon check: "Layer 7" is the top of the OSI networking model, where HTTP lives; Layers 3/4 are raw IP packets and TCP connections.
+**AWS WAF (Web Application Firewall)** works at **Layer 7** and reads HTTP requests: URLs, headers, query strings, and body content.
 
-Because WAF reads HTTP, it can catch things a packet firewall never could:
+| Rule type               | Purpose                                                                   |
+| ----------------------- | ------------------------------------------------------------------------- |
+| **SQL injection rules** | Detect SQLi such as `' OR 1=1 --`                                         |
+| **XSS rules**           | Detect malicious Cross-Site Scripting such as `<script>` input            |
+| **Rate-based rules**    | Limit requests **per IP** over 5 minutes                                  |
+| **Geo-match**           | Allow/block by country                                                    |
+| **IP sets**             | Explicit IP allow/deny lists                                              |
+| **Managed rule groups** | Pre-built rule sets from AWS/vendors, e.g. **OWASP Top 10** core rule set |
 
-| Rule type | What it catches |
-|---|---|
-| **SQL injection rules** | `' OR 1=1 --` hiding in a form field |
-| **XSS rules** | Cross-Site Scripting — malicious `<script>` tags in input |
-| **Rate-based rules** | Too many requests **per IP** in 5 minutes → block that IP |
-| **Geo-match** | Block or allow by country |
-| **IP sets** | Explicit allow/deny lists of IP addresses |
-| **Managed rule groups** | Pre-built rule packs from AWS/vendors (e.g., **OWASP Top 10** core rule set) |
+**Exam gold:** *"rate limit requests per IP"* → **WAF rate-based rule**.
 
-**Exam gold:** *"rate limit requests per IP"* → **WAF rate-based rule**. Every time.
+**Count mode:** counts matching requests instead of blocking them. Use it to test a rule against production traffic **without impacting users**.
 
-And a lovely testing feature: **Count mode** — the rule *counts* matches instead of blocking, so you can test rules against production traffic without breaking real users. "Evaluate a new rule without impacting users" → Count mode.
+**Where can WAF attach?**
 
-**Where can WAF attach?** Only to **Layer 7 fronts**:
+| WAF can attach to  | WAF cannot attach to |
+| ------------------ | -------------------- |
+| CloudFront         | NLB                  |
+| ALB                | EC2 directly         |
+| API Gateway        | Route 53             |
+| AppSync            |                      |
+| Cognito User Pools |                      |
 
+**Trap:** *"Attach WAF to a Network Load Balancer"* → impossible. **NLB is Layer 4**; WAF requires an L7 front end: **CloudFront, ALB, API Gateway, AppSync, or Cognito**.
+
+### Shield — DDoS protection
+
+**DDoS (Distributed Denial of Service)** uses many machines to flood a service and make it unavailable.
+
+* **Shield Standard**
+
+  * **Free and automatic**
+  * Protects against common **Layer 3/4** attacks
+  * Examples: **SYN floods, UDP reflection**
+  * No activation required
+
+* **Shield Advanced**
+
+  * **~$3,000/month**, 1-year commitment
+  * Adds **Layer 7 DDoS protection**
+  * **24/7 DDoS Response Team (DRT)**
+  * **Cost protection**: AWS refunds scaling charges caused by DDoS attacks
+
+**Memory hook:**
+
+* **L7 DDoS / expert help / attack-related cost protection** → **Shield Advanced**
+* **Common DDoS protection at no cost** → **Shield Standard**
+
+### Firewall Manager — centralized security policy management
+
+Use **AWS Firewall Manager** when security policies must be applied across many AWS accounts/resources.
+
+Example: 50 accounts in an **AWS Organization**, and every ALB—including resources/accounts added later—must receive the same WAF rules.
+
+Firewall Manager centrally manages and automatically applies:
+
+* **WAF rules**
+* **Shield Advanced**
+* **Security Group rules**
+* **Network Firewall rules**
+
+It can automatically apply policies to **new accounts and new resources**.
+
+**Prerequisites:**
+
+* **AWS Organizations**
+* **AWS Config** enabled
+
+**Trap:** *"Automatically apply security policies across accounts, including future accounts"* → **Firewall Manager**, not WAF alone.
+
+### Network Firewall — VPC-wide traffic inspection
+
+**AWS Network Firewall** is a managed firewall for an entire **VPC**.
+
+* Inspects traffic at **Layers 3–7**
+* Supports **intrusion prevention**
+* Supports **domain filtering**
+* Supports **stateful rules**
+* Can filter **all traffic entering/leaving the VPC**
+
+**Scenario:** *"Inspect all traffic in the VPC"* or *"Filter outbound traffic to specific domains for the entire VPC"* → **Network Firewall**
+
+### The detection zoo — one-liners
+
+| Service          | One-liner                                                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **GuardDuty**    | **ML threat detection** using **CloudTrail, VPC Flow Logs, DNS logs**; no agents. Detects **cryptomining, unusual API calls, compromised credentials** |
+| **Macie**        | **PII / sensitive-data discovery in S3**; uses ML to identify data such as credit cards and SSNs                                                       |
+| **Inspector**    | **Vulnerability scanner** for **CVEs** on **EC2 (via SSM agent), ECR container images, Lambda**                                                        |
+| **Security Hub** | **Aggregation dashboard** for findings from security services + compliance standards such as **CIS and PCI**                                           |
+| **Detective**    | **Post-finding investigation**; builds relationship graphs to help identify **root cause**                                                             |
+| **Artifact**     | Download **AWS compliance reports** such as **SOC, PCI, ISO** for auditors                                                                             |
+
+**Flow:**
+
+```text
+GuardDuty / Macie / Inspector
+            │
+         findings
+            ▼
+       Security Hub
+            │
+      "Why did this happen?"
+            ▼
+         Detective
+        root cause
 ```
-        WAF can attach to:                WAF CANNOT attach to:
-  ┌──────────────────────────┐         ┌─────────────────────┐
-  │  CloudFront              │         │  NLB  (Layer 4!)     │
-  │  ALB                     │         │  EC2 directly        │
-  │  API Gateway             │         │  Route 53            │
-  │  AppSync                 │         └─────────────────────┘
-  │  Cognito User Pools      │
-  └──────────────────────────┘
-```
 
-THE trap: *"attach WAF to a Network Load Balancer"* → **impossible**. NLB is Layer 4 (TCP) — it never parses HTTP, so a Layer 7 firewall has nothing to read. WAF needs an L7 front: **CloudFront, ALB, API Gateway, AppSync, or Cognito**.
+**Trap: GuardDuty vs Inspector**
 
-### Shield — the riot police (DDoS)
+* **GuardDuty** → detects suspicious **behavior/activity** from logs; threats happening now
+* **Inspector** → scans software/resources for **vulnerabilities**; weaknesses that could be exploited
+* **Threat** → GuardDuty
+* **CVE** → Inspector
 
-**DDoS** = Distributed Denial of Service — thousands of machines flooding you with traffic to knock you offline.
-
-- **Shield Standard**: **free, automatic, for everyone**. Protects against common **Layer 3/4** attacks (SYN floods, UDP reflection). You already have it — nothing to enable.
-- **Shield Advanced**: **~$3,000/month** (1-year commitment). Adds **Layer 7 DDoS protection**, a **24/7 DDoS Response Team (DRT)** of human experts you can call mid-attack, and **cost protection** — AWS refunds the scaling charges the attack caused.
-
-**Memory hook:** any question mentioning **L7 DDoS, expert help, or refunds for attack-driven scaling** → **Shield Advanced**. A plain "protect against common DDoS at no cost" → **Shield Standard** (it's already on).
-
-### Firewall Manager — the head of security for the whole chain
-
-You have 50 AWS accounts in an **AWS Organization**. You want every ALB in every account — including accounts created *next month* — to automatically get your WAF rules. Manually? Nightmare. **AWS Firewall Manager** is the **central policy manager**: define security policies once (WAF rules, Shield Advanced, Security Group rules, Network Firewall rules) and it **auto-applies them across the organization**, including to **new accounts and new resources as they appear**.
-
-**Prerequisites (exam-tested):** requires **AWS Organizations** + **AWS Config** enabled.
-
-THE trap: *"every new account automatically gets the security policies"* → that word **automatically across accounts** means **Firewall Manager**, not WAF alone. WAF is the rule; Firewall Manager is the rollout machine.
-
-### Network Firewall — the VPC-wide inspector
-
-**AWS Network Firewall** is a **managed firewall for your whole VPC**, inspecting traffic at **Layers 3 through 7** — think intrusion prevention, domain filtering, stateful rules for *all* traffic entering/leaving the VPC, not just HTTP to one ALB. Scenario says *"inspect all traffic in the VPC"* or *"filter outbound traffic to specific domains for the entire VPC"* → **Network Firewall**.
-
-### The detection zoo — one-liners you must know cold
-
-These are pure matching questions. Burn in the one-liners:
-
-| Service | One-liner |
-|---|---|
-| **GuardDuty** | **ML threat detection** on **CloudTrail, VPC Flow Logs, DNS logs** — no agents. Finds **cryptomining, unusual API calls, compromised credentials** |
-| **Macie** | **PII / sensitive data discovery in S3** (ML finds credit cards, SSNs) |
-| **Inspector** | **Vulnerability scanner** — **CVEs** on **EC2 (via SSM agent), ECR container images, Lambda** |
-| **Security Hub** | **Aggregation dashboard** — collects findings from all the above + runs compliance standards (CIS, PCI) |
-| **Detective** | **Investigate AFTER a finding** — builds a graph of relationships to find **root cause** |
-| **Artifact** | **Download AWS compliance reports** (SOC, PCI, ISO) to hand to auditors |
-
-Mental model of the flow:
-
-```
-GuardDuty/Macie/Inspector ──findings──▶ Security Hub (one dashboard)
-                                              │
-                              "wait, WHY did this happen?"
-                                              ▼
-                                          Detective (root cause)
-```
-
-THE trap: *"GuardDuty vs Inspector"* — GuardDuty watches **behavior in logs** (threats happening now); Inspector scans **software for vulnerabilities** (holes that *could* be exploited). Threat = GuardDuty; CVE = Inspector.
-
-THE trap: *"Macie for EC2 or RDS"* → no. **Macie is S3-only.**
+**Trap:** *"Macie for EC2 or RDS"* → no. **Macie is S3-only.**
 
 ## Question patterns
 
-> *"Block SQL injection attacks against an application behind an ALB"* → **WAF on the ALB** (L7 rules read HTTP).
+> *"Block SQL injection attacks against an application behind an ALB"* → **WAF on the ALB** using L7 rules.
 
-> *"Limit each client IP to 2,000 requests per 5 minutes"* → **WAF rate-based rule** ("per IP rate limit" is WAF's signature move).
+> *"Limit each client IP to 2,000 requests per 5 minutes"* → **WAF rate-based rule**.
 
 > *"Protection against common DDoS attacks at no additional cost"* → **Shield Standard** (free, automatic, L3/L4).
 
-> *"Company suffered a large DDoS, wants expert support during attacks and refunds for attack-related scaling costs"* → **Shield Advanced** (DRT + cost protection = the $3k tier).
+> *"Company suffered a large DDoS, wants expert support during attacks and refunds for attack-related scaling costs"* → **Shield Advanced** (DRT + cost protection, ~**$3k/month**).
 
-> *"Ensure WAF rules are applied to all ALBs across 50 accounts, including future accounts"* → **Firewall Manager** (org-wide auto-apply; needs Organizations + Config).
+> *"Ensure WAF rules are applied to all ALBs across 50 accounts, including future accounts"* → **Firewall Manager** (org-wide automatic application; requires **Organizations + Config**).
 
-> *"Identify S3 buckets containing personally identifiable information"* → **Macie** (PII in S3, full stop).
+> *"Identify S3 buckets containing personally identifiable information"* → **Macie**.
 
-> *"Alert when EC2 instances are used for cryptocurrency mining or credentials are compromised"* → **GuardDuty** (ML on CloudTrail/Flow/DNS logs, agentless).
+> *"Alert when EC2 instances are used for cryptocurrency mining or credentials are compromised"* → **GuardDuty**.
 
-> *"Continuously scan EC2 instances and container images for software vulnerabilities (CVEs)"* → **Inspector** (SSM agent on EC2, ECR, Lambda).
+> *"Continuously scan EC2 instances and container images for software vulnerabilities (CVEs)"* → **Inspector**.
 
-> *"Single pane of glass for security findings across all accounts and services"* → **Security Hub** (the aggregation dashboard).
+> *"Single pane of glass for security findings across all accounts and services"* → **Security Hub**.
 
-> *"After a GuardDuty finding, analyze and identify the root cause of the incident"* → **Detective** (post-finding investigation graph).
+> *"After a GuardDuty finding, analyze and identify the root cause of the incident"* → **Detective**.
 
-> *"Auditor requests AWS's SOC 2 / PCI compliance reports"* → **Artifact** (self-service report downloads).
+> *"Auditor requests AWS's SOC 2 / PCI compliance reports"* → **Artifact**.
 
 ## Pocket card
 
-| Keyword | Answer |
-|---|---|
-| SQLi / XSS / HTTP filtering | WAF |
-| Rate limit per IP | WAF rate-based rule |
-| Test rule without blocking | WAF Count mode |
-| WAF attach points | CloudFront, ALB, API GW, AppSync, Cognito (never NLB/EC2) |
-| Free automatic DDoS (L3/L4) | Shield Standard |
-| L7 DDoS / DRT / cost protection | Shield Advanced ($3k/mo) |
-| Security policies across org, auto for new accounts | Firewall Manager (needs Organizations + Config) |
-| Inspect ALL VPC traffic L3–L7 | Network Firewall |
-| Cryptomining / odd API calls / no agents | GuardDuty |
-| PII in S3 | Macie |
-| CVEs on EC2/ECR/Lambda | Inspector |
-| One findings dashboard + compliance checks | Security Hub |
-| Root cause after a finding | Detective |
-| SOC/PCI/ISO reports for auditors | Artifact |
+| Keyword                                                  | Answer                                        |
+| -------------------------------------------------------- | --------------------------------------------- |
+| SQLi / XSS / HTTP filtering                              | **WAF**                                       |
+| Rate limit per IP                                        | **WAF rate-based rule**                       |
+| Test rule without blocking                               | **WAF Count mode**                            |
+| WAF attach points                                        | **CloudFront, ALB, API GW, AppSync, Cognito** |
+| WAF cannot attach to                                     | **NLB, EC2 directly, Route 53**               |
+| Free automatic DDoS (L3/L4)                              | **Shield Standard**                           |
+| L7 DDoS / DRT / cost protection                          | **Shield Advanced (~$3k/mo)**                 |
+| Security policies across org, automatic for new accounts | **Firewall Manager (Organizations + Config)** |
+| Inspect ALL VPC traffic L3–L7                            | **Network Firewall**                          |
+| Cryptomining / odd API calls / no agents                 | **GuardDuty**                                 |
+| PII in S3                                                | **Macie**                                     |
+| CVEs on EC2/ECR/Lambda                                   | **Inspector**                                 |
+| One findings dashboard + compliance checks               | **Security Hub**                              |
+| Root cause after a finding                               | **Detective**                                 |
+| SOC/PCI/ISO reports for auditors                         | **Artifact**                                  |
 
-You've now got the security crew sorted — next up, the service that decides who your app's *users* even are: Cognito.
+Next: **Cognito** — user identity and authentication.
