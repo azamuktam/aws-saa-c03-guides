@@ -1,4 +1,4 @@
-# Section 14: ECS, EKS & Fargate
+# Section 14: ECS & Fargate
 
 ## The idea
 
@@ -258,54 +258,6 @@ Exam trigger:
 
 ---
 
-# ECS vs EKS
-
-## ECS
-
-**ECS = AWS-native container orchestration.**
-
-Choose ECS when the question simply asks you to run containers on AWS and does not require Kubernetes-specific functionality.
-
-ECS is generally simpler when you want an AWS-native container platform.
-
-## EKS
-
-**EKS = managed Kubernetes.**
-
-Strong signals for EKS:
-
-1. The company already uses **Kubernetes**
-2. The workload requires **Kubernetes compatibility/portability**
-
-Examples:
-
-> "The company already runs Kubernetes on-premises and wants to migrate to AWS."
-
-→ **EKS**
-
-> "The company wants Kubernetes-based workloads that can be moved between cloud providers."
-
-→ **EKS**
-
-### Important
-
-Do not choose EKS simply because it is more powerful.
-
-For SAA questions, look for an explicit Kubernetes requirement.
-
-```text
-AWS-native containers
-→ ECS
-
-Already using Kubernetes
-→ EKS
-
-Kubernetes portability / compatibility
-→ EKS
-```
-
----
-
 # ECR — Container Image Registry
 
 **Amazon ECR (Elastic Container Registry)** stores container images.
@@ -319,7 +271,7 @@ Build Docker image
    ↓
 Push image to ECR
    ↓
-ECS / EKS pulls image
+ECS pulls image
    ↓
 Container starts
 ```
@@ -378,11 +330,7 @@ Think:
 
 → **Task Execution Role**
 
-AWS documents these as responsibilities of the task execution role.
-
----
-
-# Task Role
+## Task Role
 
 The **Task Role** gives the application running inside the container permission to call AWS services.
 
@@ -407,8 +355,6 @@ Secrets Manager
 > "The application needs permission to upload files to S3."
 
 → **Task Role**
-
-AWS explicitly separates these application permissions from the task execution role.
 
 ## Easy memory rule
 
@@ -453,8 +399,6 @@ Exam trigger:
 > **"Each task should have its own ENI/private IP"**
 
 → **`awsvpc`**
-
-AWS documents `awsvpc` as the mode that provides a separate ENI and allows security groups to be assigned at the task level.
 
 ---
 
@@ -530,69 +474,6 @@ For SQS-based workloads, AWS recommends scaling using backlog-per-task rather th
 
 ---
 
-# EKS and Kubernetes
-
-Kubernetes has its own terminology and architecture.
-
-The important SAA-level distinction is:
-
-```text
-ECS
-→ AWS container orchestration
-
-EKS
-→ Managed Kubernetes
-```
-
-Choose EKS when Kubernetes itself is part of the requirement.
-
-Typical examples:
-
-* Existing Kubernetes cluster
-* Existing Kubernetes manifests/tools
-* Kubernetes-based application platform
-* Kubernetes portability requirements
-
-You do not need to memorize the entire Kubernetes architecture for basic SAA questions.
-
----
-
-# EKS Secrets encryption with AWS KMS
-
-EKS stores Kubernetes API data in the managed Kubernetes control plane, with etcd used as the datastore.
-
-For **Kubernetes 1.28 and later**, Amazon EKS provides **default envelope encryption for all Kubernetes API data**.
-
-This includes Kubernetes resources such as:
-
-* Secrets
-* ConfigMaps
-* Other Kubernetes API objects
-
-EKS uses AWS KMS as part of this encryption architecture.
-
-```text
-Kubernetes API data
-        ↓
-Envelope encryption
-        ↓
-Kubernetes control plane / etcd
-```
-
-For clusters using a **customer-managed KMS key**, that key can provide customer-controlled encryption of Kubernetes API data.
-
-### Exam takeaway
-
-Older questions may specifically mention:
-
-> **"Encrypt Kubernetes Secrets in EKS using AWS KMS."**
-
-→ **KMS envelope encryption**
-
-For modern EKS, remember that encryption of Kubernetes API data is already enabled by default for Kubernetes 1.28+; a customer-managed KMS key is an additional control rather than something required simply to obtain encryption.
-
----
-
 # Compute decision ladder
 
 Use the workload requirements rather than memorizing product names.
@@ -603,8 +484,6 @@ Use the workload requirements rather than memorizing product names.
 | Containers, no server management                   | **Fargate**           |
 | Containers + GPU                                   | **ECS on EC2**        |
 | Containers + EC2-level control                     | **ECS on EC2**        |
-| Kubernetes                                         | **EKS**               |
-| Kubernetes portability / existing Kubernetes       | **EKS**               |
 | "Just deploy my application" with managed platform | **Elastic Beanstalk** |
 | Full operating-system control                      | **EC2**               |
 
@@ -620,23 +499,7 @@ Use the workload requirements rather than memorizing product names.
 
 ---
 
-### 2. Existing Kubernetes
-
-> "The company already runs Kubernetes on-premises and wants to migrate to AWS."
-
-**Answer: EKS**
-
----
-
-### 3. Kubernetes portability
-
-> "The company wants Kubernetes workloads that can run across different cloud providers."
-
-**Answer: EKS**
-
----
-
-### 4. Task cannot pull image
+### 2. Task cannot pull image
 
 > "An ECS task fails because it cannot pull the image from ECR."
 
@@ -644,7 +507,7 @@ Use the workload requirements rather than memorizing product names.
 
 ---
 
-### 5. Application gets AccessDenied
+### 3. Application gets AccessDenied
 
 > "The application inside the ECS container receives AccessDenied when accessing DynamoDB."
 
@@ -652,7 +515,7 @@ Use the workload requirements rather than memorizing product names.
 
 ---
 
-### 6. GPU workload
+### 4. GPU workload
 
 > "Run GPU-based ML inference in containers."
 
@@ -662,7 +525,7 @@ Use the workload requirements rather than memorizing product names.
 
 ---
 
-### 7. Container vulnerability scanning
+### 5. Container vulnerability scanning
 
 > "Automatically scan container images for vulnerabilities."
 
@@ -670,7 +533,7 @@ Use the workload requirements rather than memorizing product names.
 
 ---
 
-### 8. Per-task security groups
+### 6. Per-task security groups
 
 > "Each ECS task needs its own security group."
 
@@ -678,7 +541,7 @@ Use the workload requirements rather than memorizing product names.
 
 ---
 
-### 9. Cheap interruptible containers
+### 7. Cheap interruptible containers
 
 > "Run fault-tolerant containerized batch processing at lower cost."
 
@@ -686,7 +549,7 @@ Use the workload requirements rather than memorizing product names.
 
 ---
 
-### 10. Scale workers from SQS
+### 8. Scale workers from SQS
 
 > "Increase the number of container workers as the SQS workload increases."
 
@@ -696,37 +559,28 @@ Use the workload requirements rather than memorizing product names.
 
 # Pocket card
 
-| Keyword                                                    | Answer                            |
-| ---------------------------------------------------------- | --------------------------------- |
-| **No server management + containers**                      | Fargate                           |
-| **Already using Kubernetes**                               | EKS                               |
-| **Kubernetes portability**                                 | EKS                               |
-| **GPU containers**                                         | ECS on EC2                        |
-| **Can't pull image**                                       | Task Execution Role               |
-| **Can't write ECS logs**                                   | Task Execution Role               |
-| **Application AccessDenied to AWS service**                | Task Role                         |
-| **Recipe / configuration**                                 | Task Definition                   |
-| **Running copy**                                           | Task                              |
-| **Keeps desired number of tasks running**                  | Service                           |
-| **Container image storage**                                | ECR                               |
-| **Image vulnerability scanning**                           | ECR                               |
-| **Per-task ENI / security group**                          | `awsvpc`                          |
-| **Cheap interruptible Fargate**                            | Fargate Spot                      |
-| **Scale tasks based on workload**                          | ECS Service Auto Scaling          |
-| **Kubernetes API-data encryption**                         | EKS envelope encryption / AWS KMS |
-| **Multiple tasks on one EC2 host with dynamic host ports** | ALB + dynamic port mapping        |
+| Keyword                                                    | Answer                     |
+| ---------------------------------------------------------- | -------------------------- |
+| **No server management + containers**                      | Fargate                    |
+| **GPU containers**                                         | ECS on EC2                 |
+| **Can't pull image**                                       | Task Execution Role        |
+| **Can't write ECS logs**                                   | Task Execution Role        |
+| **Application AccessDenied to AWS service**                | Task Role                  |
+| **Recipe / configuration**                                 | Task Definition            |
+| **Running copy**                                           | Task                       |
+| **Keeps desired number of tasks running**                  | Service                    |
+| **Container image storage**                                | ECR                        |
+| **Image vulnerability scanning**                           | ECR                        |
+| **Per-task ENI / security group**                          | `awsvpc`                   |
+| **Cheap interruptible Fargate**                            | Fargate Spot               |
+| **Scale tasks based on workload**                          | ECS Service Auto Scaling   |
+| **Multiple tasks on one EC2 host with dynamic host ports** | ALB + dynamic port mapping |
 
 ---
 
 # The most important distinctions
 
 ```text
-ECS vs EKS
-──────────
-ECS = AWS-native
-EKS = Kubernetes
-
-
 ECS EC2 vs Fargate
 ──────────────────
 EC2 = manage instances
@@ -759,9 +613,7 @@ ECS = runs and manages containers
 
 The key idea is simple:
 
-**ECS/EKS decide how containers are orchestrated.
+**ECS manages the containers.
 EC2/Fargate provide the compute.
 ECR stores the images.
 IAM roles control what ECS and the application can access.**
-
-Next: **Elastic Beanstalk** — a higher-level option where you deploy application code without directly managing containers or the underlying infrastructure.
