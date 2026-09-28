@@ -12,7 +12,7 @@ You control:
 * Communication between resources/networks
 * Routing
 
-```text id="s3k3h2"
+```text
 AWS Region
 └── VPC
     ├── Subnet → EC2
@@ -25,7 +25,7 @@ AWS Region
 
 # Boxes in boxes
 
-```text id="0v4f6e"
+```text
 AWS Region
 └── VPC
     ├── AZ-A
@@ -52,7 +52,7 @@ AWS Region
 
 Example:
 
-```text id="s0v5k6"
+```text
 Destination       Target
 0.0.0.0/0         Internet Gateway
 10.0.0.0/16       local
@@ -64,7 +64,7 @@ The `local` route allows communication within the VPC CIDR, subject to security 
 
 When multiple routes match, the **most specific route wins**.
 
-```text id="g3p4jq"
+```text
 10.0.0.0/16 → Transit Gateway
 10.0.1.0/24 → VPC Peering
 ```
@@ -79,7 +79,7 @@ Traffic to `10.0.1.50` uses `/24`.
 
 A subnet is **public** when its route table has a route to an **Internet Gateway (IGW)**.
 
-```text id="22wh0h"
+```text
 0.0.0.0/0 → Internet Gateway
 ```
 
@@ -93,7 +93,7 @@ Not the subnet name and not simply having a public IP.
 
 Provides internet connectivity:
 
-```text id="9l8w49"
+```text
 EC2 ↔ IGW ↔ Internet
 ```
 
@@ -105,7 +105,7 @@ For IPv4, both directions are possible if routing, public IP addressing, and sec
 
 For IPv4 Internet reachability, an EC2 instance normally needs:
 
-```text id="7v5d2t"
+```text
 Public subnet
 +
 Public IPv4 / Elastic IP
@@ -115,7 +115,7 @@ Allowed SG/NACL traffic
 
 Therefore:
 
-```text id="3np5yk"
+```text
 Public subnet
 = route to IGW
 
@@ -144,7 +144,7 @@ Used when private instances need:
 * External APIs
 * Internet access
 
-```text id="te1mb2"
+```text
 Private EC2
  ↓
 NAT Gateway
@@ -154,7 +154,7 @@ Internet Gateway
 Internet
 ```
 
-```text id="l1v2g1"
+```text
 Private EC2 → Internet ✅
 Internet → Private EC2 ❌
 ```
@@ -175,7 +175,7 @@ NAT then uses the IGW.
 
 Traditional high-availability pattern:
 
-```text id="m99eqx"
+```text
 AZ-A → NAT Gateway A
 AZ-B → NAT Gateway B
 ```
@@ -214,7 +214,7 @@ For IPv6 outbound-only access:
 
 > **Egress-Only Internet Gateway**
 
-```text id="9ck3u3"
+```text
 IPv6 EC2
  ↓
 Egress-Only IGW
@@ -222,7 +222,7 @@ Egress-Only IGW
 Internet
 ```
 
-```text id="9n7hi1"
+```text
 EC2 → Internet ✅
 Internet → EC2 ❌
 ```
@@ -284,7 +284,7 @@ Possible symptoms include:
 
 Example:
 
-```text id="k7f6qn"
+```text
 10.31.0.0/27
 → 32 total IPv4 addresses
 → 27 usable AWS subnet IPs
@@ -331,7 +331,7 @@ Overlapping ranges cause problems with:
 
 Security Groups are **stateful**.
 
-```text id="3pdxw0"
+```text
 EC2 → Database
 ```
 
@@ -339,7 +339,7 @@ If outbound traffic is allowed, the response is automatically allowed.
 
 ### SG-to-SG example
 
-```text id="e14gxt"
+```text
 ALB SG
  ↓
 App SG
@@ -371,7 +371,7 @@ NACLs are **stateless**.
 
 Both directions must be allowed:
 
-```text id="5fjxzh"
+```text
 Client → Server
 Server → Client
 ```
@@ -380,7 +380,7 @@ Rules are evaluated from the **lowest number upward**; first match wins.
 
 Example:
 
-```text id="5jly6a"
+```text
 100 → DENY 10.0.0.5/32
 200 → ALLOW 0.0.0.0/0
 ```
@@ -433,7 +433,7 @@ The traffic is **DENIED**.
 
 # Security Group vs NACL memory
 
-```text id="2v4d9h"
+```text
 Security Group
 = stateful
 = instance / ENI
@@ -470,7 +470,7 @@ Used for:
 * S3
 * DynamoDB
 
-```text id="4x7p5k"
+```text
 Private EC2
  ↓
 Gateway Endpoint
@@ -501,7 +501,7 @@ Supports many AWS services and SaaS and can be used through:
 
 S3 and DynamoDB also support Interface Endpoints.
 
-```text id="db1h7v"
+```text
 S3/DynamoDB
 + normal VPC access + lowest cost
 → Gateway Endpoint
@@ -519,7 +519,7 @@ S3/DynamoDB
 
 # Connecting VPCs
 
-```text id="e4d8um"
+```text
 VPC Peering
 = direct VPC-to-VPC
 
@@ -536,7 +536,7 @@ PrivateLink
 
 Connects **two VPCs directly**.
 
-```text id="wllc9e"
+```text
 VPC-A ←→ VPC-B
 ```
 
@@ -545,17 +545,86 @@ VPC-A ←→ VPC-B
 * **Not transitive**
 * CIDRs cannot overlap
 
+## VPC Peering + Route Tables
+
+Creating the peering connection **does not automatically tell the route tables to use it**.
+
+Think:
+
+> **Peering = build the connection**
+>
+> **Route table = tell traffic to use the connection**
+
 Example:
 
 ```text
-VPC-A ↔ VPC-B
-VPC-B ↔ VPC-C
+VPC-A: 10.0.0.0/16
+VPC-B: 10.1.0.0/16
 ```
 
-Does not create:
+After creating the peering connection:
 
 ```text
-VPC-A ↔ VPC-C
+VPC-A route table
+
+Destination       Target
+10.0.0.0/16       local
+10.1.0.0/16       pcx-xxxx
+```
+
+This means:
+
+> "To reach VPC-B (`10.1.0.0/16`), use the peering connection."
+
+The other VPC needs the reverse route:
+
+```text
+VPC-B route table
+
+Destination       Target
+10.1.0.0/16       local
+10.0.0.0/16       pcx-xxxx
+```
+
+`pcx-xxxx` = the **VPC Peering Connection ID**.
+
+So for two VPCs to communicate:
+
+```text
+1. Create VPC Peering
+2. Add route to the other VPC's CIDR
+3. Target = VPC Peering connection
+```
+
+Example:
+
+```text
+EC2 in VPC-A
+10.0.1.10
+    ↓
+Route table
+10.1.0.0/16 → pcx-xxxx
+    ↓
+VPC Peering
+    ↓
+EC2 in VPC-B
+10.1.1.10
+```
+
+> **Peering alone is not enough — the appropriate route must exist.**
+
+VPC Peering does not create:
+
+```text
+VPC-A → VPC-B → VPC-C
+```
+
+automatically.
+
+It is a direct connection:
+
+```text
+VPC-A ←→ VPC-B
 ```
 
 > **VPC Peering = direct, not transit**
@@ -570,7 +639,7 @@ Central hub for:
 * Site-to-Site VPN
 * Direct Connect
 
-```text id="8s1qv1"
+```text
 VPC-A
    \
 VPC-B — Transit Gateway — VPC-C
@@ -591,7 +660,7 @@ On-premises
 
 PrivateLink exposes **one service**, not a whole network.
 
-```text id="9q3d1l"
+```text
 Provider VPC
  ↓
 NLB
@@ -614,7 +683,7 @@ Common use: SaaS service consumed privately by many customer VPCs.
 
 # Quick chooser
 
-```text id="e89oij"
+```text
 2 VPCs → VPC Peering
 
 Many VPCs / VPN / DX → Transit Gateway
@@ -650,7 +719,7 @@ Copies **actual packets** to an inspection/monitoring system.
 
 > **Need packet contents → Traffic Mirroring**
 
-```text id="bq99q3"
+```text
 Flow Logs
 = metadata
 
@@ -664,7 +733,7 @@ Traffic Mirroring
 
 EC2 jump server for private instances.
 
-```text id="of7avh"
+```text
 Your computer
  ↓ SSH
 Bastion
@@ -696,7 +765,7 @@ Provides private EC2 access without:
 * Port 22
 * Bastion
 
-```text id="v1b38y"
+```text
 You
  ↓
 SSM Session Manager
@@ -714,7 +783,7 @@ Sessions can be logged.
 
 Allows one account to own the VPC while other accounts use its subnets.
 
-```text id="m4r7va"
+```text
 Network Account
       ↓
      VPC
@@ -742,7 +811,7 @@ Main services:
 
 # Direct Connect and VIF
 
-```text id="d0hlyj"
+```text
 On-premises
     |
 Direct Connect
@@ -770,7 +839,7 @@ Logical connection over Direct Connect using **BGP** for routes.
 
 Private VIF connects through a **Virtual Private Gateway (VGW)**.
 
-```text id="n3paj8"
+```text
 On-premises
  ↓
 Direct Connect
@@ -790,7 +859,7 @@ VPC
 
 Centralizes Direct Connect connectivity across supported architectures.
 
-```text id="qv2ao8"
+```text
 On-premises
  ↓
 Direct Connect
@@ -804,7 +873,7 @@ Direct Connect Gateway
 
 For Transit Gateway, use a **Transit VIF** with the Direct Connect Gateway.
 
-```text id="mxy5rv"
+```text
 Private VIF
 → VGW / VPC
 
@@ -826,7 +895,7 @@ Use:
 * Another independent DX connection
 * Or VPN as backup
 
-```text id="b9f6y4"
+```text
 DX #1 ──→ VPC
 DX #2 ──→ VPC
 
@@ -844,7 +913,7 @@ VPN ─→ VPC
 
 A Private VIF connects to a **VGW**, and the VGW belongs to a specific VPC.
 
-```text id="rfm7f7"
+```text
 On-premises
  ↓
 Private VIF
@@ -862,7 +931,7 @@ The VIF must reach the **correct VGW/VPC**.
 
 # VPN as backup
 
-```text id="u24k7t"
+```text
 On-premises
    | \
    |  \ VPN
@@ -879,13 +948,13 @@ On-premises
 
 Private connection between two VPCs:
 
-```text id="6vw13y"
+```text
 VPC-1 ←→ VPC-2
 ```
 
 Not transitive.
 
-```text id="xwhw6d"
+```text
 VPC-1 ←→ VPC-2 ←→ VPC-3
 ```
 
@@ -897,7 +966,7 @@ does not connect VPC-1 to VPC-3 through VPC-2.
 
 Given:
 
-```text id="4w60be"
+```text
 On-premises
      ↓
 Direct Connect
@@ -914,7 +983,7 @@ Need more fault tolerance:
 
 **Bad assumption:**
 
-```text id="m6qv8y"
+```text
 On-premises → VPC-2 → Peering → VPC-1
 ```
 
@@ -948,7 +1017,7 @@ VPC Peering is **not transitive**.
 
 Connects multiple remote networks through a hub-and-spoke VPN architecture.
 
-```text id="a6r4ml"
+```text
 Branch A
    \
     VPN hub
@@ -962,7 +1031,7 @@ Branch B
 
 # One-line mental model
 
-```text id="wnp17z"
+```text
 VPC
 = AWS private network
 
@@ -1008,7 +1077,7 @@ SSM Session Manager
 
 # Hybrid Networking — one-line mental model
 
-```text id="1gxz2q"
+```text
 Direct Connect
 = Dedicated connection
 
@@ -1079,6 +1148,8 @@ VPN CloudHub
 
 > **Multiple matching routes** → **Longest-prefix match**
 
+> **Two VPCs need private communication** → **VPC Peering + routes to each other's CIDRs**
+
 ---
 
 # Pocket card
@@ -1101,6 +1172,7 @@ VPN CloudHub
 | S3/DynamoDB private access      | **Gateway Endpoint**                        |
 | Other AWS/SaaS                  | **Interface Endpoint**                      |
 | Two VPCs                        | **VPC Peering**                             |
+| Two VPCs + private traffic      | **Peering + route tables**                  |
 | Many VPCs/networks              | **Transit Gateway**                         |
 | One service                     | **PrivateLink**                             |
 | Traffic metadata                | **VPC Flow Logs**                           |
@@ -1116,5 +1188,3 @@ VPN CloudHub
 | Central transit routing         | **Transit Gateway**                         |
 | Multiple remote VPN sites       | **VPN CloudHub**                            |
 | Lambda + VPC + high concurrency | **ENI + subnet IP capacity**                |
-
----
