@@ -623,7 +623,7 @@ For broader centralized backup management across many AWS services, consider **A
 
 ---
 
-# EBS encryption
+# EBS encryption (KMS)
 
 Encrypted EBS volumes create encrypted snapshots, and encrypted snapshots can be used to create encrypted volumes.
 
@@ -1022,6 +1022,12 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 > **"A backup must be copied to another AWS Region."**
 
 → **Copy the EBS snapshot to the destination Region**
+
+---
+
+> **"EBS encryption type."**
+
+→ **KMS by default**
 
 ---
 
