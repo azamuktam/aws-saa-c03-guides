@@ -7,14 +7,6 @@ AWS provides several storage options for applications running on EC2. The main c
 * **EBS** → persistent **block storage** attached to EC2
 * **EFS** → shared **file storage** that many Linux-based clients can use at the same time
 * **Instance Store** → very fast **local storage** physically attached to the EC2 host, but temporary
-
-The easiest way to choose is to ask:
-
-1. **Do I need block storage or a shared file system?**
-2. **Must the data survive an EC2 stop or termination?**
-3. **Does the application need very high IOPS or high throughput?**
-4. **Do multiple instances need to access the same files?**
-
 ---
 
 # EBS — Elastic Block Store
