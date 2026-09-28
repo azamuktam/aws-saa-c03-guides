@@ -157,6 +157,91 @@ You cannot simply enable encryption on an existing unencrypted RDS DB instance.
 
 ---
 
+# Database Authentication
+
+RDS supports several database authentication methods depending on the engine:
+
+* **Password authentication** → traditional database username/password.
+* **IAM Database Authentication** → temporary IAM-generated authentication token instead of a database password.
+* **Kerberos authentication** → external authentication through Kerberos / Microsoft Active Directory for supported engines.
+
+## IAM Database Authentication
+
+Use when the requirement says:
+
+* Temporary / short-lived database authentication
+* IAM user or role must connect directly to RDS
+* Avoid storing database passwords in applications
+* RDS MySQL / PostgreSQL / MariaDB
+
+Flow:
+
+```text
+IAM User / Role
+      ↓
+IAM permissions
+      ↓
+Generate authentication token
+      ↓
+RDS database
+      ↓
+Temporary DB authentication
+```
+
+### Key facts
+
+* The token is valid for **15 minutes**.
+* The token is used **instead of a database password**.
+* Authentication is managed through **IAM**, so the application does not need to store a long-lived DB password.
+* The IAM policy needs permission for **`rds-db:connect`**.
+* AWS CLI and AWS SDKs can generate/sign the token.
+* IAM DB authentication can also be used from services such as **Lambda**.
+
+### MySQL / MariaDB
+
+IAM authentication uses the AWS-provided:
+
+**`AWSAuthenticationPlugin`**
+
+Example concept:
+
+```text
+MySQL user
+   ↓
+AWSAuthenticationPlugin
+   ↓
+IAM authentication token
+```
+
+The database account is created with the AWS authentication plugin instead of a normal password.
+
+### Important distinction
+
+| Requirement                                 | Solution                                      |
+| ------------------------------------------- | --------------------------------------------- |
+| Temporary token to connect to RDS           | **IAM Database Authentication**               |
+| Store/rotate database passwords             | **Secrets Manager**                           |
+| Control whether an IAM identity can connect | **IAM policy / `rds-db:connect`**             |
+| Network access to the DB                    | **Security Group**                            |
+| Workforce SSO / AWS application access      | **IAM Identity Center**                       |
+| MFA-based AWS authentication                | **MFA**; not the RDS database-token mechanism |
+
+**THE trap:** Secrets Manager does **not** generate IAM DB authentication tokens. It is used to store and rotate database credentials.
+
+**THE trap:** MFA does **not** replace IAM Database Authentication for RDS.
+
+**THE trap:** IAM Identity Center is not the direct mechanism used to authenticate a user to an RDS MySQL database.
+
+> RDS MySQL + short-lived authentication token → **IAM Database Authentication**
+
+> MySQL + `AWSAuthenticationPlugin` → **IAM Database Authentication**
+
+> Database password must be stored and rotated → **Secrets Manager**
+
+> IAM identity must be allowed to connect → **`rds-db:connect`**
+
+---
+
 # RDS Proxy
 
 **RDS Proxy = managed database connection pool.**
@@ -604,6 +689,14 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 
 > **Encrypt existing unencrypted RDS** → **Snapshot → encrypted copy → restore**
 
+> **RDS MySQL/PostgreSQL/MariaDB + short-lived authentication token** → **IAM Database Authentication**
+
+> **MySQL + `AWSAuthenticationPlugin`** → **IAM Database Authentication**
+
+> **Database password must be stored and rotated** → **Secrets Manager**
+
+> **IAM identity must be allowed to connect to RDS** → **`rds-db:connect`**
+
 > **Oracle → RDS Oracle** → **DMS**
 
 > **Oracle → different DB engine** → **SCT + DMS**
@@ -658,6 +751,11 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 | Point-in-time restore                     | **Automated backup / PITR**             |
 | Long-term backup                          | **Manual snapshot**                     |
 | Existing unencrypted RDS → encrypted      | **Snapshot → encrypted copy → restore** |
+| Temporary DB auth token                   | **IAM Database Authentication**         |
+| IAM DB token lifetime                     | **15 minutes**                          |
+| MySQL IAM authentication                  | **`AWSAuthenticationPlugin`**           |
+| Allow IAM identity to connect             | **`rds-db:connect`**                    |
+| Store/rotate DB passwords                 | **Secrets Manager**                     |
 | Oracle → RDS Oracle                       | **DMS**                                 |
 | Oracle → different engine                 | **SCT + DMS**                           |
 | Oracle backup/recovery                    | **RMAN**                                |
