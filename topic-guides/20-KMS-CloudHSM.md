@@ -4,16 +4,6 @@
 
 **AWS Key Management Service (KMS)** manages cryptographic keys used to protect data.
 
-The main questions in KMS are:
-
-* Where is the key material stored?
-* Who can use the key?
-* Who controls the key policy?
-* Can the key be rotated?
-* Can the key be disabled or deleted?
-* Can key usage be audited?
-* Do you need AWS-managed key infrastructure or dedicated HSM infrastructure?
-
 **CloudHSM** is different from ordinary KMS because you get **single-tenant HSMs** in your VPC and direct control over the HSM cluster and its key material.
 
 The most important distinction:
@@ -395,3 +385,236 @@ HSM means:
 **Hardware Security Module**
 
 An HSM is specialized hardware designed to securely generate, store, and use cryptographic keys.
+
+CloudHSM gives you more direct control than KMS:
+
+* Dedicated HSMs
+* Customer-controlled HSM users
+* Customer-controlled key material
+* HSM cluster management
+* Cryptographic operations inside the HSM
+* HSM access from applications in your VPC
+
+```text
+KMS
+→ managed key service
+→ AWS manages the HSM infrastructure
+
+CloudHSM
+→ dedicated HSM
+→ customer manages the HSM cluster
+→ customer controls keys inside the HSM
+```
+
+AWS cannot view or perform cryptographic operations with your CloudHSM keys.
+
+---
+
+# CloudHSM backups
+
+CloudHSM automatically creates **periodic cluster backups at least every 24 hours**.
+
+Backups contain encrypted copies of:
+
+* Users
+* Key material
+* Certificates
+* HSM configuration
+* Policies
+
+The backup is encrypted by the HSM before the data leaves the HSM. AWS cannot decrypt the backup because AWS does not have access to the key needed to decrypt it.
+
+```text
+CloudHSM
+   ↓
+Encrypted cluster backup
+   ↓
+AWS stores backup
+```
+
+The default backup retention period is **90 days**; the supported retention range is **7–379 days**.
+
+### Restoring from a backup
+
+A CloudHSM backup can be used to create a **new cluster** containing the users, key material, certificates, configuration, and policies from that backup.
+
+```text
+CloudHSM backup
+      ↓
+Create new cluster from backup
+      ↓
+Keys + users + configuration restored
+```
+
+You can also copy CloudHSM backups to another Region for disaster recovery.
+
+### Important distinction
+
+The backup represents a specific recovery point.
+
+Therefore:
+
+> Data created or modified **after the latest recoverable backup** can be lost.
+
+---
+
+# CloudHSM zeroization
+
+**Zeroization destroys the key material, certificates, and other data currently stored on the HSM.**
+
+A zeroized HSM does **not automatically mean every key is permanently lost**, because a valid CloudHSM backup may still exist.
+
+```text
+Zeroization
+    ↓
+Current HSM data destroyed
+    ↓
+Recoverable backup exists?
+    ↓
+Yes → Restore from backup
+No  → Key material is unrecoverable
+```
+
+AWS explicitly states that data created or modified after the most recent backup is lost and unrecoverable if an HSM is zeroized.
+
+### SAA exam rule
+
+> **CloudHSM key + no recoverable backup/copy → permanently lost**
+
+> **CloudHSM key + valid backup → restore from backup**
+
+> **AWS Support cannot provide your plaintext CloudHSM keys**
+
+### Practice-question trap
+
+A common practice question says:
+
+> "The HSM was zeroized and you did not have a copy of the keys."
+
+The intended answer is:
+
+→ **The keys are lost permanently.**
+
+The important concept is **no recoverable copy**.
+
+Current CloudHSM also automatically maintains cluster backups, so the real-world question should be interpreted as meaning that **no usable backup containing those keys exists**.
+
+---
+
+# CloudHSM login / zeroization distinction
+
+Do not confuse **account lockout** with **HSM zeroization**.
+
+Current CloudHSM CLI behavior:
+
+* More than **5 incorrect login attempts** locks the account.
+* An administrator can reset the user's password.
+* With multiple HSMs, additional failed attempts may occur because the client load-balances requests across HSMs.
+
+Zeroization is a separate destructive operation.
+
+AWS also documents that an HSM can be zeroized without authentication if someone can access the HSM through the relevant network path.
+
+### Exam distinction
+
+```text
+Wrong password
+→ account lockout
+
+Zeroization
+→ destroys current HSM data
+```
+
+---
+
+# CloudHSM vs KMS
+
+|                                   | **KMS**                                   | **CloudHSM**                 |
+| --------------------------------- | ----------------------------------------- | ---------------------------- |
+| Main purpose                      | Managed key management                    | Dedicated HSM                |
+| Infrastructure                    | AWS-managed                               | Customer-controlled cluster  |
+| HSM tenancy                       | AWS-managed shared service infrastructure | **Single-tenant HSMs**       |
+| Key control                       | KMS controls key operations               | Customer controls HSM keys   |
+| AWS service integration           | **Excellent / built-in**                  | More application-specific    |
+| Key material exposed to customer? | No                                        | Keys remain inside HSM       |
+| Customer manages HSM users        | No                                        | **Yes**                      |
+| Backup/recovery                   | Managed by KMS                            | **CloudHSM cluster backups** |
+| Custom HSM-level control          | Limited                                   | **High**                     |
+
+### Decision rule
+
+> "Need simple AWS-service encryption and key management."
+
+→ **KMS**
+
+> "Need dedicated HSMs and direct control over HSM/key operations."
+
+→ **CloudHSM**
+
+> "Need a standard managed AWS encryption service."
+
+→ **KMS**
+
+> "Need hardware-based cryptographic processing with customer control."
+
+→ **CloudHSM**
+
+---
+
+# Question patterns
+
+> **Encrypt large files with KMS** → **Envelope encryption / GenerateDataKey**
+
+> **User has `kms:*` but receives AccessDenied** → **Check KMS key policy**
+
+> **Need customer-controlled key policy / rotation / disable / deletion** → **Customer managed KMS key**
+
+> **Immediately stop a KMS key from being used** → **Disable key**
+
+> **Permanently delete a KMS key** → **Schedule deletion, 7–30 days**
+
+> **Multi-Region application needs related KMS keys** → **Multi-Region KMS key**
+
+> **SSE-KMS causes excessive KMS requests/costs** → **S3 Bucket Key**
+
+> **Need dedicated HSMs in your VPC** → **CloudHSM**
+
+> **CloudHSM needs disaster recovery** → **CloudHSM backups / cross-Region backup copy**
+
+> **CloudHSM HSM is zeroized + valid backup exists** → **Restore from backup / create cluster from backup**
+
+> **CloudHSM key is lost + no recoverable backup** → **Key is permanently lost**
+
+> **CloudHSM + AWS Support asked for plaintext keys** → **AWS cannot provide them**
+
+> **More than 5 incorrect CloudHSM login attempts** → **Account is locked**
+
+---
+
+# Pocket card
+
+| Keyword                                     | Answer                            |
+| ------------------------------------------- | --------------------------------- |
+| Managed AWS key service                     | **KMS**                           |
+| Dedicated HSM in your VPC                   | **CloudHSM**                      |
+| AWS-controlled service encryption key       | **AWS managed key**               |
+| Customer-controlled KMS key                 | **Customer managed key**          |
+| No customer key control                     | **AWS owned key**                 |
+| KMS authorization issue                     | **Check key policy**              |
+| Large data + KMS                            | **Envelope encryption**           |
+| Generate data-encryption key                | **`GenerateDataKey`**             |
+| Stop KMS key immediately                    | **Disable**                       |
+| Permanently remove KMS key                  | **Schedule deletion, 7–30 days**  |
+| Customer-managed symmetric key rotation     | **Automatic rotation**            |
+| Multi-Region KMS                            | **Multi-Region key**              |
+| Reduce SSE-KMS requests/cost                | **S3 Bucket Key**                 |
+| Dedicated HSM + customer control            | **CloudHSM**                      |
+| CloudHSM periodic backup                    | **At least every 24 hours**       |
+| CloudHSM default backup retention           | **90 days**                       |
+| CloudHSM backup retention range             | **7–379 days**                    |
+| Restore CloudHSM                            | **Create cluster from backup**    |
+| Zeroized HSM + backup exists                | **Restore from backup**           |
+| Zeroized HSM + no recoverable backup        | **Key permanently lost**          |
+| CloudHSM backup plaintext accessible to AWS | **No**                            |
+| >5 incorrect CloudHSM logins                | **Account locked**                |
+| CloudHSM DR across Regions                  | **Copy backup to another Region** |
