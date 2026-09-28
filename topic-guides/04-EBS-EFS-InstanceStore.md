@@ -588,7 +588,24 @@ For broader centralized backup management across many AWS services, consider **A
 
 Encrypted EBS volumes create encrypted snapshots, and encrypted snapshots can be used to create encrypted volumes.
 
-Encryption applies to the EBS storage path and normally has minimal performance impact.
+Encryption protects:
+
+* **Data at rest** on the EBS volume
+* **Data in transit between the EC2 instance and EBS volume**
+* **EBS snapshots**, which are automatically encrypted when created from an encrypted volume
+* **Volumes created from encrypted snapshots**, which are automatically encrypted
+
+### Exam rules
+
+| Scenario                                        | Result                    |
+| ----------------------------------------------- | ------------------------- |
+| Encrypted EBS volume                            | ✅ Data at rest encrypted  |
+| Data moving between EC2 and EBS                 | ✅ Encrypted               |
+| Snapshot of encrypted EBS volume                | ✅ Automatically encrypted |
+| Volume created from encrypted snapshot          | ✅ Automatically encrypted |
+| "Only data in the volume is encrypted"          | ❌                         |
+| "Snapshot is not automatically encrypted"       | ❌                         |
+| "Volume from encrypted snapshot is unencrypted" | ❌                         |
 
 ## Existing unencrypted volume
 
@@ -993,6 +1010,24 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 
 ---
 
+> **"An encrypted EBS volume must protect data both at rest and while moving between EC2 and EBS."**
+
+→ **EBS encryption**
+
+---
+
+> **"A snapshot is created from an encrypted EBS volume."**
+
+→ **The snapshot is automatically encrypted**
+
+---
+
+> **"Create a volume from an encrypted EBS snapshot."**
+
+→ **The new volume is automatically encrypted**
+
+---
+
 > **"Up to 16 instances need to access the same block volume in one AZ."**
 
 → **io1/io2 Multi-Attach**
@@ -1050,6 +1085,9 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 | immediate full performance after snapshot restore | **Fast Snapshot Restore**                  |
 | automate EBS snapshot lifecycle                   | **DLM**                                    |
 | encrypt existing unencrypted EBS                  | **snapshot → encrypted copy → new volume** |
+| EBS data in transit                               | **encrypted**                              |
+| encrypted EBS snapshot                            | **automatically encrypted**                |
+| volume from encrypted snapshot                    | **automatically encrypted**                |
 | shared files across Linux instances               | **EFS**                                    |
 | shared files across AZs                           | **EFS**                                    |
 | Linux NFS file system                             | **EFS**                                    |
@@ -1066,40 +1104,3 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 | high IOPS + persistence required                  | **EBS, typically io2 for extreme IOPS**    |
 
 ---
-
-## The fastest decision tree
-
-```text
-What kind of storage do you need?
-
-            ┌──────────────────────┐
-            │ Shared files needed? │
-            └──────────┬───────────┘
-                       │
-                 Yes ──┴──→ EFS
-                       │
-                      No
-                       ↓
-          ┌─────────────────────────┐
-          │ Must data persist?      │
-          └──────────┬──────────────┘
-                     │
-            No ──────┴────→ Instance Store
-                     │
-                    Yes
-                     ↓
-                   EBS
-                     │
-          ┌──────────┴──────────┐
-          │                     │
-      Random I/O           Sequential
-       / Database          / Throughput
-          │                     │
-         SSD                   HDD
-          │                     │
-      ┌───┴───┐             ┌───┴───┐
-      ↓       ↓             ↓       ↓
-     gp3   io1/io2         st1     sc1
-```
-
-The next section moves from **block/file/local storage** to **object storage with Amazon S3**.
