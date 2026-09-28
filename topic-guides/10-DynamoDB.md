@@ -2,111 +2,148 @@
 
 ## The idea
 
-Picture a coat-check counter at a giant stadium. You hand over your coat, you get ticket **#48291**. Later you hand back the ticket and — instantly — your coat appears. The coat-check clerk never *searches* the racks; the ticket number tells her exactly which hook to walk to. It doesn't matter if the stadium holds 500 people or 5 million: one ticket, one hook, one grab. **That's DynamoDB.**
+DynamoDB is AWS's **serverless NoSQL database**.
 
-DynamoDB is AWS's **serverless NoSQL database**. Spell that out:
-
-- **Serverless** = you never see, patch, size, or connect to a server. No instance types, no connection pools, no maintenance windows. You just call an API.
-- **NoSQL** = data lives as **items** (like rows) with flexible attributes (like columns, but each item can have different ones). No joins, no rigid schema.
-
-Its superpower is the promise on the tin: **single-digit millisecond latency at ANY scale**. Ten requests per second or ten million — same speed. That's the coat-check trick: every lookup goes straight to a hook via a key, never a search.
+* **Serverless** = no servers to provision, patch, size, or maintain. You use APIs.
+* **NoSQL** = data is stored as **items** with flexible attributes. No joins or rigid relational schema.
+* Designed for **single-digit millisecond latency at scale**.
 
 ### DynamoDB vs RDS — the first fork in every question
 
-| Scenario says... | Pick |
-|---|---|
-| Joins, complex queries, existing SQL app, relational schema | **RDS / Aurora** |
-| Massive scale, serverless, key-value lookups, millisecond latency, unpredictable growth | **DynamoDB** |
+| Scenario says...                                                                        | Pick             |
+| --------------------------------------------------------------------------------------- | ---------------- |
+| Joins, complex queries, existing SQL app, relational schema                             | **RDS / Aurora** |
+| Massive scale, serverless, key-value lookups, millisecond latency, unpredictable growth | **DynamoDB**     |
 
-**THE trap:** *"migrate with no code changes from MySQL"* → that's **RDS/Aurora**, never DynamoDB. NoSQL means rewriting queries.
+**THE trap:** *"migrate with no code changes from MySQL"* → **RDS/Aurora**, not DynamoDB. Moving to NoSQL requires query/data-model changes.
 
 ### Keys and hot partitions
 
-Every table needs a **partition key** (the coat-check ticket — determines which physical partition stores the item), plus an optional **sort key** (orders items *within* a partition, so one customer can have many orders sorted by date).
+Every table has a **partition key** and may also have a **sort key**.
 
-DynamoDB spreads data across partitions by hashing the partition key. If everyone's key is `country = "USA"`, all traffic slams one partition — a **hot partition** — and you get throttled while the rest of the table sits idle.
+* **Partition key** → determines partition placement.
+* **Sort key** → orders items within the same partition key and allows multiple related items.
+* DynamoDB hashes the partition key to distribute items across partitions.
 
-**Rule: pick a high-cardinality partition key** (many distinct values: `user_id`, `order_id`), not a low-cardinality one (`status`, `country`, `date`).
+**Hot partition:** too much traffic targets the same partition key.
 
+Example:
+
+```text
+Good key: user_id                 Bad key: country
+[P1][P2][P3][P4]                 [P1][P2][P3][P4]
+ ▲▲  ▲▲  ▲▲  ▲▲                  ████  .   .   .
+ even spread                      hot!  idle idle idle
 ```
-Good key (user_id):            Bad key (country):
-[P1][P2][P3][P4]               [P1][P2][P3][P4]
- ▲▲  ▲▲  ▲▲  ▲▲                ████  .   .   .
- even spread                    hot!  idle idle idle
-```
+
+**Rule:** prefer **high-cardinality** partition keys such as `user_id` or `order_id`; avoid low-cardinality keys such as `status`, `country`, or `date`.
 
 ### Capacity modes — same logic as EC2 pricing
 
-- **Provisioned**: you declare read/write capacity up front. **Cheaper for steady, predictable traffic.** Add **auto scaling** to flex within bounds. (This is your Reserved-Instance instinct.)
-- **On-Demand**: pay per request, no planning. **Pick for spiky, unpredictable, or brand-new workloads** — flash sales, new apps with unknown traffic. (This is On-Demand EC2 instinct.)
+* **Provisioned**
 
-**THE trap:** *"app gets throttled during unpredictable traffic spikes"* → switch to **On-Demand mode**. Don't over-provision.
+  * Specify read/write capacity.
+  * Best for **steady, predictable traffic**.
+  * Can use **auto scaling** to adjust capacity within limits.
+
+* **On-Demand**
+
+  * Pay per request.
+  * No capacity planning.
+  * Best for **spiky, unpredictable, or new workloads**.
+
+**THE trap:** *"app is throttled by unpredictable traffic spikes"* → **On-Demand mode**, rather than simply over-provisioning.
 
 ### RCU / WCU — the exam arithmetic
 
-| Unit | Buys you |
-|---|---|
-| **1 RCU** | **1 strongly consistent** read/sec, item ≤ 4 KB — or **2 eventually consistent** reads/sec |
-| **1 WCU** | **1 write**/sec, item ≤ **1 KB** |
+| Unit      | Capacity                                                                                            |
+| --------- | --------------------------------------------------------------------------------------------------- |
+| **1 RCU** | **1 strongly consistent read/sec** for an item ≤ **4 KB**, or **2 eventually consistent reads/sec** |
+| **1 WCU** | **1 write/sec** for an item ≤ **1 KB**                                                              |
 
-Eventual consistency is half price because it may serve a copy that's a heartbeat stale. **"Must always read the latest write"** → request a **strongly consistent read** (default is eventual).
+* **Eventually consistent** = may return a slightly older value and uses half the read capacity.
+* **Strongly consistent** = reads the latest write.
+* Default read consistency is **eventual**.
+
+**THE trap:** *"must always read the latest write"* → **Strongly consistent read**.
 
 ### Feature zoo → scenario matcher
 
-| Feature | The one-liner |
-|---|---|
-| **DAX** (DynamoDB Accelerator) | In-memory cache in front of DynamoDB: **microsecond** reads, **API-compatible = ZERO code changes**, works **only** with DynamoDB. (Need caching for anything else, or need code-level flexibility → ElastiCache.) |
-| **Global Tables** | **Multi-region ACTIVE-ACTIVE**: users read *and write* locally in every region, DynamoDB replicates. Requires **Streams enabled**. Contrast: **Aurora Global Database = one writer region** (active-passive writes). |
-| **Streams** | A **change feed**: every insert/update/delete recorded for **24 hours**, typically triggering **Lambda**. Keyword: *"react to item changes."* |
-| **TTL** (Time To Live) | Put an expiry timestamp attribute on items → DynamoDB **auto-deletes them for FREE** (no WCU). Deletion happens within ~**48 hours** of expiry, not the exact second. Classic: session data, temp tokens. |
-| **GSI** (Global Secondary Index) | Query the table by a **different attribute** (e.g., by email when the key is user_id). Can be added **ANYTIME**, has its **own capacity**. |
-| **LSI** (Local Secondary Index) | Alternate *sort* key, same partition key — but can be created **at table creation ONLY**. **THE trap:** if the table already exists, LSI is the wrong answer; pick **GSI**. |
-| **Transactions** | **ACID** across multiple items/tables — all-or-nothing. Costs **2x** the capacity. Keyword: *"atomic"*, *"all succeed or none."* |
-| **PITR** (Point-In-Time Recovery) | Continuous backup, restore to any second in the last **35 days**. |
+| Feature                           | One-liner                                                                                                                                                                                                                        |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **DAX** (DynamoDB Accelerator)    | In-memory DynamoDB cache for **microsecond reads**; **API-compatible**, so applications can use it with minimal/no code changes. **DynamoDB only.** For other services or more flexible caching → **ElastiCache**.               |
+| **Global Tables**                 | **Multi-region active-active** DynamoDB. Users can read and write locally in multiple regions; DynamoDB replicates data across regions.                                                                                          |
+| **Streams**                       | **24-hour change feed** for item inserts, updates, and deletes; commonly triggers **Lambda**. Keyword: *"react to item changes."*                                                                                                |
+| **TTL** (Time to Live)            | Set an expiry timestamp attribute; DynamoDB automatically deletes expired items. Deletion is free for the normal TTL deletion path and can occur within about **48 hours** after expiry. Common for sessions and temporary data. |
+| **GSI** (Global Secondary Index)  | Query using a **different partition/sort key** from the base table. Can be added **anytime** and has **its own capacity**.                                                                                                       |
+| **LSI** (Local Secondary Index)   | Uses the **same partition key** with a different sort key. Must be created **when the table is created**.                                                                                                                        |
+| **Transactions**                  | **ACID**, all-or-nothing operations across multiple items/tables. Uses **2× capacity**.                                                                                                                                          |
+| **PITR** (Point-In-Time Recovery) | Continuous backup; restore to any point in the previous **35 days**.                                                                                                                                                             |
+
+**THE index trap:**
+
+* Existing table + need another access pattern → **GSI**
+* New table + same partition key but different sort key → **LSI**
 
 ### Two more exam staples
 
-**The serverless poster-child stack** — memorize the chain:
+**Serverless web/API stack:**
 
-```
+```text
 User → CloudFront → API Gateway → Lambda → DynamoDB
         (CDN)       (front door)   (code)    (data)
 ```
 
-Any question asking for a "fully serverless web/API architecture" is assembling this.
+Typical answer for a **fully serverless web/API architecture**.
 
-**400 KB item limit.** An item can't exceed 400 KB. Storing images/documents? **Put the object in S3, store the S3 pointer (key/URL) in DynamoDB.** This S3-plus-pointer pattern is a recurring correct answer.
+**400 KB item limit**
+
+* Maximum DynamoDB item size = **400 KB**.
+* For images/documents larger than this:
+
+  * Store the object in **S3**
+  * Store the **S3 key/pointer** in DynamoDB.
 
 ## Question patterns
 
-> *"Flash sale causes unpredictable spikes; table throttles"* → **On-Demand capacity mode** (pay-per-request absorbs spikes)
-> *"Reduce read latency to microseconds without changing application code"* → **DAX** (API-compatible cache, DynamoDB-only)
-> *"Global users need low-latency reads AND writes in every region"* → **Global Tables** (active-active; Aurora Global has only one writer)
-> *"Run custom logic whenever items are added or modified"* → **DynamoDB Streams + Lambda** (24-hour change feed triggers functions)
-> *"Automatically remove session records after 30 minutes, at no cost"* → **TTL** (free auto-delete, ~48h window)
-> *"Table keyed on user_id, but app must also query by email"* → **GSI** (new query attribute, addable anytime — LSI is creation-time-only bait)
-> *"Debit one account and credit another — both or neither"* → **DynamoDB Transactions** (ACID, 2x capacity cost)
-> *"Store 2 MB documents per record"* → **S3 for the object, DynamoDB holds the pointer** (400 KB item limit)
-> *"Application must always see the most recent write"* → **Strongly consistent read** (1 RCU vs 2 eventual reads)
-> *"Reporting needs joins across many tables"* → **RDS/Aurora**, not DynamoDB (relational = SQL)
+> *"Flash sale causes unpredictable spikes; table throttles"* → **On-Demand capacity mode**
+
+> *"Reduce read latency to microseconds without changing application code"* → **DAX**
+
+> *"Global users need low-latency reads AND writes in every region"* → **Global Tables** (active-active)
+
+> *"Run custom logic whenever items are added or modified"* → **DynamoDB Streams + Lambda**
+
+> *"Automatically remove session records after 30 minutes, at no cost"* → **TTL** (automatic deletion; ~48-hour deletion window)
+
+> *"Table keyed on user_id, but app must also query by email"* → **GSI**
+
+> *"Debit one account and credit another — both or neither"* → **DynamoDB Transactions** (ACID; 2× capacity)
+
+> *"Store 2 MB documents per record"* → **S3 + DynamoDB pointer** (400 KB item limit)
+
+> *"Application must always see the most recent write"* → **Strongly consistent read**
+
+> *"Reporting needs joins across many tables"* → **RDS/Aurora**
 
 ## Pocket card
 
-| Keyword | Answer |
-|---|---|
-| Serverless NoSQL, key-value, any scale | DynamoDB |
-| Joins / complex SQL | RDS or Aurora instead |
-| Spiky / unknown traffic | On-Demand mode |
-| Steady, predictable traffic | Provisioned (+ auto scaling) |
-| Microseconds, no code change | DAX |
-| Multi-region active-active | Global Tables (needs Streams) |
-| React to item changes | Streams → Lambda |
-| Auto-expire items free | TTL |
-| Query by another attribute, existing table | GSI (LSI = creation-time trap) |
-| Atomic multi-item | Transactions (2x cost) |
-| Restore to any second, 35 days | PITR |
-| Item > 400 KB | S3 + pointer |
-| 1 RCU | 1 strong or 2 eventual reads ≤ 4 KB |
-| 1 WCU | 1 write ≤ 1 KB |
+| Keyword                                                     | Answer                                  |
+| ----------------------------------------------------------- | --------------------------------------- |
+| Serverless NoSQL, key-value, any scale                      | **DynamoDB**                            |
+| Joins / complex SQL                                         | **RDS / Aurora**                        |
+| Spiky / unknown traffic                                     | **On-Demand mode**                      |
+| Steady, predictable traffic                                 | **Provisioned + auto scaling**          |
+| Microseconds, DynamoDB cache                                | **DAX**                                 |
+| Multi-region active-active                                  | **Global Tables**                       |
+| React to item changes                                       | **Streams → Lambda**                    |
+| Auto-expire items                                           | **TTL**                                 |
+| Query by another attribute on an existing table             | **GSI**                                 |
+| Alternate sort key, same partition key, table creation only | **LSI**                                 |
+| Atomic multi-item operation                                 | **Transactions**                        |
+| Restore to any point in last 35 days                        | **PITR**                                |
+| Item > 400 KB                                               | **S3 + pointer**                        |
+| 1 RCU                                                       | **1 strong or 2 eventual reads ≤ 4 KB** |
+| 1 WCU                                                       | **1 write ≤ 1 KB**                      |
 
-DynamoDB gives you millisecond answers forever — but when even milliseconds are too slow, you reach for the in-memory layer, and that's where ElastiCache (Section 11) picks up the story.
+**Final distinction:** DynamoDB is for scalable NoSQL access patterns; when you need relational features such as joins and complex SQL, use **RDS/Aurora**. When you need an in-memory caching layer, see **ElastiCache (Section 11)**.
