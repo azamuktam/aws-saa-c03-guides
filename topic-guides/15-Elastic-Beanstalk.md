@@ -2,96 +2,216 @@
 
 ## The idea
 
-Elastic Beanstalk is AWS saying: **"here's my code, you figure out the rest."**
+**Elastic Beanstalk (EB)** is an application deployment service that provisions and manages the infrastructure needed to run your application.
 
-Think of it as moving into a **fully furnished apartment**. You could buy land, pour a foundation, and wire the electricity yourself (raw EC2 + ASG + ALB by hand) — or you could just show up with your suitcase (your code) and everything is already set up. But here's the key difference from a hotel: **you still get the keys to every room**. You can rearrange furniture, swap appliances — nothing is locked away.
+You upload code—supported platforms include **Java, Python, Node.js, .NET, Go, Ruby, PHP, and Docker**—and Beanstalk can provision:
 
-Concretely: you upload your code — **Java, Python, Node.js, .NET, Go, Ruby, PHP, or Docker** — and Beanstalk automatically provisions **EC2 instances, an Auto Scaling Group, a Load Balancer, and CloudWatch monitoring**. You didn't configure any of them, but you *can* see and tune all of them.
+* **EC2 instances**
+* **Auto Scaling Group**
+* **Load Balancer**
+* **CloudWatch monitoring**
 
-Two exam-critical identity facts:
+You can still inspect and customize the underlying resources.
 
-- **EB is an orchestrator, NOT a black box.** You retain **full control of the underlying resources**. The identity phrase the exam loves: *"deploy a web application quickly without managing infrastructure BUT retain control over the resources."* That sentence = Beanstalk.
-- **EB itself is free** — you pay only for the resources it creates (EC2, ALB, etc.).
+### Two exam-critical facts
 
-Config tweaks live in **`.ebextensions`** — YAML/JSON files in your code bundle that customize the environment (packages, env vars, resources).
+* **EB is an orchestrator, not a black box** → you retain **full control of the underlying resources**.
+* **EB itself is free** → you pay for the AWS resources it creates, such as EC2 and ALB.
 
-There's also a **Worker environment**: instead of serving web traffic, it pulls jobs from an **SQS queue** — the background-processing tier of your app.
+Configuration customizations can be defined in **`.ebextensions`** YAML/JSON files in the source bundle.
+
+### Worker environment
+
+A **Worker environment** does not serve normal web traffic. It pulls background jobs from an **SQS queue**.
+
+```text
+Web environment
+→ serves application requests
+
+Worker environment
+→ consumes SQS jobs
+→ performs background processing
+```
+
+---
+
+## App Runner
+
+**AWS App Runner** is a fully managed service for deploying **web applications and APIs** directly from:
+
+* source code repositories
+* container images
+
+AWS handles the underlying infrastructure, deployment, load balancing, and automatic scaling.
+
+Use App Runner when the requirement is:
+
+> **"Deploy a web application/API without managing servers or infrastructure."**
+
+### App Runner vs Elastic Beanstalk
+
+| Requirement                           | App Runner                   | Elastic Beanstalk                                |
+| ------------------------------------- | ---------------------------- | ------------------------------------------------ |
+| Deploy web app/API quickly            | ✅                            | ✅                                                |
+| Manage servers/infrastructure for you | ✅                            | ✅                                                |
+| Underlying infrastructure control     | Limited                      | **Full control**                                 |
+| Deploy source code                    | ✅                            | ✅                                                |
+| Deploy container image                | ✅                            | ✅                                                |
+| Built-in load balancing/scaling       | ✅                            | ✅                                                |
+| Typical use                           | Simple managed web apps/APIs | Applications needing more infrastructure control |
+
+### Exam signal
+
+> **"Deploy a web app/API with minimal infrastructure management."** → **App Runner**
+
+> **"Deploy quickly without managing infrastructure but retain control of the underlying resources."** → **Elastic Beanstalk**
+
+Do not confuse App Runner with **Run Command**:
+
+* **App Runner** → deploy/run an application
+* **Systems Manager Run Command** → configure/manage existing EC2 instances without SSH/RDP
+
+---
 
 ## THE tested table: deployment policies
 
-This table is the single most-tested Beanstalk fact. Learn to match constraint → row.
+| Policy                            | How it works                                                        | Downtime? | Capacity during deploy               | Extra cost?             | Rollback                     | Pick when...                                   |
+| --------------------------------- | ------------------------------------------------------------------- | --------- | ------------------------------------ | ----------------------- | ---------------------------- | ---------------------------------------------- |
+| **All at once**                   | Update every instance simultaneously                                | **YES**   | Drops to zero briefly                | No                      | Redeploy old version (slow)  | Fastest; **dev/test, downtime OK**             |
+| **Rolling**                       | Update in batches, batch by batch                                   | No        | **Reduced** (a batch is always down) | **No**                  | Slow (roll batches back)     | **No downtime + no extra cost**                |
+| **Rolling with additional batch** | Spin up one extra batch first, then roll                            | No        | **FULL capacity maintained**         | Small (one extra batch) | Slow                         | Can't afford reduced capacity                  |
+| **Immutable**                     | Build a **whole new fleet** alongside the old, swap when healthy    | No        | Full                                 | Double, briefly         | **Safest: delete new fleet** | Production, **safest rollback**                |
+| **Blue/Green**                    | Clone the entire **environment**, test it, then **swap DNS CNAMEs** | No        | Full                                 | Double while both exist | **Instant: swap CNAME back** | Test new version with real URL, instant switch |
 
-| Policy | How it works | Downtime? | Capacity during deploy | Extra cost? | Rollback | Pick when... |
-|---|---|---|---|---|---|---|
-| **All at once** | Update every instance simultaneously | **YES** | Drops to zero briefly | No | Redeploy old version (slow) | Fastest; **dev/test, downtime OK** |
-| **Rolling** | Update in batches, batch by batch | No | **Reduced** (a batch is always down) | **No** | Slow (roll batches back) | **No downtime + no extra cost** |
-| **Rolling with additional batch** | Spin up one extra batch first, then roll | No | **FULL capacity maintained** | Small (one extra batch) | Slow | Can't afford reduced capacity |
-| **Immutable** | Build a **whole new fleet** alongside the old, swap when healthy | No | Full | Double, briefly | **Safest: just delete new fleet** | Production, **safest rollback** |
-| **Blue/Green** | Clone the entire **environment**, test it, then **swap DNS CNAMEs** | No | Full | Double while both exist | **Instant: swap CNAME back** | Test new version with real URL, instant switch |
+### Constraint matching
 
-Constraint-matching cheats:
-- "Fastest, downtime acceptable" → **All at once**
-- "No downtime, no additional cost" → **Rolling**
-- "Must maintain full capacity" → **Rolling with additional batch**
-- "Safest / easiest rollback if instances fail" → **Immutable**
-- "Test new version, then instant cutover / instant rollback via DNS" → **Blue/Green (CNAME swap)**
+* **Fastest, downtime acceptable** → **All at once**
+* **No downtime, no additional cost** → **Rolling**
+* **Must maintain full capacity** → **Rolling with additional batch**
+* **Safest / easiest rollback if instances fail** → **Immutable**
+* **Test new version, then instant cutover / instant rollback via DNS** → **Blue/Green (CNAME swap)**
+
+---
 
 ## THE RDS trap
 
-If you create an RDS database **inside** a Beanstalk environment, its lifecycle is **tied to the environment** — terminate or rebuild the environment, and **the database dies with it**.
+If you create an **RDS database inside a Beanstalk environment**, its lifecycle is tied to the environment.
 
+```text
+Terminate/rebuild EB environment
+        ↓
+RDS created inside environment
+        ↓
+Database can be deleted with environment
 ```
-DEV:   [ EB Environment ]           PROD:  [ EB Environment ]     [ RDS ]
-       |  EC2 + ASG + ALB |                |  EC2 + ASG + ALB | -->(env vars:
-       |  RDS  <-- dies    |               |                  |    conn string)
-       |       with env!   |               +------------------+   lives forever
-       +------------------+
+
+### Production rule
+
+Keep RDS **outside the Beanstalk environment** and provide the connection string through environment variables.
+
+```text
+Production
+[EB Environment]
+EC2 + ASG + ALB
+       │
+       └── environment variables
+                   ↓
+                [RDS]
+             independent
+              lifecycle
 ```
 
-**Production rule: RDS lives OUTSIDE the environment**, and the app gets the **connection string via environment variables**.
+### Migration path
 
-Migration path if you already made the mistake: take an **RDS snapshot → restore as a standalone RDS instance** → point the environment at it via env vars → enable deletion protection.
+If RDS is already inside the environment:
+
+```text
+RDS snapshot
+   ↓
+Restore as standalone RDS
+   ↓
+Point Beanstalk to standalone RDS
+   ↓
+Use environment variables
+   ↓
+Enable deletion protection
+```
+
+---
 
 ## When Beanstalk is the distractor
 
-EB is often a wrong answer planted next to the right one:
+| Question really wants                                            | Correct answer     |
+| ---------------------------------------------------------------- | ------------------ |
+| Fine-grained, repeatable **infrastructure as code**              | **CloudFormation** |
+| **Microservices at scale** / container orchestration             | **ECS / EKS**      |
+| **Event-driven**, sub-15-minute functions                        | **Lambda**         |
+| Fully managed web app/API with minimal infrastructure management | **App Runner**     |
 
-| Question really wants | Correct answer |
-|---|---|
-| Fine-grained, repeatable **infrastructure as code** | **CloudFormation** |
-| **Microservices at scale** / container orchestration | **ECS / EKS** |
-| **Event-driven**, sub-15-minute functions | **Lambda** |
+Beanstalk is for:
 
-EB is for: *one classic web app, developers who want speed, control retained.*
+> **Classic application deployment where developers want speed but still need control of the underlying resources.**
+
+---
 
 ## Question patterns
 
-> *"Developers want to deploy code quickly without managing infrastructure but must retain full control of the underlying resources"* → **Elastic Beanstalk** (that's its identity phrase verbatim)
-> *"Deploy new version as fast as possible; brief downtime is acceptable (dev environment)"* → **All at once** (speed + downtime-OK = the only reason to pick it)
-> *"Deploy with no downtime and no additional cost"* → **Rolling** (batches reuse existing instances, capacity dips but nothing new is billed)
-> *"Deploy with no downtime while maintaining full capacity"* → **Rolling with additional batch** (the extra batch covers the gap)
-> *"Deployment must be safest possible with quick rollback if health checks fail"* → **Immutable** (bad deploy? delete the new fleet, old one untouched)
-> *"Test the new version against a separate URL, then switch all traffic instantly with instant rollback"* → **Blue/Green with CNAME swap** (DNS swap both ways)
-> *"Beanstalk app's database was lost when the environment was terminated — prevent this in production"* → **Create RDS outside the environment; connect via environment variables** (decouple lifecycles)
-> *"Migrate a database out of an existing Beanstalk environment"* → **Snapshot the RDS instance → restore as standalone RDS** (then reconnect via env vars)
-> *"Long-running background jobs from a queue alongside a Beanstalk web app"* → **Worker environment** (the SQS-consuming tier)
-> *"Customize packages and configuration of Beanstalk instances at deploy time"* → **.ebextensions** (config files in the source bundle)
+> *"Developers want to deploy code quickly without managing infrastructure but must retain full control of the underlying resources"*
+> → **Elastic Beanstalk**
+
+> *"Deploy a web application or API without managing servers or infrastructure"*
+> → **App Runner**
+
+> *"Deploy new version as fast as possible; brief downtime is acceptable (dev environment)"*
+> → **All at once**
+
+> *"Deploy with no downtime and no additional cost"*
+> → **Rolling**
+
+> *"Deploy with no downtime while maintaining full capacity"*
+> → **Rolling with additional batch**
+
+> *"Deployment must be safest possible with quick rollback if health checks fail"*
+> → **Immutable**
+
+> *"Test the new version against a separate URL, then switch all traffic instantly with instant rollback"*
+> → **Blue/Green with CNAME swap**
+
+> *"Beanstalk app's database was lost when the environment was terminated — prevent this in production"*
+> → **Create RDS outside the environment; connect via environment variables**
+
+> *"Migrate a database out of an existing Beanstalk environment"*
+> → **Snapshot the RDS instance → restore as standalone RDS**
+
+> *"Long-running background jobs from a queue alongside a Beanstalk web app"*
+> → **Worker environment** (SQS-consuming tier)
+
+> *"Customize packages and configuration of Beanstalk instances at deploy time"*
+> → **`.ebextensions`**
+
+> *"Existing EC2 instances must be configured without SSH/RDP"*
+> → **Systems Manager Run Command**, not App Runner
+
+---
 
 ## Pocket card
 
-| Keyword | Answer |
-|---|---|
-| "Quickly deploy, no infra mgmt, KEEP control" | Elastic Beanstalk |
-| Fastest deploy, downtime OK | All at once |
-| No downtime, no extra cost | Rolling |
-| No downtime, full capacity | Rolling + additional batch |
-| Safest rollback (delete new fleet) | Immutable |
-| DNS CNAME swap, instant rollback | Blue/Green |
-| DB died with environment | Create RDS OUTSIDE env (env vars) |
-| Move DB out of env | Snapshot → standalone RDS |
-| SQS-driven background tier | Worker environment |
-| Instance/env customization files | .ebextensions |
-| Beanstalk pricing | Free — pay for resources only |
-| Fine-grained IaC instead | CloudFormation |
+| Keyword                                                | Answer                            |
+| ------------------------------------------------------ | --------------------------------- |
+| Quickly deploy, no infra management, **KEEP control**  | **Elastic Beanstalk**             |
+| Managed web app/API, minimal infrastructure management | **App Runner**                    |
+| Fastest deploy, downtime OK                            | **All at once**                   |
+| No downtime, no extra cost                             | **Rolling**                       |
+| No downtime, full capacity                             | **Rolling + additional batch**    |
+| Safest rollback (delete new fleet)                     | **Immutable**                     |
+| DNS CNAME swap, instant rollback                       | **Blue/Green**                    |
+| DB tied to environment                                 | **Create RDS OUTSIDE env**        |
+| Move DB out of env                                     | **Snapshot → standalone RDS**     |
+| SQS-driven background tier                             | **Worker environment**            |
+| Instance/env customization files                       | **`.ebextensions`**               |
+| Beanstalk pricing                                      | **Free — pay for resources only** |
+| Fine-grained IaC                                       | **CloudFormation**                |
+| Fully managed web app/API                              | **App Runner**                    |
+| Existing EC2 configuration without SSH/RDP             | **Systems Manager Run Command**   |
 
-Beanstalk fronts your app with a load balancer automatically — but when your "app" is an API consumed by other programs, you want a smarter front door: API Gateway, next section.
+Beanstalk fronts web applications with a load balancer automatically. When an application needs a dedicated API front door and API-management features, the next topic is **API Gateway**.
