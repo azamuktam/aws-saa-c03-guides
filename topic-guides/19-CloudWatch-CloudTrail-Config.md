@@ -659,6 +659,74 @@ Store the logs in S3 for long-term retention.
 
 ---
 
+# CloudTrail Logs + S3 Encryption
+
+CloudTrail log files delivered to an S3 bucket are **encrypted at rest by default with S3 server-side encryption (SSE-S3)**. You can optionally use **SSE-KMS** when you need control over the KMS key and its permissions.
+
+Separately, **Amazon S3 automatically encrypts all new object uploads with SSE-S3 (AES-256)** by default. This has been the default for new S3 objects since **January 5, 2023**.
+
+Important:
+
+```text
+New S3 object
+→ automatically encrypted
+→ SSE-S3
+→ AES-256
+```
+
+This does **not** mean old unencrypted objects are automatically changed just because the bucket's default encryption is enabled.
+
+### Exam trap
+
+Older practice questions may say:
+
+> "Configure the S3 bucket to use Server-Side Encryption."
+
+For current AWS behavior, remember:
+
+```text
+S3 new objects
+→ SSE-S3 by default
+
+CloudTrail → S3
+→ encrypted at rest by default
+
+Need customer-controlled encryption key
+→ SSE-KMS
+```
+
+### SSE-S3 vs SSE-KMS
+
+```text
+SSE-S3
+= AWS manages the S3 encryption keys
+= default S3 encryption
+
+SSE-KMS
+= AWS KMS manages the key
+= more control over key policies / permissions
+```
+
+### Encryption exam clue
+
+> "CloudTrail logs must be encrypted."
+
+→ **CloudTrail → S3 with server-side encryption**
+
+> "Need customer-controlled KMS key for CloudTrail logs."
+
+→ **CloudTrail + SSE-KMS**
+
+> "Does S3 automatically encrypt new objects?"
+
+→ **Yes, SSE-S3**
+
+> "Are existing unencrypted objects automatically changed?"
+
+→ **No**
+
+---
+
 # CloudTrail Management Events vs Data Events
 
 This is very important.
@@ -1096,7 +1164,44 @@ Detailed
 
 ---
 
-## 15. Unusual API activity
+## 15. CloudTrail log encryption
+
+> "CloudTrail logs stored in S3 must be encrypted."
+
+→ **CloudTrail → S3 with server-side encryption**
+
+Current AWS behavior:
+
+```text
+CloudTrail → S3
+→ encrypted at rest by default
+
+S3 new objects
+→ SSE-S3 by default
+```
+
+Need a customer-controlled KMS key:
+
+```text
+CloudTrail
+→ SSE-KMS
+```
+
+---
+
+## 16. S3 default encryption
+
+> "Are newly uploaded S3 objects encrypted by default?"
+
+→ **Yes, SSE-S3 (AES-256).**
+
+> "Will enabling default encryption encrypt old unencrypted objects?"
+
+→ **No.**
+
+---
+
+## 17. Unusual API activity
 
 > "Detect unusual spikes in API activity."
 
@@ -1104,7 +1209,7 @@ Detailed
 
 ---
 
-## 16. Prove logs were not modified
+## 18. Prove logs were not modified
 
 > "Provide evidence that CloudTrail logs have not been tampered with."
 
@@ -1112,7 +1217,7 @@ Detailed
 
 ---
 
-## 17. Historical configuration
+## 19. Historical configuration
 
 > "What did this security group look like last Tuesday?"
 
@@ -1120,7 +1225,7 @@ Detailed
 
 ---
 
-## 18. Compliance
+## 20. Compliance
 
 > "Identify security groups that allow SSH from the Internet."
 
@@ -1128,7 +1233,7 @@ Detailed
 
 ---
 
-## 19. Automatic compliance remediation
+## 21. Automatic compliance remediation
 
 > "Automatically fix resources that violate the security rule."
 
@@ -1148,7 +1253,7 @@ Fix
 
 ---
 
-## 20. Prevent the action
+## 22. Prevent the action
 
 > "Prevent developers from disabling CloudTrail."
 
@@ -1160,7 +1265,7 @@ Not:
 
 ---
 
-## 21. Distributed application latency
+## 23. Distributed application latency
 
 > "A request passes through API Gateway, Lambda, several microservices, and DynamoDB. Find which component is causing the delay."
 
@@ -1291,34 +1396,56 @@ Find which service/hop caused the latency
 
 ---
 
+## Trap 9 — S3 encryption
+
+```text
+New S3 object
+→ SSE-S3 automatically
+
+CloudTrail logs stored in S3
+→ encrypted by default
+
+Need customer-controlled key
+→ SSE-KMS
+
+Old unencrypted S3 objects
+→ not automatically changed
+```
+
+---
+
 # Pocket Card
 
-| Keyword                         | Answer                            |
-| ------------------------------- | --------------------------------- |
-| Performance / health / metrics  | **CloudWatch**                    |
-| Logs                            | **CloudWatch Logs**               |
-| Alarm on a metric               | **CloudWatch Alarm**              |
-| Count log messages → metric     | **Metric Filter**                 |
-| Query logs                      | **Logs Insights**                 |
-| Real-time log processing        | **Subscription Filter**           |
-| Reduce alert noise              | **Composite Alarm**               |
-| EC2 memory                      | **CloudWatch Agent**              |
-| EC2 swap                        | **CloudWatch Agent**              |
-| EC2 filesystem disk usage       | **CloudWatch Agent**              |
-| EC2 process metrics             | **CloudWatch Agent / procstat**   |
-| EC2 metrics every 1 minute      | **Detailed Monitoring**           |
-| RDS process-level CPU/memory    | **Enhanced Monitoring**           |
-| RDS query/database load         | **Performance Insights**          |
-| Who did what / API audit        | **CloudTrail**                    |
-| Long-term API logs              | **CloudTrail Trail → S3**         |
-| S3 object-level "who"           | **CloudTrail Data Events**        |
-| Unusual API activity            | **CloudTrail Insights**           |
-| Prove logs weren't modified     | **Log File Integrity Validation** |
-| Configuration history           | **AWS Config**                    |
-| Compliance checking             | **AWS Config Rules**              |
-| Automatically fix noncompliance | **Config + remediation**          |
-| Prevent an action               | **IAM / SCP**                     |
-| Trace request across services   | **X-Ray**                         |
+| Keyword                         | Answer                             |
+| ------------------------------- | ---------------------------------- |
+| Performance / health / metrics  | **CloudWatch**                     |
+| Logs                            | **CloudWatch Logs**                |
+| Alarm on a metric               | **CloudWatch Alarm**               |
+| Count log messages → metric     | **Metric Filter**                  |
+| Query logs                      | **Logs Insights**                  |
+| Real-time log processing        | **Subscription Filter**            |
+| Reduce alert noise              | **Composite Alarm**                |
+| EC2 memory                      | **CloudWatch Agent**               |
+| EC2 swap                        | **CloudWatch Agent**               |
+| EC2 filesystem disk usage       | **CloudWatch Agent**               |
+| EC2 process metrics             | **CloudWatch Agent / procstat**    |
+| EC2 metrics every 1 minute      | **Detailed Monitoring**            |
+| RDS process-level CPU/memory    | **Enhanced Monitoring**            |
+| RDS query/database load         | **Performance Insights**           |
+| Who did what / API audit        | **CloudTrail**                     |
+| Long-term API logs              | **CloudTrail Trail → S3**          |
+| S3 object-level "who"           | **CloudTrail Data Events**         |
+| Unusual API activity            | **CloudTrail Insights**            |
+| Prove logs weren't modified     | **Log File Integrity Validation**  |
+| CloudTrail logs encrypted       | **S3 SSE-S3 by default**           |
+| New S3 objects encrypted        | **SSE-S3 by default**              |
+| Customer-controlled S3 key      | **SSE-KMS**                        |
+| Existing old unencrypted data   | **Not automatically re-encrypted** |
+| Configuration history           | **AWS Config**                     |
+| Compliance checking             | **AWS Config Rules**               |
+| Automatically fix noncompliance | **Config + remediation**           |
+| Prevent an action               | **IAM / SCP**                      |
+| Trace request across services   | **X-Ray**                          |
 
 ---
 
@@ -1336,6 +1463,15 @@ CloudWatch Detailed Monitoring
 
 CloudTrail
 = WHO DID WHAT?
+
+CloudTrail + S3
+= API logs stored for long-term auditing
+
+S3
+= NEW OBJECTS ARE ENCRYPTED BY DEFAULT WITH SSE-S3
+
+SSE-KMS
+= USE KMS WHEN YOU NEED CUSTOMER-CONTROLLED KEY MANAGEMENT
 
 AWS Config
 = WHAT WAS IT CONFIGURED LIKE?
@@ -1371,6 +1507,12 @@ Application logs
 
 AWS API actions
 → CloudTrail
+
+CloudTrail logs → S3
+→ encrypted by default
+
+New S3 objects
+→ SSE-S3 by default
 
 Resource configuration history / compliance
 → AWS Config
