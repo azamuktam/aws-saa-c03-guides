@@ -7,6 +7,7 @@ AWS provides several storage options for applications running on EC2. The main c
 * **EBS** → persistent **block storage** attached to EC2
 * **EFS** → shared **file storage** that many Linux-based clients can use at the same time
 * **Instance Store** → very fast **local storage** physically attached to the EC2 host, but temporary
+
 ---
 
 # EBS — Elastic Block Store
@@ -470,7 +471,53 @@ Snapshots B and C only need to account for changed blocks rather than copying th
 
 ---
 
-## Cross-Region EBS backup
+## Using an EBS volume while a snapshot is in progress
+
+An EBS volume **can still be used while its snapshot is being created**.
+
+You can continue to:
+
+* read from the volume
+* write to the volume
+* use the EC2 instance normally
+* perform normal volume operations
+
+A snapshot does **not lock the EBS volume**.
+
+```text
+EC2
+ ↓
+EBS Volume
+ ├── Read ✅
+ ├── Write ✅
+ └── Snapshot in progress ✅
+```
+
+### Important exam trap
+
+> **"Can the EBS volume be used while the snapshot is in progress?"**
+
+→ **Yes**
+
+It is **not read-only** and does **not** have to wait for the snapshot to finish.
+
+### Simple mental model
+
+```text
+Snapshot
+= backup being created
+
+EBS volume
+= remains available
+```
+
+So:
+
+> **EBS snapshot in progress ≠ EBS volume locked**
+
+---
+
+# Cross-Region EBS backup
 
 To protect EBS data in another Region:
 
@@ -1070,6 +1117,8 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 | Multi-Attach limit                                | **up to 16 instances, same AZ**            |
 | root volume survives termination                  | **DeleteOnTermination = false**            |
 | new EBS data volume                               | **format + mount**                         |
+| EBS volume usable during snapshot                 | **Yes — read/write continues**             |
+| EBS snapshot does not lock volume                 | **Volume remains available**               |
 | move EBS to another AZ                            | **snapshot → restore**                     |
 | cross-Region EBS DR                               | **snapshot → copy to Region → restore**    |
 | cheaper rarely restored snapshots                 | **Snapshot Archive**                       |
@@ -1094,5 +1143,3 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 | instance store + terminate                        | **data lost**                              |
 | instance store + hibernate                        | **data lost**                              |
 | high IOPS + persistence required                  | **EBS, typically io2 for extreme IOPS**    |
-
----
