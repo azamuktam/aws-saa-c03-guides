@@ -45,7 +45,9 @@ A group cannot contain:
 
 * another group
 * a role
-Role can not be attached to group but only policy
+
+A role cannot be attached to a group; groups are used to attach policies to multiple IAM users.
+
 Groups are mainly used to manage permissions for multiple IAM users.
 
 ### IAM role
@@ -147,6 +149,56 @@ but not:
 ```text
 s3://company-bucket/bob/
 ```
+
+---
+
+## Resource tags and ABAC
+
+IAM policies can use **resource tags in conditions** to control access based on resource attributes.
+
+This is called **Attribute-Based Access Control (ABAC)**.
+
+Example:
+
+```text
+UAT EC2:
+Environment = UAT
+
+Production EC2:
+Environment = Production
+```
+
+An IAM policy can allow access only when:
+
+```text
+ec2:ResourceTag/Environment = UAT
+```
+
+Result:
+
+```text
+UAT employee
+    ↓
+IAM policy
+    ↓
+Environment = UAT
+    ↓
+Can manage UAT instances
+    ✕
+Cannot manage Production instances
+```
+
+### Exam clue
+
+> "Restrict employees to EC2 instances based on tags."
+
+→ **IAM policy Condition + `ec2:ResourceTag/...` → ABAC**
+
+This is preferable to separating instances into VPCs when the requirement is **who is authorized to manage which resources**.
+
+**Remember:**
+
+> **Tags identify resources; IAM Conditions use those tags to control access.**
 
 ---
 
@@ -1080,6 +1132,12 @@ They are completely different.
 > **"Each corporate employee should only access their own S3 folder."**
 > → Use **IAM policies restricting access to the user's S3 prefix**, often combined with federation.
 
+> **"Employees responsible for UAT must not be able to manage production EC2 instances."**
+> → **Tag the EC2 instances and use an IAM policy Condition with `ec2:ResourceTag/...` (ABAC).**
+
+> **"Restrict EC2 access based on Environment=UAT or Environment=Production."**
+> → **IAM Condition + resource tags → ABAC**.
+
 > **"A sensitive action should only work after MFA."**
 > → Condition key **`aws:MultiFactorAuthPresent`**.
 
@@ -1113,6 +1171,9 @@ They are completely different.
 | Per-user S3 folder                         | S3 prefix + IAM policy                |
 | Policy attached to S3 bucket               | Bucket policy                         |
 | Legacy S3 permissions                      | S3 ACL                                |
+| Resource access based on tags              | **ABAC / IAM Condition**              |
+| EC2 access by tag                          | **`ec2:ResourceTag/...`**             |
+| UAT vs Production isolation                | **Resource tags + IAM Condition**     |
 | Explicit Deny                              | Always wins                           |
 | MFA requirement                            | `aws:MultiFactorAuthPresent`          |
 | New AWS account                            | Secure root + MFA                     |
@@ -1154,6 +1215,8 @@ Resource policy
 Permissions boundary
 SCP
 Session policy
+IAM Conditions
+Resource tags / ABAC
 ```
 
 ### 4. Is there an explicit Deny?
@@ -1191,6 +1254,20 @@ IAM Policy
 S3 bucket/prefix
    ↓
 User's designated objects
+```
+
+For resource-based authorization, especially EC2:
+
+```text
+EC2 resource
+   ↓
+Tags
+   ↓
+IAM Condition
+   ↓
+ABAC
+   ↓
+Only matching resources can be managed
 ```
 
 **Do not create an IAM user for every employee just because the employees already exist in a corporate directory. Federation exists specifically to avoid that pattern.**
