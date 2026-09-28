@@ -154,6 +154,147 @@ Simple AD is **closed to new customers**. For new deployments, consider **Manage
 
 ---
 
+# Amazon WorkSpaces
+
+**Amazon WorkSpaces = virtual desktop in AWS.**
+
+Instead of purchasing and maintaining a physical computer for each employee, the company can provide each employee with a **cloud-hosted desktop**.
+
+```text
+Employee
+   │
+   │ WorkSpaces client
+   ▼
+Amazon WorkSpaces
+┌──────────────────────┐
+│ Windows desktop      │
+│ Applications         │
+│ User profile         │
+│ Corporate resources  │
+└──────────────────────┘
+```
+
+The employee interacts with it like a normal desktop computer, but the desktop runs in an AWS VPC.
+
+### Best for
+
+* Virtual desktops for employees
+* Remote workers
+* Avoiding physical workstation purchases
+* Centrally managed desktops
+* Employees needing access to corporate applications/resources
+* Integrating desktops with existing Active Directory
+
+> **WorkSpaces = Desktop as a Service (DaaS) / virtual desktop infrastructure (VDI)**
+
+---
+
+# WorkSpaces + Active Directory
+
+WorkSpaces uses **AWS Directory Service** to authenticate users.
+
+For example, a company already has an on-premises Microsoft AD:
+
+```text
+On-premises
+┌──────────────────┐
+│ Active Directory │
+└────────┬─────────┘
+         │
+       VPN
+         │
+         ▼
+AWS VPC
+┌──────────────────┐
+│ AD Connector     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Amazon WorkSpaces│
+│ Virtual desktops │
+└──────────────────┘
+```
+
+With **AD Connector**, the users can remain in the existing on-premises AD while WorkSpaces uses that directory for authentication.
+
+### Typical exam combination
+
+> **Existing on-premises AD + virtual desktops in AWS + connectivity to on-premises**
+
+→ **AD Connector + VPN + Amazon WorkSpaces**
+
+The VPN provides network connectivity.
+
+AD Connector provides access to the existing directory.
+
+WorkSpaces provides the virtual desktops.
+
+---
+
+# WorkSpaces vs AppStream 2.0
+
+These services are easy to confuse.
+
+| Service                  | Main purpose                   |
+| ------------------------ | ------------------------------ |
+| **Amazon WorkSpaces**    | Complete virtual desktop       |
+| **Amazon AppStream 2.0** | Stream individual applications |
+
+Think:
+
+```text
+WorkSpaces
+→ "Give the employee a complete computer"
+
+AppStream 2.0
+→ "Give the employee access to an application"
+```
+
+### Exam clues
+
+> **"Virtual desktop for employees"**
+> → **Amazon WorkSpaces**
+
+> **"Cloud-based desktop without buying physical PCs"**
+> → **Amazon WorkSpaces**
+
+> **"Stream an application to users"**
+> → **AppStream 2.0**
+
+> **"Existing on-premises AD + WorkSpaces"**
+> → **AD Connector** or another supported AWS Directory Service option, depending on the requirement
+
+---
+
+# Important distinction
+
+**WorkSpaces is not a directory service.**
+
+```text
+Directory Service
+→ Who is the user?
+→ How do we authenticate them?
+
+WorkSpaces
+→ What desktop does the user receive?
+```
+
+For the startup question:
+
+```text
+AWS Directory Service
+→ Existing Active Directory integration
+
+VPN
+→ AWS ↔ on-premises connectivity
+
+Amazon WorkSpaces
+→ Virtual desktops
+```
+
+---
+
 # The three options compared
 
 |                               | **Managed Microsoft AD** | **AD Connector**             | **Simple AD**         |
@@ -331,20 +472,30 @@ AWS resources
 > **"Existing AD + AWS Console + role-based access."**
 > → **AD Connector + IAM Roles**
 
+> **"Virtual desktops for employees."**
+> → **Amazon WorkSpaces**
+
+> **"Stream individual applications."**
+> → **Amazon AppStream 2.0**
+
+> **"Existing on-premises AD + virtual desktops + AWS connectivity."**
+> → **AD Connector + VPN + Amazon WorkSpaces**
+
 ---
 
 # Pocket card
 
-| Requirement                  | Answer                                                |
-| ---------------------------- | ----------------------------------------------------- |
-| Full Microsoft AD in AWS     | **Managed Microsoft AD**                              |
-| Existing on-prem AD          | **AD Connector**                                      |
-| Keep identities on-premises  | **AD Connector**                                      |
-| Trust relationship           | **Managed Microsoft AD**                              |
-| Full AD features             | **Managed Microsoft AD**                              |
-| MFA                          | **Managed Microsoft AD** or **AD Connector + RADIUS** |
-| Basic/legacy directory       | **Simple AD**                                         |
-| Simple AD trust              | **Not supported**                                     |
-| AWS Console via corporate AD | **AD Connector + IAM Roles**                          |
-
-
+| Requirement                    | Answer                                                |
+| ------------------------------ | ----------------------------------------------------- |
+| Full Microsoft AD in AWS       | **Managed Microsoft AD**                              |
+| Existing on-prem AD            | **AD Connector**                                      |
+| Keep identities on-premises    | **AD Connector**                                      |
+| Trust relationship             | **Managed Microsoft AD**                              |
+| Full AD features               | **Managed Microsoft AD**                              |
+| MFA                            | **Managed Microsoft AD** or **AD Connector + RADIUS** |
+| Basic/legacy directory         | **Simple AD**                                         |
+| Simple AD trust                | **Not supported**                                     |
+| AWS Console via corporate AD   | **AD Connector + IAM Roles**                          |
+| Virtual desktop                | **Amazon WorkSpaces**                                 |
+| Stream individual apps         | **Amazon AppStream 2.0**                              |
+| Existing AD + virtual desktops | **AD Connector + VPN + WorkSpaces**                   |
