@@ -101,7 +101,7 @@ It can automatically apply policies to **new accounts and new resources**.
 | Service          | One-liner                                                                                                                                              |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **GuardDuty**    | **ML threat detection** using **CloudTrail, VPC Flow Logs, DNS logs**; no agents. Detects **cryptomining, unusual API calls, compromised credentials** |
-| **Macie**        | **PII / sensitive-data discovery in S3**; uses ML to identify data such as credit cards and SSNs                                                       |
+| **Macie**        | **PII / sensitive-data discovery in S3**; uses ML to identify data such as credit cards and SSNs .                                                      |
 | **Inspector**    | **Vulnerability scanner** for **CVEs** on **EC2 (via SSM agent), ECR container images, Lambda**                                                        |
 | **Security Hub** | **Aggregation dashboard** for findings from security services + compliance standards such as **CIS and PCI**                                           |
 | **Detective**    | **Post-finding investigation**; builds relationship graphs to help identify **root cause**                                                             |
@@ -130,6 +130,8 @@ GuardDuty / Macie / Inspector
 * **CVE** → Inspector
 
 **Trap:** *"Macie for EC2 or RDS"* → no. **Macie is S3-only.**
+ Identify sensitive data using **Amazon Macie** and create an Amazon EventBridge (Amazon CloudWatch Events) rule to capture the **SensitiveData** event type.
+ Set up an Amazon SNS topic as the target for an Amazon EventBridge (Amazon CloudWatch Events) rule that sends notifications when the error occurs again.
 
 ## Question patterns
 
