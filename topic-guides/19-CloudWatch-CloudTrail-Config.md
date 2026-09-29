@@ -2,30 +2,20 @@
 
 ## The idea
 
-These services all monitor AWS, but they answer **different questions**.
+These services monitor AWS but answer different questions:
 
-| Service        | Main question                                                   |
-| -------------- | --------------------------------------------------------------- |
-| **CloudWatch** | **How is it performing?**                                       |
-| **CloudTrail** | **Who did what?**                                               |
+| Service | Main question |
+|---|---|
+| **CloudWatch** | **How is it performing?** |
+| **CloudTrail** | **Who did what?** |
 | **AWS Config** | **What was the resource configured like, and is it compliant?** |
-| **X-Ray**      | **Which part of the application request is slow?**              |
-
-The easiest way to recognize them:
+| **X-Ray** | **Which part of the application request is slow?** |
 
 ```text
-Performance / metrics / logs / alarms
-→ CloudWatch
-
-Who created / deleted / changed something?
-→ CloudTrail
-
-What did the configuration look like?
-Is the resource compliant?
-→ AWS Config
-
-Which service in a request chain is slow?
-→ X-Ray
+Performance / metrics / logs / alarms → CloudWatch
+Who created / deleted / changed something? → CloudTrail
+What did the configuration look like? Is it compliant? → AWS Config
+Which service/hop in a request chain is slow? → X-Ray
 ```
 
 ---
@@ -34,24 +24,11 @@ Which service in a request chain is slow?
 
 **Amazon CloudWatch = monitoring for metrics, logs, alarms, and dashboards.**
 
-It helps you monitor:
-
-* CPU usage
-* network traffic
-* application logs
-* error counts
-* latency
-* alarms
-* dashboards
-* application/system metrics
-
----
+Monitors include CPU, network traffic, application logs, error counts, latency, alarms, dashboards, and application/system metrics.
 
 ## CloudWatch Metrics
 
 Metrics are **numbers measured over time**.
-
-Examples:
 
 ```text
 CPU = 75%
@@ -59,26 +36,17 @@ Request count = 10,000
 Latency = 250 ms
 ```
 
----
-
 ## Important EC2 metric trap
 
-EC2 provides many standard metrics, such as:
+Standard EC2 metrics include CPU utilization, network traffic, status checks, and some EBS-related metrics.
 
-* CPU utilization
-* network traffic
-* status checks
-* some EBS-related metrics
+Normal EC2 metrics do **not** include OS-level:
 
-But **OS-level metrics** such as:
+- memory usage
+- swap usage
+- filesystem disk usage
 
-* memory usage
-* swap usage
-* filesystem disk usage
-
-are not part of the normal EC2 metric set.
-
-To collect these, install the **CloudWatch Agent**. The agent can collect memory, disk, process, network, and swap metrics.
+Use the **CloudWatch Agent** for memory, disk, process, network, and swap metrics.
 
 ### Exam pattern
 
@@ -90,17 +58,11 @@ To collect these, install the **CloudWatch Agent**. The agent can collect memory
 
 # EC2 Swap Space Monitoring
 
-This is an important CloudWatch exam trap.
+For swap monitoring:
 
-Suppose:
+→ **CloudWatch Agent**
 
-> "Several EC2 instances are failing because they have insufficient swap space. Monitor the available/used swap space."
-
-The correct approach is:
-
-→ **Install the CloudWatch Agent and monitor swap metrics.**
-
-The CloudWatch Agent can collect:
+The agent can collect:
 
 ```text
 swap_free
@@ -108,16 +70,15 @@ swap_used
 swap_used_percent
 ```
 
-`swap_used_percent` represents the percentage of swap space currently being used.
+`swap_used_percent` = percentage of swap currently used.
 
-Some exam/question banks may refer to this concept as **`SwapUtilization`**, but the current AWS CloudWatch Agent metric name is **`swap_used_percent`**.
+Some question banks may call this **`SwapUtilization`**, but the current AWS CloudWatch Agent metric name is **`swap_used_percent`**.
 
-### Example
+Example:
 
 ```text
 Swap space = 4 GB
 Swap used  = 3 GB
-
 swap_used_percent = 75%
 ```
 
@@ -131,11 +92,7 @@ swap_used_percent = 75%
 
 ## Why EC2 Detailed Monitoring is NOT enough
 
-This is a common trap.
-
-**EC2 Detailed Monitoring does not mean more OS-level metrics.**
-
-It mainly changes the frequency of standard EC2 metrics:
+**EC2 Detailed Monitoring does not mean more OS-level metrics.** It mainly changes the frequency of standard EC2 metrics:
 
 ```text
 Basic monitoring
@@ -147,120 +104,90 @@ Detailed monitoring
 → 1-minute periods
 ```
 
-AWS documents EC2 detailed monitoring as providing metrics at one-minute intervals rather than the five-minute intervals of basic monitoring.
+AWS documents detailed monitoring as one-minute intervals instead of five-minute basic-monitoring intervals.
 
-It does **not** suddenly give you:
+It does **not** add memory, swap, filesystem, or process-level metrics.
 
-* memory usage
-* swap usage
-* filesystem usage
-* process-level metrics
-
-For those, use the **CloudWatch Agent**.
-
-### Remember
+For those → **CloudWatch Agent**.
 
 ```text
-Detailed Monitoring
-= MORE FREQUENT EC2 METRICS
-
-CloudWatch Agent
-= MORE OS-LEVEL METRICS
+Detailed Monitoring = MORE FREQUENT EC2 METRICS
+CloudWatch Agent   = MORE OS-LEVEL METRICS
 ```
 
 ---
 
 ## EC2 Monitoring — the important distinction
 
-| Requirement                      | Solution                        |
-| -------------------------------- | ------------------------------- |
-| Standard EC2 CPU/network metrics | **CloudWatch**                  |
-| Standard metrics every 1 minute  | **EC2 Detailed Monitoring**     |
-| EC2 memory usage                 | **CloudWatch Agent**            |
-| EC2 swap usage                   | **CloudWatch Agent**            |
-| EC2 filesystem disk usage        | **CloudWatch Agent**            |
-| EC2 process-level metrics        | **CloudWatch Agent / procstat** |
-| Alarm on any collected metric    | **CloudWatch Alarm**            |
-
-### Memory trick
+| Requirement | Solution |
+|---|---|
+| Standard EC2 CPU/network metrics | **CloudWatch** |
+| Standard metrics every 1 minute | **EC2 Detailed Monitoring** |
+| EC2 memory usage | **CloudWatch Agent** |
+| EC2 swap usage | **CloudWatch Agent** |
+| EC2 filesystem disk usage | **CloudWatch Agent** |
+| EC2 process-level metrics | **CloudWatch Agent / procstat** |
+| Alarm on any collected metric | **CloudWatch Alarm** |
 
 ```text
-Detailed Monitoring
-= frequency
-
-CloudWatch Agent
-= visibility inside the OS
+Detailed Monitoring = frequency
+CloudWatch Agent    = visibility inside the OS
 ```
-
----
 
 ## Auto Scaling + CloudWatch Agent
 
-If the question says:
+If instances are launched dynamically by an Auto Scaling Group and you need memory/swap/disk on every instance, you still need the **CloudWatch Agent**.
 
-> "Instances are launched dynamically by an Auto Scaling Group. Monitor memory/swap/disk on every instance."
-
-You still need the **CloudWatch Agent**.
-
-For an Auto Scaling fleet, a common architecture is:
+Common architecture:
 
 ```text
 Launch Template / AMI / User Data / Systems Manager
                     ↓
              CloudWatch Agent
                     ↓
-              EC2 instances
+               EC2 instances
                     ↓
              CloudWatch metrics
                     ↓
-                 Alarms
+                  Alarms
 ```
 
-The important exam point is:
-
-> **Auto Scaling does not automatically install the CloudWatch Agent.**
-
-You must configure the instances to have the agent.
+**Exam point:** Auto Scaling does **not** automatically install the CloudWatch Agent. Configure instances to have the agent.
 
 ---
 
 # CloudWatch Enhanced Monitoring vs normal CloudWatch
 
-For **RDS**, there is an important distinction.
+For **RDS**, distinguish normal CloudWatch monitoring from Enhanced Monitoring.
 
 ## Normal CloudWatch RDS monitoring
 
-CloudWatch can show overall database-instance metrics.
-
-Example:
+CloudWatch provides overall database-instance metrics, e.g.:
 
 ```text
 RDS CPUUtilization = 75%
 ```
 
-This tells you about the **RDS instance as a whole**.
-
----
+This is about the **RDS instance as a whole**.
 
 ## RDS Enhanced Monitoring
 
 **Enhanced Monitoring = OS-level monitoring of the RDS instance.**
 
-It provides more detailed information such as:
+Includes:
 
-* CPU usage
-* memory usage
-* processes
-* process-level CPU usage
-* process-level memory usage
-* load
-* filesystem information
+- CPU usage
+- memory usage
+- processes
+- process-level CPU
+- process-level memory
+- load
+- filesystem information
 
 Example:
 
 ```text
 RDS instance
-│
 ├── Process A → CPU 20%, memory 300 MB
 ├── Process B → CPU 35%, memory 500 MB
 └── Process C → CPU 10%, memory 100 MB
@@ -271,8 +198,6 @@ RDS instance
 > "Monitor the CPU and memory used by individual processes on an RDS instance."
 
 → **RDS Enhanced Monitoring**
-
-### Easy distinction
 
 ```text
 Overall RDS CPU
@@ -288,29 +213,19 @@ RDS OS-level CPU / memory / processes
 
 Do not confuse **Enhanced Monitoring** with **Performance Insights**.
 
-### Performance Insights
-
-Performance Insights is focused on **database performance and query/load analysis**.
-
-Think:
+**Performance Insights** focuses on **database performance and query/load analysis**:
 
 ```text
-Which SQL queries
-are consuming database resources?
+Which SQL queries are consuming database resources?
 ```
 
-### Enhanced Monitoring
-
-Enhanced Monitoring is focused on the **underlying OS**.
-
-Think:
+**Enhanced Monitoring** focuses on the **underlying OS**:
 
 ```text
-How much CPU / memory
-are the database processes using?
+How much CPU / memory are the database processes using?
 ```
 
-### Exam pattern
+### Exam patterns
 
 > "Identify which SQL queries are causing high database load."
 
@@ -320,23 +235,16 @@ are the database processes using?
 
 → **Enhanced Monitoring**
 
-### Memory trick
-
 ```text
-Enhanced Monitoring
-= OS-level RDS monitoring
-
-Performance Insights
-= database workload / query performance
+Enhanced Monitoring = OS-level RDS monitoring
+Performance Insights = database workload / query performance
 ```
 
 ---
 
 # CloudWatch Alarms
 
-A CloudWatch Alarm watches a metric and takes action when a condition is met.
-
-Example:
+A **CloudWatch Alarm** watches a metric and acts when a condition is met.
 
 ```text
 CPU > 80%
@@ -346,19 +254,15 @@ CloudWatch Alarm
 SNS notification
 ```
 
-An alarm can also trigger things such as:
+Can also trigger:
 
-* Auto Scaling
-* EC2 actions
-* SNS notifications
-
----
+- Auto Scaling
+- EC2 actions
+- SNS notifications
 
 ## Composite alarms
 
 A **Composite Alarm** combines multiple alarms.
-
-Example:
 
 ```text
 CPU > 80%
@@ -368,7 +272,7 @@ Error rate > 5%
 Composite Alarm
 ```
 
-Use it when you want to reduce unnecessary alerts.
+Use it to reduce unnecessary alerts.
 
 ### Exam pattern
 
@@ -382,26 +286,19 @@ Use it when you want to reduce unnecessary alerts.
 
 CloudWatch Logs stores application and system logs.
 
-The structure is:
-
 ```text
 Log Group
-   ├── Log Stream
-   ├── Log Stream
-   └── Log Stream
+├── Log Stream
+├── Log Stream
+└── Log Stream
 ```
 
-A **log group** usually represents an application or service.
-
-A **log stream** contains logs from one source, such as an instance or container.
-
----
+- **Log group**: usually an application or service.
+- **Log stream**: logs from one source, such as an instance or container.
 
 ## Metric Filters
 
 A **metric filter** searches logs for a pattern and turns the result into a metric.
-
-Example:
 
 ```text
 Application log:
@@ -409,11 +306,8 @@ ERROR
 ERROR
 INFO
 ERROR
-```
 
 Metric filter:
-
-```text
 Count ERROR
     ↓
 CloudWatch metric
@@ -431,24 +325,17 @@ Alarm if > 100
 
 # CloudWatch Logs Insights
 
-**Logs Insights = query and analyze logs interactively.**
+**Logs Insights = interactive query and analysis of CloudWatch Logs.**
 
-Use it when you want to search and analyze large amounts of CloudWatch Logs.
-
-Example:
+Use it to search/analyze large amounts of logs.
 
 > "Find all requests that took more than 2 seconds."
 
 → **CloudWatch Logs Insights**
 
-### Remember
-
 ```text
-Metric Filter
-= turn log patterns into metrics
-
-Logs Insights
-= query / analyze logs
+Metric Filter = turn log patterns into metrics
+Logs Insights = query / analyze logs
 ```
 
 ---
@@ -457,13 +344,11 @@ Logs Insights
 
 A **subscription filter** sends log events somewhere else in **near real time**.
 
-Common destinations include:
+Common destinations:
 
-* Kinesis Data Streams
-* Kinesis Data Firehose
-* Lambda
-
-Example:
+- Kinesis Data Streams
+- Kinesis Data Firehose
+- Lambda
 
 ```text
 CloudWatch Logs
@@ -483,7 +368,7 @@ Lambda / Kinesis
 
 # CloudWatch Logs → S3 / Firehose
 
-Another common pattern is:
+Common pattern:
 
 ```text
 CloudWatch Logs
@@ -495,12 +380,12 @@ Kinesis Data Firehose
 S3
 ```
 
-Think of this when the requirement is to:
+Think of this for:
 
-* continuously export logs
-* centralize logs
-* archive logs
-* process logs before storing them
+- continuously exporting logs
+- centralizing logs
+- archiving logs
+- processing logs before storage
 
 ---
 
@@ -508,104 +393,74 @@ Think of this when the requirement is to:
 
 **Application Load Balancer Access Logs = detailed records of HTTP/HTTPS requests processed by the ALB.**
 
-This is different from CloudWatch metrics because access logs contain information about **individual requests**, rather than only aggregated numbers.
+Different from CloudWatch metrics: access logs contain **individual request records**, not only aggregated numbers.
 
-Access logs can contain information such as:
+Can contain:
 
-* client IP address
-* request path
-* request method
-* HTTP status codes
-* bytes sent/received
-* request processing time
-* target processing time
-* response processing time
-* user agent and other request metadata
+- client IP
+- request path
+- request method
+- HTTP status codes
+- bytes sent/received
+- request processing time
+- target processing time
+- response processing time
+- user agent and other request metadata
 
-ALB access logs are published to **Amazon S3 periodically, typically every 5 minutes**.
+Published to **Amazon S3 periodically, typically every 5 minutes**.
 
 ### Exam pattern
 
-> "Capture detailed information about every HTTP request through an Application Load Balancer, including the client IP address and latency."
+> "Capture detailed information about every HTTP request through an ALB, including the client IP address and latency."
 
 → **ALB Access Logs**
 
----
-
 ## ALB Access Logs vs CloudWatch Metrics
 
-This distinction is very important.
-
 ```text
-CloudWatch Metrics
-= aggregated numbers
-
+CloudWatch Metrics = aggregated numbers
 RequestCount
 TargetResponseTime
 HTTPCode_ELB_5XX_Count
 ```
 
-versus:
+vs.
 
 ```text
-ALB Access Logs
-= individual request records
-
+ALB Access Logs = individual request records
 Client IP
 Request path
 Status code
-Request/target/response latency
+Request / target / response latency
 ```
 
-### Example
-
-If the requirement is:
+Examples:
 
 > "How many requests reached the ALB?"
 
 → **CloudWatch metric: RequestCount**
 
-If the requirement is:
-
 > "Show me the client IP and details of each request."
 
 → **ALB Access Logs**
 
----
-
 ## ALB Access Logs vs CloudTrail
-
-Do not confuse **HTTP traffic** with **AWS API activity**.
 
 ```text
 CloudTrail
 = control-plane / API activity
-
 "Who modified the ALB?"
-→ CloudTrail
-```
 
-while:
-
-```text
 ALB Access Logs
 = data-plane HTTP traffic
-
 "What HTTP request passed through the ALB?"
-→ ALB Access Logs
 ```
 
 ### Exam pattern
 
 > "The company wants detailed information about all HTTP requests that passed through the public-facing ALB."
 
-→ **ALB Access Logs**
-
-Not:
-
-→ CloudTrail
-
----
+→ **ALB Access Logs**, not CloudTrail.
 
 ## ALB Access Logs vs X-Ray
 
@@ -617,42 +472,29 @@ X-Ray
 = distributed tracing across application components
 ```
 
-Access logs are appropriate when you need request-level information such as:
+Use access logs for client IP, path, HTTP status, and latency fields.
 
-```text
-client IP
-request path
-HTTP status
-latency fields
-```
-
-X-Ray is appropriate when the goal is:
+Use X-Ray when the goal is:
 
 ```text
 Which application component in the request chain caused the delay?
 ```
 
----
-
 ## ALB Access Logs vs CloudWatch Logs
-
-These are also different.
 
 ```text
 ALB Access Logs
 → records created by the load balancer
 → commonly stored in S3
 → request-level ALB traffic information
-```
 
-```text
 CloudWatch Logs
 → application/system/container logs
 → stored in CloudWatch Logs
 → queried with Logs Insights
 ```
 
-### Exam clue
+### Exam clues
 
 > "Capture detailed information about requests handled by the ALB."
 
@@ -666,26 +508,20 @@ CloudWatch Logs
 
 # CloudWatch Application Insights
 
-**CloudWatch Application Insights helps automatically discover and monitor application components and supporting AWS resources, and helps with troubleshooting application problems.**
+**CloudWatch Application Insights** helps automatically discover and monitor application components and supporting AWS resources and helps troubleshoot application problems.
 
-It is useful when the requirement goes beyond raw infrastructure metrics and the customer wants help understanding the health of an application and its underlying resources.
+Useful for:
 
-It can help with:
+- application/resource monitoring
+- relevant metrics
+- logs
+- dashboards
+- detecting problems
+- troubleshooting application issues
 
-* application/resource monitoring
-* relevant metrics
-* logs
-* dashboards
-* detecting problems
-* troubleshooting application issues
+For containerized applications, it can be used for application monitoring and troubleshooting.
 
-For containerized applications, it can be used as part of application monitoring and troubleshooting.
-
-### Important distinction
-
-Application Insights does **not replace ALB access logs**.
-
-Think:
+**Application Insights does not replace ALB access logs.**
 
 ```text
 ALB Access Logs
@@ -695,7 +531,7 @@ Application Insights
 = "What is happening with the application and its supporting resources?"
 ```
 
-A question can therefore require both.
+A question can require both.
 
 ### Example architecture
 
@@ -703,17 +539,11 @@ A question can therefore require both.
 Client
    ↓
 ALB
-   │
-   ├── ALB Access Logs
-   │       ↓
-   │      S3
-   │
+   ├── ALB Access Logs → S3
    ↓
 Application / ECS workload
-   │
    ↓
 CloudWatch Application Insights
-   │
    ├── Monitoring
    ├── Logs
    ├── Metrics
@@ -732,22 +562,15 @@ CloudWatch Application Insights
 
 CloudWatch dashboards display metrics and monitoring information in one place.
 
-They can show resources and metrics from different Regions.
-
-Example:
+They can show resources and metrics from **different Regions**.
 
 ```text
-US
-CPU / Errors / Latency
-+
-Europe
-CPU / Errors / Latency
-+
-Asia
-CPU / Errors / Latency
+US      → CPU / Errors / Latency
+Europe  → CPU / Errors / Latency
+Asia    → CPU / Errors / Latency
+                ↓
+       One CloudWatch dashboard
 ```
-
-→ One CloudWatch dashboard
 
 ---
 
@@ -759,11 +582,7 @@ CPU / Errors / Latency
 
 → **CloudWatch Agent**
 
-Not:
-
-→ EC2 Detailed Monitoring
-
----
+Not → EC2 Detailed Monitoring.
 
 ### EC2 Swap
 
@@ -771,9 +590,7 @@ Not:
 
 → **CloudWatch Agent**
 
-Current AWS Agent metrics include `swap_used_percent`, `swap_used`, and `swap_free`.
-
----
+Current AWS Agent metrics: `swap_used_percent`, `swap_used`, `swap_free`.
 
 ### EC2 Disk Space
 
@@ -793,9 +610,7 @@ with:
 filesystem space inside the operating system
 ```
 
-The CloudWatch Agent can collect filesystem metrics such as `disk_used_percent`.
-
----
+CloudWatch Agent can collect filesystem metrics such as `disk_used_percent`.
 
 ### EC2 Detailed Monitoring
 
@@ -803,9 +618,7 @@ The CloudWatch Agent can collect filesystem metrics such as `disk_used_percent`.
 
 → **Detailed Monitoring**
 
-It changes the **frequency**, not the type of OS metrics collected.
-
----
+Changes **frequency**, not OS metric type.
 
 ### Process-level EC2 metrics
 
@@ -813,29 +626,15 @@ It changes the **frequency**, not the type of OS metrics collected.
 
 → **CloudWatch Agent / procstat**
 
-The CloudWatch Agent can collect process-specific CPU and memory metrics.
-
----
-
 ### ALB request details
 
 > "Capture every HTTP request, including client IP and latency."
 
 → **ALB Access Logs**
 
-Not:
-
-→ CloudWatch `GetMetricData`
-
-Not:
-
-→ CloudTrail
-
-Not necessarily:
-
-→ X-Ray
-
----
+Not → CloudWatch `GetMetricData`  
+Not → CloudTrail  
+Not necessarily → X-Ray
 
 ### ALB health
 
@@ -843,14 +642,11 @@ Not necessarily:
 
 → **ELB health checks / CloudWatch health-related metrics**
 
-Do not confuse health monitoring with access logs.
+Do not confuse:
 
 ```text
-Health checks
-= "Is the target healthy?"
-
-Access logs
-= "What requests went through the ALB?"
+Health checks = "Is the target healthy?"
+Access logs  = "What requests went through the ALB?"
 ```
 
 ---
@@ -859,13 +655,13 @@ Access logs
 
 **AWS CloudTrail = audit log of AWS API activity.**
 
-It records API actions such as:
+Records:
 
-* who made the request
-* what action they performed
-* when it happened
-* where the request came from
-* what resource was affected
+- who made the request
+- what action they performed
+- when it happened
+- where the request came from
+- what resource was affected
 
 Example:
 
@@ -887,17 +683,17 @@ CloudTrail
 
 # CloudTrail Event History
 
-CloudTrail provides **90 days of management event history** without requiring you to create a trail.
+CloudTrail provides **90 days of management event history** without requiring a trail.
 
 For longer-term retention:
 
 ```text
 CloudTrail Trail
       ↓
-S3
+     S3
 ```
 
-Store the logs in S3 for long-term retention.
+Store logs in S3 for long-term retention.
 
 ### Exam pattern
 
@@ -909,11 +705,9 @@ Store the logs in S3 for long-term retention.
 
 # CloudTrail Logs + S3 Encryption
 
-CloudTrail log files delivered to an S3 bucket are **encrypted at rest by default with S3 server-side encryption (SSE-S3)**. You can optionally use **SSE-KMS** when you need control over the KMS key and its permissions.
+CloudTrail log files delivered to S3 are **encrypted at rest by default with S3 server-side encryption (SSE-S3)**. You can optionally use **SSE-KMS** when you need control over the KMS key and its permissions.
 
 Separately, **Amazon S3 automatically encrypts all new object uploads with SSE-S3 (AES-256) by default**. This has been the default for new S3 objects since **January 5, 2023**.
-
-Important:
 
 ```text
 New S3 object
@@ -922,7 +716,7 @@ New S3 object
 → AES-256
 ```
 
-This does **not** mean old unencrypted objects are automatically changed just because the bucket's default encryption is enabled.
+Enabling bucket default encryption does **not** automatically re-encrypt old unencrypted objects.
 
 ### Exam trap
 
@@ -930,7 +724,7 @@ Older practice questions may say:
 
 > "Configure the S3 bucket to use Server-Side Encryption."
 
-For current AWS behavior, remember:
+Current behavior:
 
 ```text
 S3 new objects
@@ -955,7 +749,7 @@ SSE-KMS
 = more control over key policies / permissions
 ```
 
-### Encryption exam clue
+### Encryption exam clues
 
 > "CloudTrail logs must be encrypted."
 
@@ -977,30 +771,22 @@ SSE-KMS
 
 # CloudTrail Management Events vs Data Events
 
-This is very important.
-
 ## Management events
 
-These are **control-plane operations**.
+**Control-plane operations**, e.g.:
 
-Examples:
-
-* create EC2 instance
-* terminate EC2 instance
-* create S3 bucket
-* change IAM policy
-
----
+- create EC2 instance
+- terminate EC2 instance
+- create S3 bucket
+- change IAM policy
 
 ## Data events
 
-These are **resource-level operations**.
+**Resource-level operations**, e.g.:
 
-Examples:
-
-* reading an S3 object
-* deleting an S3 object
-* invoking a Lambda function
+- reading an S3 object
+- deleting an S3 object
+- invoking a Lambda function
 
 Data events generally must be **enabled explicitly** and can incur additional charges.
 
@@ -1016,14 +802,14 @@ Normal management events are not enough.
 
 # CloudTrail Log File Integrity Validation
 
-This helps prove that CloudTrail log files have **not been modified after delivery**.
+Helps prove CloudTrail log files were **not modified after delivery**.
 
 Useful for:
 
-* security investigations
-* compliance
-* forensics
-* proving log integrity
+- security investigations
+- compliance
+- forensics
+- proving log integrity
 
 ### Exam pattern
 
@@ -1039,25 +825,20 @@ Useful for:
 
 Example:
 
-Normally:
-
 ```text
+Normally:
 TerminateInstances = 2 per day
-```
 
 Suddenly:
-
-```text
 TerminateInstances = 500 in 10 minutes
 ```
 
-CloudTrail Insights can identify this unusual behavior.
+CloudTrail Insights can identify the unusual behavior.
 
-### Remember
-
-> **CloudTrail = API audit**
-
-> **CloudTrail Insights = unusual API activity**
+```text
+CloudTrail = API audit
+CloudTrail Insights = unusual API activity
+```
 
 ---
 
@@ -1065,11 +846,9 @@ CloudTrail Insights can identify this unusual behavior.
 
 **AWS Config = resource configuration history + compliance checking.**
 
-It answers questions such as:
+Answers:
 
 > "What did this security group look like last Tuesday?"
-
-or:
 
 > "Does this security group comply with our security rules?"
 
@@ -1092,7 +871,7 @@ Wednesday
 SG changed again
 ```
 
-You can investigate the configuration history.
+You can investigate configuration history.
 
 ### Exam pattern
 
@@ -1111,9 +890,7 @@ Example:
 ```text
 Rule:
 SSH must not be open to the Internet
-
         ↓
-
 Security Group
 0.0.0.0/0:22
         ↓
@@ -1122,8 +899,8 @@ NONCOMPLIANT
 
 Rules can be:
 
-* AWS-managed
-* custom rules
+- AWS-managed
+- custom
 
 ### Exam pattern
 
@@ -1137,7 +914,7 @@ Rules can be:
 
 AWS Config can automatically trigger remediation when a resource becomes noncompliant.
 
-A common pattern is:
+Common pattern:
 
 ```text
 Config Rule
@@ -1159,23 +936,17 @@ Fix the resource
 
 # Important Config limitation
 
-**AWS Config does not prevent the action from happening.**
-
-It detects configuration and compliance problems.
-
-If the question says:
+**AWS Config does not prevent the action from happening.** It detects configuration and compliance problems.
 
 > **"Prevent users from creating this resource or performing this action."**
 
-Think about:
+Think:
 
-* IAM
-* SCPs
-* other preventive controls
+- IAM
+- SCPs
+- other preventive controls
 
-not Config.
-
-### Easy distinction
+Not Config.
 
 ```text
 Config
@@ -1191,9 +962,7 @@ SCP / IAM
 
 **AWS X-Ray = distributed tracing.**
 
-It follows one request as it moves through multiple services.
-
-Example:
+Follows one request across multiple services.
 
 ```text
 Client
@@ -1209,13 +978,7 @@ Service B
 DynamoDB
 ```
 
-Suppose the whole request takes:
-
-```text
-2 seconds
-```
-
-X-Ray can help identify:
+If the request takes 2 seconds:
 
 ```text
 API Gateway   50 ms
@@ -1231,75 +994,52 @@ DynamoDB      100 ms
 
 → **X-Ray**
 
-### CloudWatch vs X-Ray
-
 ```text
-CloudWatch
-= this service is slow
-
-X-Ray
-= this specific hop in the request is slow
+CloudWatch = this service is slow
+X-Ray       = this specific hop in the request is slow
 ```
 
 ---
 
 # The four-way comparison
 
-| Service        | Main question                                | Example                     |
-| -------------- | -------------------------------------------- | --------------------------- |
-| **CloudWatch** | How is it performing?                        | CPU = 90%                   |
-| **CloudTrail** | Who did what?                                | Alice terminated EC2        |
+| Service | Main question | Example |
+|---|---|---|
+| **CloudWatch** | How is it performing? | CPU = 90% |
+| **CloudTrail** | Who did what? | Alice terminated EC2 |
 | **AWS Config** | What was the configuration? Is it compliant? | SG allowed SSH last Tuesday |
-| **X-Ray**      | Which part of the request is slow?           | Service B adds 1.6 seconds  |
-
-### Memory
+| **X-Ray** | Which part of the request is slow? | Service B adds 1.6 seconds |
 
 ```text
-CloudWatch
-= PERFORMANCE
-
-CloudTrail
-= API AUDIT
-
-Config
-= CONFIGURATION + COMPLIANCE
-
-X-Ray
-= REQUEST TRACE
+CloudWatch = PERFORMANCE
+CloudTrail = API AUDIT
+Config     = CONFIGURATION + COMPLIANCE
+X-Ray      = REQUEST TRACE
 ```
 
 ---
 
 # ALB Monitoring — the five-way distinction
 
-For ALB questions, remember that several AWS services can describe different aspects of the same application:
-
-| Requirement                                  | Service                             |
-| -------------------------------------------- | ----------------------------------- |
-| Number of requests / aggregated ALB behavior | **CloudWatch Metrics**              |
-| Detailed individual HTTP requests            | **ALB Access Logs**                 |
-| Who changed the ALB configuration/API        | **CloudTrail**                      |
-| Which application hop is slow                | **X-Ray**                           |
-| Application/resource troubleshooting         | **CloudWatch Application Insights** |
-| Target/load balancer health                  | **ELB Health Checks**               |
-
-### Example
+| Requirement | Service |
+|---|---|
+| Number of requests / aggregated ALB behavior | **CloudWatch Metrics** |
+| Detailed individual HTTP requests | **ALB Access Logs** |
+| Who changed the ALB configuration/API | **CloudTrail** |
+| Which application hop is slow | **X-Ray** |
+| Application/resource troubleshooting | **CloudWatch Application Insights** |
+| Target/load balancer health | **ELB Health Checks** |
 
 ```text
 ALB
-│
 ├── CloudWatch Metrics
 │   └── RequestCount / latency / errors
-│
 ├── Access Logs
 │   └── client IP / request / status / latency details
-│
 ├── CloudTrail
 │   └── API/control-plane changes
-│
 ├── Health Checks
 │   └── target health
-│
 └── X-Ray
     └── distributed request tracing
 ```
@@ -1324,8 +1064,6 @@ Memory metric
 CloudWatch Alarm
 ```
 
----
-
 ## 2. EC2 swap monitoring
 
 > "Several EC2 instances are failing because of insufficient swap space. Monitor swap utilization."
@@ -1340,8 +1078,6 @@ swap_used_percent
 
 (Some question banks may call this `SwapUtilization`.)
 
----
-
 ## 3. EC2 disk-space monitoring
 
 > "Alert when `/var` reaches 90% disk utilization."
@@ -1350,8 +1086,6 @@ swap_used_percent
 
 Because this is **filesystem-level information inside the OS**.
 
----
-
 ## 4. EC2 metric frequency
 
 > "The company needs EC2 metrics every minute rather than every five minutes."
@@ -1359,14 +1093,9 @@ Because this is **filesystem-level information inside the OS**.
 → **EC2 Detailed Monitoring**
 
 ```text
-Basic
-→ 5 minutes
-
-Detailed
-→ 1 minute
+Basic    → 5 minutes
+Detailed → 1 minute
 ```
-
----
 
 ## 5. EC2 process monitoring
 
@@ -1374,15 +1103,11 @@ Detailed
 
 → **CloudWatch Agent with process/procstat monitoring**
 
----
-
 ## 6. RDS overall CPU
 
 > "Monitor the CPU utilization of an RDS instance."
 
 → **CloudWatch**
-
----
 
 ## 7. RDS process-level CPU/memory
 
@@ -1390,15 +1115,11 @@ Detailed
 
 → **RDS Enhanced Monitoring**
 
----
-
 ## 8. RDS query performance
 
 > "Determine which SQL statements are responsible for database load."
 
 → **RDS Performance Insights**
-
----
 
 ## 9. Log message alarm
 
@@ -1406,15 +1127,11 @@ Detailed
 
 → **CloudWatch Logs Metric Filter + CloudWatch Alarm**
 
----
-
 ## 10. Search logs
 
 > "Find requests that took more than two seconds."
 
 → **CloudWatch Logs Insights**
-
----
 
 ## 11. Real-time log processing
 
@@ -1422,15 +1139,11 @@ Detailed
 
 → **CloudWatch Logs Subscription Filter → Lambda**
 
----
-
 ## 12. Identify who performed an API action
 
 > "Who terminated the EC2 instance?"
 
 → **CloudTrail**
-
----
 
 ## 13. Identify who deleted an S3 object
 
@@ -1438,15 +1151,11 @@ Detailed
 
 → **CloudTrail S3 Data Events**
 
----
-
 ## 14. Long-term API auditing
 
 > "Keep API activity records for seven years."
 
 → **CloudTrail Trail → S3**
-
----
 
 ## 15. CloudTrail log encryption
 
@@ -1454,7 +1163,7 @@ Detailed
 
 → **CloudTrail → S3 with server-side encryption**
 
-Current AWS behavior:
+Current behavior:
 
 ```text
 CloudTrail → S3
@@ -1471,8 +1180,6 @@ CloudTrail
 → SSE-KMS
 ```
 
----
-
 ## 16. S3 default encryption
 
 > "Are newly uploaded S3 objects encrypted by default?"
@@ -1483,15 +1190,11 @@ CloudTrail
 
 → **No.**
 
----
-
 ## 17. Unusual API activity
 
 > "Detect unusual spikes in API activity."
 
 → **CloudTrail Insights**
-
----
 
 ## 18. Prove logs were not modified
 
@@ -1499,23 +1202,17 @@ CloudTrail
 
 → **CloudTrail Log File Integrity Validation**
 
----
-
 ## 19. Historical configuration
 
 > "What did this security group look like last Tuesday?"
 
 → **AWS Config**
 
----
-
 ## 20. Compliance
 
 > "Identify security groups that allow SSH from the Internet."
 
 → **AWS Config Rule**
-
----
 
 ## 21. Automatic compliance remediation
 
@@ -1535,19 +1232,13 @@ SSM Automation
 Fix
 ```
 
----
-
 ## 22. Prevent the action
 
 > "Prevent developers from disabling CloudTrail."
 
 → **IAM / SCP / preventive control**
 
-Not:
-
-→ AWS Config
-
----
+Not → **AWS Config**
 
 ## 23. Distributed application latency
 
@@ -1555,15 +1246,11 @@ Not:
 
 → **X-Ray**
 
----
-
 ## 24. ALB client IP and request details
 
 > "Capture detailed information about every HTTP request through an ALB, including client IP addresses and latency."
 
 → **ALB Access Logs**
-
----
 
 ## 25. ALB traffic patterns
 
@@ -1575,19 +1262,13 @@ If the question also asks for application troubleshooting:
 
 → **ALB Access Logs + CloudWatch Application Insights**
 
----
-
 ## 26. ALB API changes
 
 > "Find out who modified the ALB listener or configuration."
 
 → **CloudTrail**
 
-Not:
-
-→ ALB Access Logs
-
----
+Not → **ALB Access Logs**
 
 ## 27. ALB aggregate request count
 
@@ -1595,11 +1276,7 @@ Not:
 
 → **CloudWatch Metrics**
 
-Not:
-
-→ ALB Access Logs, if only an aggregate metric is required
-
----
+Not → **ALB Access Logs** if only an aggregate metric is required.
 
 ## 28. ALB request path and client IP
 
@@ -1607,17 +1284,13 @@ Not:
 
 → **ALB Access Logs**
 
----
-
 ## 29. Find the slow application component
 
 > "The ALB shows high latency and the company needs to determine which downstream service is responsible."
 
 → **X-Ray**
 
-The ALB may show the overall latency, but **X-Ray is used to trace the request across application components**.
-
----
+The ALB may show overall latency, but **X-Ray traces the request across application components**.
 
 ## 30. Monitor application troubleshooting
 
@@ -1634,18 +1307,11 @@ The ALB may show the overall latency, but **X-Ray is used to trace the request a
 It isn't.
 
 ```text
-EC2 Detailed Monitoring
-= more frequent standard EC2 metrics
-
-CloudWatch Agent
-= OS-level metrics
+EC2 Detailed Monitoring = more frequent standard EC2 metrics
+CloudWatch Agent        = OS-level metrics
 ```
 
----
-
 ## Trap 2 — CloudWatch vs CloudWatch Agent
-
-Both are CloudWatch-related, but remember:
 
 ```text
 CloudWatch
@@ -1655,8 +1321,6 @@ CloudWatch Agent
 = software running on the server
   that collects additional OS metrics
 ```
-
----
 
 ## Trap 3 — CloudWatch Agent vs RDS Enhanced Monitoring
 
@@ -1668,8 +1332,6 @@ RDS OS-level process/memory monitoring
 → Enhanced Monitoring
 ```
 
----
-
 ## Trap 4 — Enhanced Monitoring vs Performance Insights
 
 ```text
@@ -1679,8 +1341,6 @@ OS/process information
 Database/query/load information
 → Performance Insights
 ```
-
----
 
 ## Trap 5 — CloudWatch Logs vs CloudTrail
 
@@ -1702,8 +1362,6 @@ Example:
 → CloudTrail
 ```
 
----
-
 ## Trap 6 — CloudTrail vs Config
 
 ```text
@@ -1724,8 +1382,6 @@ What was the security group's configuration yesterday?
 → Config
 ```
 
----
-
 ## Trap 7 — Config vs IAM/SCP
 
 ```text
@@ -1736,8 +1392,6 @@ Prevent unauthorized action
 → IAM / SCP
 ```
 
----
-
 ## Trap 8 — CloudWatch vs X-Ray
 
 ```text
@@ -1747,8 +1401,6 @@ Metric shows high latency
 Find which service/hop caused the latency
 → X-Ray
 ```
-
----
 
 ## Trap 9 — S3 encryption
 
@@ -1766,8 +1418,6 @@ Old unencrypted S3 objects
 → not automatically re-encrypted
 ```
 
----
-
 ## Trap 10 — ALB Access Logs vs CloudTrail
 
 ```text
@@ -1777,8 +1427,6 @@ HTTP requests through ALB
 AWS API calls involving the ALB
 → CloudTrail
 ```
-
----
 
 ## Trap 11 — ALB Access Logs vs CloudWatch Metrics
 
@@ -1790,8 +1438,6 @@ Aggregated request/latency metrics
 → CloudWatch Metrics
 ```
 
----
-
 ## Trap 12 — ALB Access Logs vs X-Ray
 
 ```text
@@ -1802,8 +1448,6 @@ Trace the request through multiple application services
 → X-Ray
 ```
 
----
-
 ## Trap 13 — Health checks vs Access Logs
 
 ```text
@@ -1813,8 +1457,6 @@ Is the target healthy?
 What requests are going through the ALB?
 → ALB Access Logs
 ```
-
----
 
 ## Trap 14 — Application Insights vs Access Logs
 
@@ -1832,39 +1474,39 @@ They can be used together when the question requires both.
 
 # Pocket Card
 
-| Keyword                             | Answer                             |
-| ----------------------------------- | ---------------------------------- |
-| Performance / health / metrics      | **CloudWatch**                     |
-| Logs                                | **CloudWatch Logs**                |
-| Alarm on a metric                   | **CloudWatch Alarm**               |
-| Count log messages → metric         | **Metric Filter**                  |
-| Query logs                          | **Logs Insights**                  |
-| Real-time log processing            | **Subscription Filter**            |
-| Reduce alert noise                  | **Composite Alarm**                |
-| EC2 memory                          | **CloudWatch Agent**               |
-| EC2 swap                            | **CloudWatch Agent**               |
-| EC2 filesystem disk usage           | **CloudWatch Agent**               |
-| EC2 process metrics                 | **CloudWatch Agent / procstat**    |
-| EC2 metrics every 1 minute          | **Detailed Monitoring**            |
-| RDS process-level CPU/memory        | **Enhanced Monitoring**            |
-| RDS query/database load             | **Performance Insights**           |
-| Detailed HTTP requests through ALB  | **ALB Access Logs**                |
-| ALB client IP                       | **ALB Access Logs**                |
-| ALB request/target/response latency | **ALB Access Logs**                |
-| ALB aggregate request count         | **CloudWatch Metrics**             |
-| ALB health                          | **ELB Health Checks**              |
-| ALB/application troubleshooting     | **Application Insights**           |
-| Who did what / API audit            | **CloudTrail**                     |
-| Long-term API logs                  | **CloudTrail Trail → S3**          |
-| S3 object-level "who"               | **CloudTrail Data Events**         |
-| Unusual API activity                | **CloudTrail Insights**            |
-| Prove logs weren't modified         | **Log File Integrity Validation**  |
-| CloudTrail logs encrypted           | **S3 SSE-S3 by default**           |
-| New S3 objects encrypted            | **SSE-S3 by default**              |
-| Customer-controlled S3 key          | **SSE-KMS**                        |
-| Existing old unencrypted data       | **Not automatically re-encrypted** |
-| Configuration history               | **AWS Config**                     |
-| Compliance checking                 | **AWS Config Rules**               |
-| Automatically fix noncompliance     | **Config + remediation**           |
-| Prevent an action                   | **IAM / SCP**                      |
-| Trace request across services       | **X-Ray**                          |
+| Keyword | Answer |
+|---|---|
+| Performance / health / metrics | **CloudWatch** |
+| Logs | **CloudWatch Logs** |
+| Alarm on a metric | **CloudWatch Alarm** |
+| Count log messages → metric | **Metric Filter** |
+| Query logs | **Logs Insights** |
+| Real-time log processing | **Subscription Filter** |
+| Reduce alert noise | **Composite Alarm** |
+| EC2 memory | **CloudWatch Agent** |
+| EC2 swap | **CloudWatch Agent** |
+| EC2 filesystem disk usage | **CloudWatch Agent** |
+| EC2 process metrics | **CloudWatch Agent / procstat** |
+| EC2 metrics every 1 minute | **Detailed Monitoring** |
+| RDS process-level CPU/memory | **Enhanced Monitoring** |
+| RDS query/database load | **Performance Insights** |
+| Detailed HTTP requests through ALB | **ALB Access Logs** |
+| ALB client IP | **ALB Access Logs** |
+| ALB request/target/response latency | **ALB Access Logs** |
+| ALB aggregate request count | **CloudWatch Metrics** |
+| ALB health | **ELB Health Checks** |
+| ALB/application troubleshooting | **Application Insights** |
+| Who did what / API audit | **CloudTrail** |
+| Long-term API logs | **CloudTrail Trail → S3** |
+| S3 object-level "who" | **CloudTrail Data Events** |
+| Unusual API activity | **CloudTrail Insights** |
+| Prove logs weren't modified | **Log File Integrity Validation** |
+| CloudTrail logs encrypted | **S3 SSE-S3 by default** |
+| New S3 objects encrypted | **SSE-S3 by default** |
+| Customer-controlled S3 key | **SSE-KMS** |
+| Existing old unencrypted data | **Not automatically re-encrypted** |
+| Configuration history | **AWS Config** |
+| Compliance checking | **AWS Config Rules** |
+| Automatically fix noncompliance | **Config + remediation** |
+| Prevent an action | **IAM / SCP** |
+| Trace request across services | **X-Ray** |
