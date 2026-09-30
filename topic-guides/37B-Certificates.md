@@ -8,6 +8,7 @@ This section covers AWS certificate management and TLS/HTTPS patterns that commo
 
 | Requirement / keyword                                | Answer                                |
 | ---------------------------------------------------- | ------------------------------------- |
+| Need a new public TLS / HTTPS certificate            | **ACM**                               |
 | TLS / HTTPS certificates                             | **ACM**                               |
 | Third-party certificate that must be imported        | **ACM**                               |
 | Third-party certificate import alternative           | **IAM certificate store**             |
@@ -23,6 +24,12 @@ This section covers AWS certificate management and TLS/HTTPS patterns that commo
 
 **ACM = TLS/SSL certificate management for AWS services.**
 
+ACM can:
+
+* **Request and issue new public certificates**
+* **Import existing certificates** from third-party Certificate Authorities (CAs)
+* Manage certificates for supported AWS services
+
 Common integrations:
 
 * Application Load Balancer (ALB)
@@ -32,6 +39,51 @@ Common integrations:
 ### Common signal
 
 > **HTTPS / TLS certificate → ACM**
+
+---
+
+## ACM can request / issue certificates
+
+ACM can **request a new public TLS certificate** for your domain.
+
+Typical flow:
+
+```text
+You
+ ↓
+ACM: Request certificate
+ ↓
+Prove domain ownership
+ ↓
+ACM issues certificate
+ ↓
+Use with ALB / CloudFront / API Gateway
+```
+
+Domain ownership can be validated using:
+
+* **DNS validation**
+* **Email validation**
+
+### Important
+
+> **ACM can create/issue a new public certificate for you.**
+
+So don't think of ACM only as a place where you import certificates.
+
+It can either:
+
+```text
+Need a new certificate
+→ ACM requests/issues it
+```
+
+or:
+
+```text
+Already have a certificate from another CA
+→ Import it into ACM
+```
 
 ---
 
@@ -126,11 +178,9 @@ Do not choose S3 merely because the question says the certificate must be stored
 
 # ACM and EC2
 
-You generally cannot export an **ACM public certificate's private key** for direct installation on an EC2 server.
+You generally cannot use an ACM public certificate's private key directly on an EC2 server in the same way that you would with a certificate file you manage yourself.
 
-If the private key must be directly accessible by an EC2-hosted application, an ACM public certificate is not the normal solution.
-
-Common AWS-native architecture:
+For an ALB / CloudFront / API Gateway architecture, the common pattern is:
 
 ```text
 Internet
@@ -141,6 +191,8 @@ ACM certificate
    ↓
 Application
 ```
+
+The TLS certificate is associated with the AWS service that terminates HTTPS.
 
 ---
 
@@ -185,7 +237,7 @@ CloudFront
 
 ## ACM-issued public certificate
 
-ACM issues the certificate.
+ACM requests and issues the certificate.
 
 ```text
 ACM
@@ -324,7 +376,7 @@ SNI
 
 # Common Question Patterns
 
-> **"Need HTTPS certificate."**
+> **"Need a new public HTTPS/TLS certificate."**
 
 → **AWS Certificate Manager (ACM)**
 
@@ -371,6 +423,18 @@ CloudFront
 
 ---
 
+## ACM issue vs import
+
+```text
+Need a new public certificate
+→ ACM requests/issues it
+
+Already have a third-party certificate
+→ Import into ACM
+```
+
+---
+
 ## Imported certificate trap
 
 ```text
@@ -410,6 +474,7 @@ Multiple unrelated domains on one ALB
 
 | Keyword                                   | Answer                           |
 | ----------------------------------------- | -------------------------------- |
+| Need a new public TLS certificate         | **ACM**                          |
 | TLS / SSL certificate                     | **ACM**                          |
 | HTTPS                                     | **ACM**                          |
 | Third-party certificate import            | **ACM**                          |
