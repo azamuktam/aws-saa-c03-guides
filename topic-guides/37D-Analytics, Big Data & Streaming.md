@@ -4,17 +4,18 @@
 
 Match the requirement to the unique service keyword.
 
-| Requirement / keyword                          | Service                                             |
-| ---------------------------------------------- | --------------------------------------------------- |
-| **Spark / Hadoop**                             | **Amazon EMR (Elastic MapReduce)**                  |
-| **SQL directly on S3**                         | **Amazon Athena**                                   |
-| **BI + standard SQL + analytical workloads**   | **Amazon Redshift**                                 |
-| **Apache Flink / real-time stream processing** | **Amazon Managed Service for Apache Flink**         |
-| **Interactive Flink streaming analysis**       | **Flink Studio**                                    |
-| **Kafka**                                      | **Amazon MSK (Managed Streaming for Apache Kafka)** |
-| **BI dashboards**                              | **Amazon QuickSight**                               |
-| **File-based video transcoding**               | **AWS Elemental MediaConvert**                      |
-| **Legacy video transcoding**                   | **Amazon Elastic Transcoder**                       |
+| Requirement / keyword                              | Service                                             |
+| -------------------------------------------------- | --------------------------------------------------- |
+| **Spark / Hadoop**                                 | **Amazon EMR (Elastic MapReduce)**                  |
+| **SQL directly on S3**                             | **Amazon Athena**                                   |
+| **Query S3 data from Redshift without loading it** | **Amazon Redshift Spectrum**                        |
+| **BI + standard SQL + analytical workloads**       | **Amazon Redshift**                                 |
+| **Apache Flink / real-time stream processing**     | **Amazon Managed Service for Apache Flink**         |
+| **Interactive Flink streaming analysis**           | **Flink Studio**                                    |
+| **Kafka**                                          | **Amazon MSK (Managed Streaming for Apache Kafka)** |
+| **BI dashboards**                                  | **Amazon QuickSight**                               |
+| **File-based video transcoding**                   | **AWS Elemental MediaConvert**                      |
+| **Legacy video transcoding**                       | **Amazon Elastic Transcoder**                       |
 
 ---
 
@@ -149,15 +150,50 @@ Use it for:
 
 ---
 
-# Athena vs Redshift
+# Amazon Redshift Spectrum
 
-| Requirement                           | Service             |
-| ------------------------------------- | ------------------- |
-| Query data directly in S3 with SQL    | **Amazon Athena**   |
-| Dedicated analytical data warehouse   | **Amazon Redshift** |
-| BI / reporting / high-performance SQL | **Amazon Redshift** |
+**Amazon Redshift Spectrum = query data stored in S3 directly from Redshift without loading the data into Redshift tables.**
 
-### Mental model
+Use it when:
+
+* you already use **Amazon Redshift**
+* some data remains in **S3**
+* you want to query that S3 data using Redshift
+
+```text
+Amazon Redshift
+      ↓
+Redshift Spectrum
+      ↓
+S3 data
+```
+
+### Signal
+
+> **Query S3 data from Redshift without loading it → Redshift Spectrum**
+
+### Key distinction
+
+```text
+Athena
+→ SQL directly on S3
+
+Redshift Spectrum
+→ SQL on S3 from Redshift
+```
+
+---
+
+# Athena vs Redshift vs Redshift Spectrum
+
+| Requirement                                           | Service               |
+| ----------------------------------------------------- | --------------------- |
+| Query data directly in S3 with SQL                    | **Amazon Athena**     |
+| Query S3 data using an existing Redshift environment  | **Redshift Spectrum** |
+| Dedicated analytical data warehouse                   | **Amazon Redshift**   |
+| BI / reporting / high-performance warehouse analytics | **Amazon Redshift**   |
+
+### Memory
 
 ```text
 Athena
@@ -165,6 +201,9 @@ Athena
 
 Redshift
 = ANALYTICAL DATA WAREHOUSE
+
+Redshift Spectrum
+= QUERY S3 FROM REDSHIFT
 ```
 
 ### Examples
@@ -176,6 +215,10 @@ Redshift
 > "Business users need high-performance analytical SQL queries against a data warehouse."
 
 → **Amazon Redshift**
+
+> "The company already uses Redshift but wants to query additional datasets stored in S3 without loading them into Redshift."
+
+→ **Redshift Spectrum**
 
 ---
 
@@ -467,6 +510,7 @@ Example:
 | ------------------------------- | ------------------------------------------- |
 | Big-data processing             | **Amazon EMR**                              |
 | SQL on S3                       | **Amazon Athena**                           |
+| Query S3 from Redshift          | **Amazon Redshift Spectrum**                |
 | Data warehouse / analytical SQL | **Amazon Redshift**                         |
 | Real-time Flink processing      | **Amazon Managed Service for Apache Flink** |
 | Kafka                           | **Amazon MSK**                              |
@@ -501,6 +545,7 @@ BI / SQL analytics
 | --------------------------------------------------- | ------------------------------------------ | ---------------------------------- |
 | **Amazon EMR (Elastic MapReduce)**                  | Managed big-data processing                | Spark / Hadoop                     |
 | **Amazon Athena**                                   | SQL directly on S3                         | SQL on S3                          |
+| **Amazon Redshift Spectrum**                        | Query S3 data from Redshift                | S3 + existing Redshift             |
 | **Amazon Redshift**                                 | Data warehouse / analytical SQL            | BI / analytical workloads          |
 | **Amazon Managed Service for Apache Flink**         | Managed real-time stream processing        | Apache Flink / real-time streaming |
 | **Flink Studio**                                    | Interactive Flink development and analysis | Interactive Flink                  |
@@ -556,6 +601,22 @@ Dedicated analytical warehouse
 
 ---
 
+## Athena vs Redshift Spectrum
+
+```text
+Query S3 directly
+→ Amazon Athena
+```
+
+```text
+Already using Redshift + need to query S3
+→ Redshift Spectrum
+```
+
+**Spectrum does not mean you must load the S3 data into Redshift first.**
+
+---
+
 ## MSK vs Flink
 
 ```text
@@ -598,47 +659,6 @@ Live video stream
 
 ---
 
-# Analytics Decision Tree
-
-```text
-What is the requirement?
-          │
-          ├── Spark / Hadoop?
-          │       ↓
-          │   Amazon EMR
-          │
-          ├── SQL directly on S3?
-          │       ↓
-          │   Amazon Athena
-          │
-          ├── Data warehouse / BI / analytical SQL?
-          │       ↓
-          │   Amazon Redshift
-          │
-          ├── Kafka?
-          │       ↓
-          │   Amazon MSK
-          │
-          ├── Apache Flink + real-time processing?
-          │       ↓
-          │   Amazon Managed Service
-          │   for Apache Flink
-          │
-          ├── Interactive Flink analysis?
-          │       ↓
-          │   Flink Studio
-          │
-          ├── BI dashboards?
-          │       ↓
-          │   Amazon QuickSight
-          │
-          └── File-based video transcoding?
-                  ↓
-            AWS Elemental MediaConvert
-```
-
----
-
 # Common Question Patterns
 
 > **"Managed Apache Spark processing."**
@@ -656,6 +676,10 @@ What is the requirement?
 > **"Business users need high-performance analytical SQL queries and BI access."**
 
 → **Amazon Redshift**
+
+> **"The company already has Redshift and needs to query files in S3 without loading them into Redshift."**
+
+→ **Amazon Redshift Spectrum**
 
 > **"A company stores large datasets in S3 and wants big-data processing frameworks to process the data. Business users then need high-performance access using BI tools and standard SQL queries."**
 
@@ -702,6 +726,7 @@ Redshift
 | Spark / Hadoop                           | **Amazon EMR (Elastic MapReduce)**                  |
 | Large-scale big-data processing          | **Amazon EMR**                                      |
 | SQL on S3                                | **Amazon Athena**                                   |
+| S3 + existing Redshift                   | **Redshift Spectrum**                               |
 | Data warehouse                           | **Amazon Redshift**                                 |
 | BI + standard SQL + analytical workloads | **Amazon Redshift**                                 |
 | Apache Flink / real-time streaming       | **Amazon Managed Service for Apache Flink**         |
@@ -712,6 +737,3 @@ Redshift
 | File-based video transcoding             | **AWS Elemental MediaConvert**                      |
 | Live video encoding                      | **AWS Elemental MediaLive**                         |
 | Legacy video transcoding                 | **Amazon Elastic Transcoder — discontinued**        |
-
----
-
