@@ -683,15 +683,13 @@ Live video stream
 
 ## Redshift Regional DR
 
-```text
-Redshift cluster + entire Region outage
-→ Cross-Region Snapshot Copy
-```
-
-```text
 Redshift automated snapshots
-→ Recovery within the Region
-```
+→ ENABLED by default
+→ default retention: 1 day
+
+Cross-Region Snapshot Copy
+→ NOT enabled by default
+→ must configure destination Region
 
 ---
 
