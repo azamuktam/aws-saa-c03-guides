@@ -290,24 +290,6 @@ If the requirement is for an auditor to obtain AWS compliance reports:
 
 ---
 
-## License Manager vs Fleet Manager
-
-```text
-License Manager
-= software license tracking + enforcement
-
-Fleet Manager
-= EC2 instance management / inspection
-```
-
-So:
-
-> **Software licenses + license limit → License Manager**
-
-> **Manage / inspect EC2 servers → Fleet Manager**
-
----
-
 ## AppStream 2.0 vs normal application deployment
 
 AppStream is not simply a service for deploying a web application.
