@@ -69,6 +69,83 @@ For SAA questions, the more important distinction is usually:
 
 ---
 
+# VPN CloudHub
+
+**AWS VPN CloudHub** allows **multiple on-premises networks/sites to communicate with each other through AWS** using Site-to-Site VPN connections.
+
+It is useful when an organization has several:
+
+* Branch offices
+* Data centers
+* Remote networks
+
+that need **site-to-site communication** without creating a direct connection between every site.
+
+### Basic architecture
+
+```text
+Office A ── VPN ──┐
+                  │
+Office B ── VPN ──┼── Virtual Private Gateway
+                  │
+Office C ── VPN ──┘
+```
+
+The AWS VPN CloudHub acts as the **hub**, while the remote sites act as **spokes**.
+
+For example:
+
+```text
+Office A
+   ↕
+   AWS
+   ↕
+Office B
+```
+
+Office A and Office B can communicate **through AWS**, even though they do not have a direct VPN connection to each other.
+
+### Important distinction
+
+**Site-to-Site VPN**
+
+```text
+One on-premises network
+        ↓
+       AWS
+```
+
+**VPN CloudHub**
+
+```text
+Many on-premises networks
+      ↘  ↓  ↙
+       AWS
+```
+
+### Exam clue
+
+> **"Several branch offices/data centers need to communicate with each other through AWS."**
+
+→ **VPN CloudHub**
+
+### CloudHub vs Transit Gateway
+
+|                  | VPN CloudHub                           | Transit Gateway                                         |
+| ---------------- | -------------------------------------- | ------------------------------------------------------- |
+| Main purpose     | Connect **multiple on-premises sites** | Central hub for **VPCs + on-premises + other networks** |
+| Main technology  | Site-to-Site VPN + VGW                 | Transit Gateway                                         |
+| Main exam clue   | **Branch office ↔ branch office**      | **Many VPCs/networks need centralized routing**         |
+| VPC connectivity | Not the main purpose                   | Major use case                                          |
+
+### Easy rule
+
+> **Multiple on-premises sites need to talk to each other → VPN CloudHub**
+
+> **Many VPCs and networks need a central routing hub → Transit Gateway**
+
+---
+
 # Scaling VPN Throughput with ECMP
 
 A common SAA requirement is:
@@ -728,17 +805,18 @@ This allows the organization to establish connectivity quickly and move to dedic
 
 ### Decision rule
 
-| Requirement                                           | Choose                           |
-| ----------------------------------------------------- | -------------------------------- |
-| Need connectivity quickly                             | **Site-to-Site VPN**             |
-| Need encrypted connectivity                           | **Site-to-Site VPN**             |
-| Need dedicated/private connectivity                   | **Direct Connect**               |
-| Large, steady data transfers                          | **Direct Connect**               |
-| More predictable network performance                  | **Direct Connect**               |
-| Cost-effective backup for DX                          | **Site-to-Site VPN**             |
-| Need many VPCs through one DX connection              | **Direct Connect Gateway**       |
-| Need many VPCs/accounts through a central network hub | **DX Gateway + Transit Gateway** |
-| Individual users need secure AWS access               | **Client VPN**                   |
+| Requirement                                            | Choose                           |
+| ------------------------------------------------------ | -------------------------------- |
+| Need connectivity quickly                              | **Site-to-Site VPN**             |
+| Need encrypted connectivity                            | **Site-to-Site VPN**             |
+| Need dedicated/private connectivity                    | **Direct Connect**               |
+| Large, steady data transfers                           | **Direct Connect**               |
+| More predictable network performance                   | **Direct Connect**               |
+| Cost-effective backup for DX                           | **Site-to-Site VPN**             |
+| Need many VPCs through one DX connection               | **Direct Connect Gateway**       |
+| Need many VPCs/accounts through a central network hub  | **DX Gateway + Transit Gateway** |
+| Need many on-premises sites to communicate through AWS | **VPN CloudHub**                 |
+| Individual users need secure AWS access                | **Client VPN**                   |
 
 ---
 
@@ -852,32 +930,44 @@ Direct Connect normally takes longer to provision.
 
 ---
 
-# Pocket card
+> **"Several branch offices need to communicate with each other, but they do not need a full mesh of direct VPN connections."**
 
-| Keyword                                | Answer                              |
-| -------------------------------------- | ----------------------------------- |
-| Encrypted tunnel over internet         | **Site-to-Site VPN**                |
-| Fast to deploy                         | **Site-to-Site VPN**                |
-| VGW + CGW                              | **Site-to-Site VPN**                |
-| Dedicated private connection           | **Direct Connect**                  |
-| Consistent network performance         | **Direct Connect**                  |
-| Large steady transfers                 | **Direct Connect**                  |
-| Direct Connect is encrypted by default | **❌ No**                            |
-| Encrypt Direct Connect traffic         | **VPN/IPsec over DX**               |
-| Cost-effective DX backup               | **Site-to-Site VPN**                |
-| Individual users/laptops → AWS         | **Client VPN**                      |
-| One DX → multiple VPCs                 | **Direct Connect Gateway**          |
-| One DX → many VPCs through TGW         | **DX Gateway + Transit Gateway**    |
-| Central hub for many VPCs              | **Transit Gateway**                 |
-| Private VIF                            | **Private VPC resources**           |
-| Public VIF                             | **AWS public services**             |
-| Transit VIF                            | **Transit Gateway**                 |
-| Many AWS accounts need on-prem access  | **DX Gateway + Transit Gateway**    |
-| Point-to-point VPC connectivity        | **VPC Peering**                     |
-| VPN throughput too low                 | **Transit Gateway + ECMP**          |
-| Aggregate multiple VPN tunnels         | **ECMP**                            |
-| ECMP VPN routing                       | **BGP / dynamic routing**           |
-| One VPN connection                     | **2 tunnels**                       |
-| Scale VPN throughput                   | **Multiple VPN connections + ECMP** |
+→ **VPN CloudHub**
 
 ---
+
+> **"Multiple remote sites each have a Site-to-Site VPN connection to AWS and need to communicate with each other through AWS."**
+
+→ **VPN CloudHub**
+
+---
+
+# Pocket card
+
+| Keyword                                         | Answer                              |
+| ----------------------------------------------- | ----------------------------------- |
+| Encrypted tunnel over internet                  | **Site-to-Site VPN**                |
+| Fast to deploy                                  | **Site-to-Site VPN**                |
+| VGW + CGW                                       | **Site-to-Site VPN**                |
+| Multiple branch offices communicate through AWS | **VPN CloudHub**                    |
+| Multiple on-premises sites ↔ each other         | **VPN CloudHub**                    |
+| Dedicated private connection                    | **Direct Connect**                  |
+| Consistent network performance                  | **Direct Connect**                  |
+| Large steady transfers                          | **Direct Connect**                  |
+| Direct Connect is encrypted by default          | **❌ No**                            |
+| Encrypt Direct Connect traffic                  | **VPN/IPsec over DX**               |
+| Cost-effective DX backup                        | **Site-to-Site VPN**                |
+| Individual users/laptops → AWS                  | **Client VPN**                      |
+| One DX → multiple VPCs                          | **Direct Connect Gateway**          |
+| One DX → many VPCs through TGW                  | **DX Gateway + Transit Gateway**    |
+| Central hub for many VPCs                       | **Transit Gateway**                 |
+| Private VIF                                     | **Private VPC resources**           |
+| Public VIF                                      | **AWS public services**             |
+| Transit VIF                                     | **Transit Gateway**                 |
+| Many AWS accounts need on-prem access           | **DX Gateway + Transit Gateway**    |
+| Point-to-point VPC connectivity                 | **VPC Peering**                     |
+| VPN throughput too low                          | **Transit Gateway + ECMP**          |
+| Aggregate multiple VPN tunnels                  | **ECMP**                            |
+| ECMP VPN routing                                | **BGP / dynamic routing**           |
+| One VPN connection                              | **2 tunnels**                       |
+| Scale VPN throughput                            | **Multiple VPN connections + ECMP** |
