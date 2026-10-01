@@ -27,7 +27,7 @@ Stream desktop applications to users
 
 Create a fast copy of an Aurora database for testing
 → Aurora Cloning
-
+```
 ---
 
 # AWS Artifact
