@@ -307,6 +307,37 @@ Karpenter / Cluster Autoscaler
 → scales Nodes
 ```
 
+## Scaling differences
+
+| Component                     | What it does                                      | What changes?                      | Typical signal                                         |
+| ----------------------------- | ------------------------------------------------- | ---------------------------------- | ------------------------------------------------------ |
+| **Kubernetes Metrics Server** | Provides CPU/memory metrics                       | Nothing                            | "Measure Pod/node CPU or memory"                       |
+| **HPA**                       | Adds/removes Pods                                 | **Number of Pods**                 | "Scale Pods based on CPU/request load"                 |
+| **VPA**                       | Adjusts Pod resource requests                     | **CPU/memory per Pod**             | "Give Pods more/less CPU or memory"                    |
+| **Cluster Autoscaler**        | Adjusts existing node groups                      | **Number of worker nodes**         | "Pods cannot be scheduled because nodes lack capacity" |
+| **Karpenter**                 | Dynamically provisions/consolidates node capacity | **Node capacity / instance types** | "Automatically provision flexible/right-sized nodes"   |
+
+### Easy memory
+
+```text
+Metrics Server
+→ measures
+
+HPA
+→ more/fewer Pods
+
+VPA
+→ bigger/smaller Pods
+
+Cluster Autoscaler
+→ more/fewer Nodes
+
+Karpenter
+→ provision/consolidate Nodes
+```
+
+---
+
 ## Horizontal Pod Autoscaler (HPA)
 
 **HPA increases or decreases the number of Pods** based on workload demand.
@@ -757,6 +788,7 @@ RoleBinding
 | **Kubernetes manifests/tools**             | EKS                                 |
 | **Kubernetes + serverless compute**        | EKS + Fargate                       |
 | **Kubernetes + EC2 control**               | EKS on EC2                          |
+| **Metrics Server**                         | Provides CPU/memory metrics         |
 | **More Pods**                              | HPA                                 |
 | **Change Pod CPU/memory**                  | VPA                                 |
 | **More/fewer Nodes**                       | Karpenter / Cluster Autoscaler      |
@@ -770,5 +802,3 @@ RoleBinding
 | **Customer-controlled encryption key**     | Customer-managed AWS KMS key        |
 | **Kubernetes datastore**                   | etcd                                |
 | **Kubernetes 1.28+ API-data encryption**   | Enabled by default                  |
-
----
