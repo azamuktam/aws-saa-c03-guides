@@ -27,81 +27,6 @@ Stream desktop applications to users
 
 Create a fast copy of an Aurora database for testing
 → Aurora Cloning
-```
-
----
-
-# AWS Elemental MediaConvert
-
-**AWS Elemental MediaConvert = managed file-based video transcoding service.**
-
-Use it to convert and process **video files for on-demand delivery**.
-
-### Signal
-
-> **File-based video transcoding → MediaConvert**
-
----
-
-## Example
-
-```text
-Video file
-    ↓
-MediaConvert
-    ↓
-Transcoded video
-```
-
-A company may have a video file and need to produce versions in different formats, codecs, or resolutions for on-demand delivery.
-
-→ **AWS Elemental MediaConvert**
-
----
-
-## Important distinction
-
-```text
-File-based video transcoding
-→ MediaConvert
-
-Live video encoding
-→ MediaLive
-```
-
-### Memory
-
-> **MediaConvert = FILE-BASED VIDEO**
-
-> **MediaLive = LIVE VIDEO**
-
----
-
-## Legacy service: Amazon Elastic Transcoder
-
-**Amazon Elastic Transcoder was the older managed video/audio transcoding service.**
-
-It was **discontinued on November 13, 2025**.
-
-AWS recommends **MediaConvert** for file-based transcoding workflows.
-
-### SAA memory
-
-> **Video transcoding → MediaConvert**
-
-> **Old question mentioning Elastic Transcoder → recognize it as the legacy service**
-
-### Important
-
-Do not choose Elastic Transcoder for a new modern AWS architecture.
-
-```text
-Current file-based video transcoding
-→ MediaConvert
-
-Legacy video transcoding service
-→ Elastic Transcoder
-```
 
 ---
 
@@ -353,32 +278,11 @@ Typical use cases include:
 
 | Service             | What it does                          | Signal keyword                   |
 | ------------------- | ------------------------------------- | -------------------------------- |
-| **MediaConvert**    | File-based video transcoding          | Video transcoding                |
 | **Artifact**        | AWS compliance documents and reports  | Compliance / auditor             |
 | **License Manager** | Tracks and enforces software licenses | Software license limit           |
 | **ParallelCluster** | Deploys and manages HPC clusters      | HPC / High Performance Computing |
 | **AppStream 2.0**   | Streams desktop applications          | Desktop application streaming    |
 | **Aurora Cloning**  | Fast Aurora database copy             | Aurora copy for testing          |
-
----
-
-# Important SAA Distinctions
-
-## MediaConvert vs MediaLive
-
-```text
-MediaConvert
-= file-based video transcoding
-
-MediaLive
-= live video encoding
-```
-
-So:
-
-> **Video file → MediaConvert**
-
-> **Live video stream → MediaLive**
 
 ---
 
@@ -451,24 +355,6 @@ For SAA, remember the unique signal:
 ---
 
 # Common Question Patterns
-
-> **"File-based video transcoding for on-demand content."**
-
-→ **AWS Elemental MediaConvert**
-
----
-
-> **"An application needs to transcode uploaded video files into multiple formats."**
-
-→ **AWS Elemental MediaConvert**
-
----
-
-> **"An old question mentions Elastic Transcoder."**
-
-→ **Recognize it as the legacy service**
-
----
 
 > **"Auditors need AWS compliance reports."**
 
