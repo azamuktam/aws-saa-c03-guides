@@ -2,97 +2,86 @@
 
 ## The idea
 
-These are AWS services that commonly appear in SAA questions involving **instance management, secure access, command execution, patching, AWS operational events, distributed tracing, and Prometheus-compatible monitoring**.
+These AWS services commonly appear in SAA questions involving **instance management, secure access, command execution, patching, AWS operational events, distributed tracing, and Prometheus-compatible monitoring**.
 
-You generally don't need deep knowledge of each one.
-
-The best strategy is:
+Best strategy:
 
 > **Read the requirement → identify the unique keyword → choose the service.**
 
-For example:
-
 ```text
 Secure shell access to private EC2 without SSH
-→ SSM Session Manager
+→ AWS Systems Manager Session Manager
 
 Run the same command on hundreds of EC2 instances
-→ SSM Run Command
+→ AWS Systems Manager Run Command
 
 Automatically patch hundreds of EC2 instances
-→ SSM Patch Manager
+→ AWS Systems Manager Patch Manager
 
-AWS event may affect your specific AWS resources
-→ AWS Personal Health Dashboard
+AWS event specifically associated with your account/resources
+→ AWS Health Dashboard account-specific events
+   (older SAA material: Personal Health Dashboard)
 
 Automatically react to AWS Health events
-→ EventBridge
+→ Amazon EventBridge
+
+Send notifications
+→ Amazon Simple Notification Service (Amazon SNS)
 
 Find which microservice is causing latency
 → AWS X-Ray
 
 Prometheus / PromQL + container metrics
-→ Amazon Managed Service for Prometheus
+→ Amazon Managed Service for Prometheus (AMP)
 ```
 
 ---
 
 # AWS Systems Manager
 
-**AWS Systems Manager = a collection of tools for managing and operating AWS and supported hybrid infrastructure.**
+**AWS Systems Manager (SSM) = a collection of tools for managing and operating AWS and supported hybrid infrastructure.**
 
-The most important services for SAA questions in this section are:
+Most important SAA services:
 
-* Session Manager
-* Run Command
-* Patch Manager
-
-The easiest way to remember them is:
+* **AWS Systems Manager Session Manager**
+* **AWS Systems Manager Run Command**
+* **AWS Systems Manager Patch Manager**
 
 ```text
-Session Manager
-= ACCESS
-
-Run Command
-= RUN
-
-Patch Manager
-= PATCH
+Session Manager = ACCESS
+Run Command     = RUN
+Patch Manager   = PATCH
 ```
 
 ---
 
 # Session Manager
 
-**AWS Systems Manager Session Manager = secure shell access to EC2 instances without traditional SSH.**
+**AWS Systems Manager Session Manager = secure interactive shell access to managed EC2 instances without traditional SSH.**
 
-It allows administrators to connect to managed instances without requiring:
+You can avoid:
 
 * a bastion host
-* an open inbound port 22
-* SSH keys for the session itself
+* inbound port 22
+* exposing SSH to the Internet
 
-### Typical pattern
+Typical pattern:
 
 ```text
 Admin
   ↓
-Session Manager
+AWS Systems Manager Session Manager
   ↓
 Private EC2
 ```
 
-The instance can remain private without exposing SSH to the Internet.
-
 ### Signal
 
-> **Secure access to private EC2 without SSH → Session Manager**
+> **Secure access to private EC2 without SSH → AWS Systems Manager Session Manager**
 
----
+### Example
 
-## Example
-
-> "Administrators need secure shell access to private EC2 instances, but the company does not want to open port 22 or maintain a bastion host."
+> "Administrators need secure shell access to private EC2 instances without opening port 22 or maintaining a bastion host."
 
 → **AWS Systems Manager Session Manager**
 
@@ -106,30 +95,29 @@ The instance can remain private without exposing SSH to the Internet.
 
 **AWS Systems Manager Run Command = execute commands or scripts on one or many managed instances.**
 
-This is useful when the same operation needs to be performed across many servers.
-
-### Example
+Example:
 
 ```text
 500 EC2 instances
       ↓
-   Run Command
+AWS Systems Manager Run Command
       ↓
 Run the same script
-on all selected instances
 ```
 
 ### Signal
 
-> **Run a command across many EC2 instances → Run Command**
+> **Run a command/script across many EC2 instances → AWS Systems Manager Run Command**
 
----
+### Examples
 
-## Example
+> "Execute the same shell script on hundreds of EC2 instances."
 
-> "An administrator needs to execute the same shell script on hundreds of EC2 instances."
+→ **AWS Systems Manager Run Command**
 
-→ **SSM Run Command**
+> "Execute a script across a fleet of EC2 instances."
+
+→ **AWS Systems Manager Run Command**
 
 ### Memory
 
@@ -141,17 +129,19 @@ on all selected instances
 
 **AWS Systems Manager Patch Manager = automate OS patching for managed instances.**
 
-It can be used to automate patching across fleets of servers.
+### Signal
 
-### Example
+> **Automatically patch many EC2 instances → AWS Systems Manager Patch Manager**
+
+### Examples
 
 > "Apply security patches to 500 EC2 instances every month."
 
-→ **Patch Manager**
+→ **AWS Systems Manager Patch Manager**
 
-### Signal
+> "Apply security patches to EC2 instances on a regular schedule."
 
-> **Automatically patch many EC2 instances → Patch Manager**
+→ **AWS Systems Manager Patch Manager**
 
 ### Memory
 
@@ -161,198 +151,174 @@ It can be used to automate patching across fleets of servers.
 
 # Session Manager vs Run Command vs Patch Manager
 
-These three are very easy to mix up.
-
-| Service             | Main purpose                             | Signal                                 |
-| ------------------- | ---------------------------------------- | -------------------------------------- |
-| **Session Manager** | Interactive secure access to an instance | Access private EC2 without SSH         |
-| **Run Command**     | Execute commands/scripts                 | Run the same command on many instances |
-| **Patch Manager**   | Automate OS patching                     | Patch many instances                   |
-
-### Mental model
+| Service                                 | Main purpose              | Signal                         |
+| --------------------------------------- | ------------------------- | ------------------------------ |
+| **AWS Systems Manager Session Manager** | Interactive secure access | Access private EC2 without SSH |
+| **AWS Systems Manager Run Command**     | Execute commands/scripts  | Same command on many instances |
+| **AWS Systems Manager Patch Manager**   | Automate OS patching      | Patch many instances           |
 
 ```text
-Need to ACCESS an instance
-→ Session Manager
+ACCESS an instance
+→ AWS Systems Manager Session Manager
 
-Need to RUN a command
-→ Run Command
+RUN a command/script
+→ AWS Systems Manager Run Command
 
-Need to PATCH instances
-→ Patch Manager
+PATCH the OS
+→ AWS Systems Manager Patch Manager
 ```
 
 ---
 
 # Hybrid Systems Manager
 
-Systems Manager can also manage supported **on-premises servers** when the SSM Agent and required connectivity are configured.
-
-This means Systems Manager is not limited to EC2.
-
-A hybrid environment can be managed through Systems Manager as well.
-
-### Memory
+**AWS Systems Manager (SSM)** can also manage supported **on-premises servers** when the Systems Manager Agent and required connectivity are configured.
 
 ```text
 AWS instances
 +
-supported on-premises servers
-→ Systems Manager
+Supported on-premises servers
+→ AWS Systems Manager
 ```
+
+### Important
+
+The on-premises server must be properly configured, including the required agent and connectivity.
 
 ---
 
 # AWS Health / Personal Health Dashboard
 
-**AWS Health Dashboard = information about AWS service events and health issues.**
+**AWS Health Dashboard** provides AWS Health information for both **public service events** and **account-specific events**. Older SAA material may refer to the account-specific view as the **AWS Personal Health Dashboard (PHD)**.
 
-For SAA, the important distinction is between:
+## Public / Service Health
 
-* **Service Health Dashboard**
-* **Personal Health Dashboard**
+**AWS Health Dashboard – Service health = public/general AWS service events.**
 
-## Service Health Dashboard
-
-Shows **general/public AWS service health information**.
-
-Think:
+Example:
 
 ```text
-Is AWS EC2 experiencing
+Is Amazon EC2 experiencing
 a service issue in this Region?
 ```
 
-It is not personalized to your specific resources.
+Public events are **not specific to an AWS account** and can describe a Regional service issue even when you do not use that service there.
 
 ### Signal
 
-> **General AWS service status → Service Health Dashboard**
+> **General AWS service status → AWS Health Dashboard – Service health**
 
 ---
 
-## Personal Health Dashboard
+## Account-Specific / Personal Health
 
-Shows **AWS Health events that are relevant to your AWS account/resources**.
-
-For example:
+The signed-in **AWS Health Dashboard – Your account health** shows events specific to your account, including **upcoming scheduled changes** and affected resources. Older SAA material commonly calls this the **AWS Personal Health Dashboard (PHD)**.
 
 ```text
-An AWS event
-may affect your EC2 instance
+AWS event
+specific to your account/resources
         ↓
-Personal Health Dashboard
+AWS Health Dashboard
+Your account health
 ```
-
-This is the important SAA distinction.
 
 ### Signal
 
-> **AWS event may affect my specific EC2/RDS/etc. resources → Personal Health Dashboard**
-
----
-
-## EventBridge + AWS Health
-
-AWS Health events can be used with **Amazon EventBridge** so you can automatically react to them.
-
-For example:
-
-```text
-AWS event affecting your resources
-        ↓
-AWS Health
-        ↓
-EventBridge
-        ↓
-SNS
-        ↓
-Notification
-```
-
-This is useful when the requirement says:
-
-> "Notify administrators when an upcoming AWS event may affect the company's EC2 instances."
-
-→ **Personal Health Dashboard + EventBridge + SNS**
+> **AWS event specifically associated with my account/resources → AWS Health Dashboard account-specific events**
 
 ### Important distinction
 
 ```text
-Service Health Dashboard
-= General AWS service status
+PUBLIC
+= general AWS service/Regional event
+= not specific to my account
 
-Personal Health Dashboard
-= Events relevant to YOUR AWS resources
+ACCOUNT-SPECIFIC
+= specific to my account/organization
+= affected resources may be identified
 ```
+
+The distinction is **not** whether the event could affect resources generally; public events can also affect users. The distinction is whether the event is **specific to your account**.
 
 ---
 
-## Example
+# EventBridge + AWS Health
 
-> "An EC2 instance was unexpectedly powered down. Management wants to receive notifications about upcoming AWS events that may affect their EC2 instances."
+**Amazon EventBridge** can detect and route AWS Health events so you can automate actions or notifications. AWS Health events can include both public and account-specific events.
 
-→ **AWS Personal Health Dashboard + EventBridge + SNS**
-
-Why:
+Typical notification pattern:
 
 ```text
-Specific resources may be affected
-→ Personal Health Dashboard
-
-Automatically detect the event
-→ EventBridge
-
-Send notification
-→ SNS
+AWS Health event
+      ↓
+Amazon EventBridge
+      ↓
+Amazon Simple Notification Service (Amazon SNS)
+      ↓
+Notification
 ```
 
----
-
-# Common AWS Health Traps
-
-### Service Health vs Personal Health
-
-```text
-General AWS outage / service status
-→ Service Health Dashboard
-```
-
-```text
-AWS event may affect my resources
-→ Personal Health Dashboard
-```
-
-### EventBridge is not the health database
-
-EventBridge is the **event-routing/automation mechanism**.
+### Roles
 
 ```text
 AWS Health
 = provides the health event
 
-EventBridge
-= reacts to/routes the event
+Amazon EventBridge
+= detects/routes/triggers from the event
 
-SNS
+Amazon SNS
 = sends the notification
+```
+
+### Example
+
+> "Notify administrators about upcoming AWS events that may affect specific EC2 instances."
+
+→ **AWS Health Dashboard account-specific events + Amazon EventBridge + Amazon SNS**
+
+This matches the older SAA wording of:
+
+→ **Personal Health Dashboard + EventBridge + SNS**
+
+---
+
+# Common AWS Health Traps
+
+## Service Health vs Account-Specific Health
+
+```text
+General AWS service / Regional status
+→ AWS Health Dashboard – Service health
+
+Event specific to my account/resources
+→ AWS Health Dashboard – Your account health
+  (older term: Personal Health Dashboard)
+```
+
+## EventBridge vs SNS
+
+```text
+Amazon EventBridge
+= detect / route / trigger
+
+Amazon Simple Notification Service (Amazon SNS)
+= send notifications
 ```
 
 ---
 
-# AWS Health Question Pattern
+# AWS Health Question Patterns
 
-> **"Notify administrators about upcoming AWS events that may affect specific EC2 instances."**
+> **"An EC2 instance was unexpectedly powered down. Management wants notifications about upcoming AWS events that may affect their EC2 instances."**
 
-→ **Personal Health Dashboard + EventBridge + SNS**
+→ **AWS Health Dashboard account-specific events + Amazon EventBridge + Amazon SNS**
 
-Not:
+---
 
-```text
-Service Health Dashboard
-```
+> **"A company wants general information about the status of an AWS service."**
 
-because that provides general service health information rather than personalized resource impact.
+→ **AWS Health Dashboard – Service health**
 
 ---
 
@@ -360,7 +326,11 @@ because that provides general service health information rather than personalize
 
 **AWS X-Ray = distributed tracing.**
 
-It follows a request as it moves through different services in a distributed application.
+It follows a request through multiple services and helps identify:
+
+* which service is slow
+* where a request failed
+* where latency is occurring
 
 Example:
 
@@ -376,63 +346,41 @@ Service A
 Service B
 ```
 
-X-Ray helps identify:
-
-* which service is slow
-* where a request failed
-* where latency is coming from
-
 ### Signal
 
-> **Find which microservice is causing latency → X-Ray**
+> **Find which microservice is causing latency → AWS X-Ray**
 
----
+### Examples
 
-# Why X-Ray is useful
+> "A distributed application has high latency and the team needs to identify which microservice is responsible."
 
-In a distributed application, a request may travel through multiple services.
+→ **AWS X-Ray**
 
-Without tracing, you may know that a request took five seconds, but not which component caused the delay.
+> "Trace a request across API Gateway, Lambda, and multiple downstream services."
 
-For example:
-
-```text
-Client
-  ↓
-API Gateway
-  ↓
-Lambda
-  ↓
-Service A
-  ↓
-Service B
-```
-
-Suppose Service B takes most of the time.
-
-X-Ray helps trace the request through the architecture and identify where the latency is occurring.
+→ **AWS X-Ray**
 
 ### Memory
 
-> **X-Ray = TRACE one request across services**
+> **AWS X-Ray = TRACE one request across services**
 
 ---
 
 # CloudWatch vs X-Ray
 
-This is an important SAA distinction.
+**Amazon CloudWatch (CloudWatch)** focuses on metrics, logs, alarms, and general monitoring.
+
+**AWS X-Ray** focuses on distributed request tracing.
 
 ```text
-CloudWatch
-= metrics + logs + monitoring
+Amazon CloudWatch
+= metrics + logs + alarms + monitoring
 
-X-Ray
-= trace one request across services
+AWS X-Ray
+= request path + service latency + failures
 ```
 
-### CloudWatch
-
-Think:
+### CloudWatch clues
 
 ```text
 CPU utilization
@@ -440,11 +388,10 @@ Memory
 Application logs
 Alarms
 Metrics
+AWS resource monitoring
 ```
 
-### X-Ray
-
-Think:
+### X-Ray clues
 
 ```text
 Request
@@ -455,182 +402,137 @@ Service B
  ↓
 Service C
 
-Where did the request become slow?
+Where did it become slow?
 Where did it fail?
 ```
-
-### Example
-
-> "A distributed application has high latency and the team needs to identify which microservice is responsible."
-
-→ **AWS X-Ray**
 
 ---
 
 # Amazon Managed Service for Prometheus
 
-**Amazon Managed Service for Prometheus = managed, Prometheus-compatible monitoring and alerting for container workloads.**
+**Amazon Managed Service for Prometheus (AMP) = managed, Prometheus-compatible monitoring and alerting.**
 
-It is especially useful for monitoring:
+Especially relevant to:
 
 * Amazon EKS
 * Amazon ECS
 * AWS Fargate
-* Kubernetes environments
+* Kubernetes
+* container workloads
 
-It uses the **Prometheus data model and PromQL** for querying metrics.
+Uses the **Prometheus data model and PromQL**.
 
 ### Signal
 
-> **Prometheus / PromQL + container metrics → Amazon Managed Service for Prometheus**
-
----
-
-# Typical architecture
-
-```text
-Container workloads
-        ↓
-Prometheus metrics
-        ↓
-Amazon Managed Service for Prometheus
-        ↓
-PromQL / Grafana
-```
-
-Amazon Managed Grafana can be used to visualize Prometheus metrics.
-
-### Memory
-
-> **Managed Service for Prometheus = MANAGED PROMETHEUS**
-
----
-
-# Prometheus and containers
-
-A question may mention:
-
-* Kubernetes
-* EKS
-* containers
-* Prometheus
-* PromQL
-* metrics
-* monitoring
-
-These clues strongly point toward:
-
-→ **Amazon Managed Service for Prometheus**
+> **Prometheus / PromQL + container/Kubernetes metrics → Amazon Managed Service for Prometheus (AMP)**
 
 ### Example
 
-> "A company uses Kubernetes and wants to use Prometheus and PromQL for monitoring without managing the Prometheus infrastructure."
+> "A company uses Kubernetes and wants Prometheus and PromQL for monitoring without managing Prometheus infrastructure."
 
-→ **Amazon Managed Service for Prometheus**
+→ **Amazon Managed Service for Prometheus (AMP)**
 
----
+> "The company needs managed Prometheus-compatible metrics for EKS workloads."
 
-# Amazon Managed Service for Prometheus vs CloudWatch
-
-These services can both be used for monitoring, but the signal is different.
-
-```text
-CloudWatch
-= AWS-native metrics, logs, and monitoring
-
-Amazon Managed Service for Prometheus
-= Prometheus-compatible metrics
-= PromQL
-= especially useful for container/Kubernetes monitoring
-```
-
-### Important distinction
-
-If the question emphasizes:
-
-```text
-Prometheus
-PromQL
-Kubernetes
-container metrics
-```
-
-→ **Amazon Managed Service for Prometheus**
-
-If it emphasizes:
-
-```text
-AWS metrics
-logs
-alarms
-AWS resource monitoring
-```
-
-→ **CloudWatch**
+→ **Amazon Managed Service for Prometheus (AMP)**
 
 ---
 
-# Amazon Managed Service for Prometheus + Grafana
-
-Prometheus stores and provides the metrics/querying model, while Grafana can be used to visualize the metrics.
-
-Typical pattern:
+# Typical AMP Architecture
 
 ```text
 Container / Kubernetes workloads
              ↓
        Prometheus metrics
              ↓
-Amazon Managed Service for Prometheus
+Amazon Managed Service for Prometheus (AMP)
              ↓
          PromQL queries
              ↓
-   Amazon Managed Grafana
+     Amazon Managed Grafana
              ↓
-       Dashboards
+         Dashboards
 ```
 
 ### Important
 
-> **Prometheus service = metrics/querying**
+```text
+Amazon Managed Service for Prometheus (AMP)
+= metrics + Prometheus querying
 
-> **Grafana = visualization**
+Amazon Managed Grafana
+= visualization
+```
+
+---
+
+# Prometheus / AMP vs CloudWatch
+
+```text
+Amazon Managed Service for Prometheus (AMP)
+= Prometheus-compatible metrics
+= PromQL
+= especially useful for Kubernetes/container monitoring
+
+Amazon CloudWatch
+= AWS-native metrics
+= logs
+= alarms
+= general resource monitoring
+```
+
+### SAA clue
+
+```text
+Prometheus
+PromQL
+Kubernetes
+container metrics
+→ Amazon Managed Service for Prometheus (AMP)
+```
+
+```text
+AWS metrics
+logs
+alarms
+resource monitoring
+→ Amazon CloudWatch (CloudWatch)
+```
 
 ---
 
 # Operations Service Comparison
 
-| Service                            | What it does                                   | Signal keyword                            |
-| ---------------------------------- | ---------------------------------------------- | ----------------------------------------- |
-| **SSM Session Manager**            | Secure interactive access to EC2               | Private EC2 without SSH                   |
-| **SSM Run Command**                | Run commands/scripts on instances              | Same command on many instances            |
-| **SSM Patch Manager**              | Automate OS patching                           | Patch many instances                      |
-| **AWS Personal Health Dashboard**  | Shows health events relevant to your resources | AWS event may affect my resources         |
-| **Amazon EventBridge**             | Reacts to/routs AWS Health events              | Automatically react to Health events      |
-| **Amazon SNS**                     | Sends notifications                            | Notify administrators                     |
-| **AWS X-Ray**                      | Distributed request tracing                    | Find latency/failure across microservices |
-| **Managed Service for Prometheus** | Managed Prometheus-compatible monitoring       | Prometheus / PromQL / Kubernetes          |
+| Service                                                                              | What it does                   | Signal keyword                         |
+| ------------------------------------------------------------------------------------ | ------------------------------ | -------------------------------------- |
+| **AWS Systems Manager Session Manager**                                              | Secure interactive EC2 access  | Private EC2 without SSH                |
+| **AWS Systems Manager Run Command**                                                  | Run commands/scripts           | Same command on many instances         |
+| **AWS Systems Manager Patch Manager**                                                | Automate OS patching           | Patch many instances                   |
+| **AWS Health Dashboard – Your account health** / **Personal Health Dashboard (PHD)** | Account-specific Health events | Event specific to my account/resources |
+| **AWS Health Dashboard – Service health**                                            | Public AWS service events      | General service/Regional status        |
+| **Amazon EventBridge**                                                               | Detect/route AWS Health events | Automatically react to an event        |
+| **Amazon Simple Notification Service (Amazon SNS)**                                  | Send notifications             | Notify administrators                  |
+| **AWS X-Ray**                                                                        | Distributed request tracing    | Find latency/failure across services   |
+| **Amazon Managed Service for Prometheus (AMP)**                                      | Managed Prometheus monitoring  | Prometheus / PromQL / Kubernetes       |
 
 ---
 
 # Systems Manager Decision Tree
-
-When you see an SSM question, ask:
 
 ```text
 What does the administrator need to do?
           │
           ├── Access an instance interactively?
           │       ↓
-          │   Session Manager
+          │   AWS Systems Manager Session Manager
           │
           ├── Run a command/script?
           │       ↓
-          │    Run Command
+          │   AWS Systems Manager Run Command
           │
           └── Patch the operating system?
                   ↓
-              Patch Manager
+          AWS Systems Manager Patch Manager
 ```
 
 ---
@@ -638,19 +540,20 @@ What does the administrator need to do?
 # AWS Health Decision Tree
 
 ```text
-What kind of AWS health information is needed?
+What kind of Health information is needed?
           │
-          ├── General AWS service status?
+          ├── General AWS service / Regional status?
           │       ↓
-          │   Service Health Dashboard
+          │   AWS Health Dashboard – Service health
           │
-          └── Event may affect my resources?
+          └── Event specific to my account/resources?
                   ↓
-           Personal Health Dashboard
+          AWS Health Dashboard – Your account health
+          (older term: Personal Health Dashboard)
                   ↓
-              EventBridge
+              Amazon EventBridge
                   ↓
-                  SNS
+          Amazon Simple Notification Service (Amazon SNS)
 ```
 
 ---
@@ -660,88 +563,18 @@ What kind of AWS health information is needed?
 ```text
 What is the monitoring requirement?
           │
-          ├── Trace one request through
-          │   multiple services?
+          ├── Trace one request through multiple services?
           │       ↓
-          │      X-Ray
+          │   AWS X-Ray
           │
           ├── Prometheus / PromQL?
           │       ↓
-          │   Managed Service
-          │   for Prometheus
+          │   Amazon Managed Service for Prometheus (AMP)
           │
           └── General AWS metrics/logs/alarms?
                   ↓
-               CloudWatch
+          Amazon CloudWatch (CloudWatch)
 ```
-
----
-
-# Common Question Patterns
-
-> **"Secure shell access to private EC2 without SSH or a bastion."**
-
-→ **SSM Session Manager**
-
----
-
-> **"Run the same command on hundreds of EC2 instances."**
-
-→ **SSM Run Command**
-
----
-
-> **"Execute a script across a fleet of EC2 instances."**
-
-→ **SSM Run Command**
-
----
-
-> **"Automatically patch hundreds of EC2 instances."**
-
-→ **SSM Patch Manager**
-
----
-
-> **"Apply security patches to EC2 instances on a regular schedule."**
-
-→ **SSM Patch Manager**
-
----
-
-> **"Notify administrators about AWS events that may affect their EC2 instances."**
-
-→ **Personal Health Dashboard + EventBridge + SNS**
-
----
-
-> **"A company wants general information about the status of an AWS service."**
-
-→ **Service Health Dashboard**
-
----
-
-> **"Find which microservice is causing latency in a request."**
-
-→ **AWS X-Ray**
-
----
-
-> **"Trace a request across API Gateway, Lambda, and multiple downstream services."**
-
-→ **AWS X-Ray**
-
----
-
-> **"A company uses Kubernetes and wants Prometheus and PromQL for monitoring without managing Prometheus infrastructure."**
-
-→ **Amazon Managed Service for Prometheus**
-
----
-
-> **"The company needs managed Prometheus-compatible metrics for EKS workloads."**
-
-→ **Amazon Managed Service for Prometheus**
 
 ---
 
@@ -749,101 +582,76 @@ What is the monitoring requirement?
 
 ## Session Manager vs Run Command
 
-Both are part of Systems Manager, but they serve different purposes.
-
 ```text
 Interactive shell / access
-→ Session Manager
+→ AWS Systems Manager Session Manager
 ```
 
 ```text
-Execute commands or scripts
-→ Run Command
+Execute commands/scripts
+→ AWS Systems Manager Run Command
 ```
 
 Example:
 
 > "Connect to a private EC2 instance and inspect files interactively."
 
-→ **Session Manager**
-
-But:
+→ **AWS Systems Manager Session Manager**
 
 > "Run the same command on 500 EC2 instances."
 
-→ **Run Command**
+→ **AWS Systems Manager Run Command**
 
 ---
 
 ## Run Command vs Patch Manager
 
-Patching is a specific operational task.
-
 ```text
 General command/script
-→ Run Command
-```
+→ AWS Systems Manager Run Command
 
-```text
 OS patching
-→ Patch Manager
+→ AWS Systems Manager Patch Manager
 ```
 
 ---
 
 ## Session Manager vs SSH
 
-If the question says:
+> **"Access private instances without opening port 22."**
 
-> "Access private instances without opening port 22."
+→ **AWS Systems Manager Session Manager**
 
-Think:
+Typical pattern does not require:
 
-```text
-Session Manager
-```
-
-You do not need:
-
-* a public IP
+* public IP
 * inbound SSH port 22
-* a bastion host
-
-for the Session Manager access pattern.
+* bastion host
 
 ---
 
-## Personal Health Dashboard vs Service Health Dashboard
-
-This is a common SAA trap.
+## Account-Specific Health vs Public Health
 
 ```text
 General AWS service status
-→ Service Health Dashboard
+→ AWS Health Dashboard – Service health
+
+Event specific to my account/resources
+→ AWS Health Dashboard – Your account health
+   (older term: Personal Health Dashboard)
 ```
 
-```text
-AWS event may affect my resources
-→ Personal Health Dashboard
-```
-
-If the question says **your EC2 instances**, **your RDS databases**, or another specific account resource may be affected, think:
-
-→ **Personal Health Dashboard**
+A public EC2 event can still potentially affect your resources; what distinguishes it is that it is **not specific to your account**. Account-specific events can identify affected resources.
 
 ---
 
 ## EventBridge vs SNS
 
-These are often used together but solve different problems.
-
 ```text
-EventBridge
-= detect / route / trigger from an event
-```
+Amazon EventBridge
+= detect / route / trigger
 
-```text
-SNS
+Amazon Simple Notification Service (Amazon SNS)
 = send notifications
 ```
 
@@ -851,8 +659,8 @@ Typical pattern:
 
 ```text
 AWS Health event
-→ EventBridge
-→ SNS
+→ Amazon EventBridge
+→ Amazon SNS
 → Administrators
 ```
 
@@ -860,29 +668,23 @@ AWS Health event
 
 ## X-Ray vs CloudWatch
 
-Look at the thing being investigated.
-
 ```text
 Metrics / logs / alarms
-→ CloudWatch
-```
+→ Amazon CloudWatch
 
-```text
 Request path / service latency
-→ X-Ray
+→ AWS X-Ray
 ```
 
 ---
 
 ## Prometheus vs CloudWatch
 
-Look for the monitoring technology named in the question.
-
 ```text
 Prometheus
 PromQL
 Kubernetes metrics
-→ Managed Service for Prometheus
+→ Amazon Managed Service for Prometheus (AMP)
 ```
 
 ```text
@@ -890,129 +692,47 @@ AWS-native monitoring
 Metrics
 Logs
 Alarms
-→ CloudWatch
+→ Amazon CloudWatch
 ```
 
 ---
 
 # Hybrid Environment Example
 
-Systems Manager can manage supported on-premises servers in addition to AWS instances when configured appropriately.
-
-For example:
+**AWS Systems Manager (SSM)** can manage supported on-premises servers as well as AWS instances when configured appropriately.
 
 ```text
 AWS EC2 instances
         +
 On-premises servers
         ↓
-Systems Manager
+AWS Systems Manager
         ↓
 Operations / management
 ```
 
-This can allow the same operational tooling to be used across a hybrid environment.
-
 ### Important
 
-The on-premises server must be properly configured for Systems Manager, including the required agent and connectivity.
+The on-premises server requires the required agent and connectivity configuration.
 
 ---
 
 # Pocket Card
 
-| Keyword                                   | Answer                                    |
-| ----------------------------------------- | ----------------------------------------- |
-| Secure instance shell without SSH         | **SSM Session Manager**                   |
-| Private EC2 without bastion               | **SSM Session Manager**                   |
-| Run commands across instances             | **SSM Run Command**                       |
-| Run same script on many instances         | **SSM Run Command**                       |
-| Automated OS patching                     | **SSM Patch Manager**                     |
-| Patch many instances                      | **SSM Patch Manager**                     |
-| AWS event may affect my resources         | **Personal Health Dashboard**             |
-| General AWS service status                | **Service Health Dashboard**              |
-| Automatically react to AWS Health event   | **EventBridge**                           |
-| Send AWS Health notifications             | **SNS**                                   |
-| Distributed request tracing               | **AWS X-Ray**                             |
-| Find microservice latency                 | **AWS X-Ray**                             |
-| Prometheus / PromQL                       | **Amazon Managed Service for Prometheus** |
-| Kubernetes / container Prometheus metrics | **Amazon Managed Service for Prometheus** |
+| Keyword                                   | Answer                                                                           |
+| ----------------------------------------- | -------------------------------------------------------------------------------- |
+| Secure instance shell without SSH         | **AWS Systems Manager Session Manager**                                          |
+| Private EC2 without bastion               | **AWS Systems Manager Session Manager**                                          |
+| Run commands across instances             | **AWS Systems Manager Run Command**                                              |
+| Run same script on many instances         | **AWS Systems Manager Run Command**                                              |
+| Automated OS patching                     | **AWS Systems Manager Patch Manager**                                            |
+| Patch many instances                      | **AWS Systems Manager Patch Manager**                                            |
+| Event specific to my account/resources    | **AWS Health Dashboard – Your account health / Personal Health Dashboard (PHD)** |
+| General AWS service status                | **AWS Health Dashboard – Service health**                                        |
+| Automatically react to AWS Health event   | **Amazon EventBridge**                                                           |
+| Send AWS Health notifications             | **Amazon Simple Notification Service (Amazon SNS)**                              |
+| Distributed request tracing               | **AWS X-Ray**                                                                    |
+| Find microservice latency                 | **AWS X-Ray**                                                                    |
+| Prometheus / PromQL                       | **Amazon Managed Service for Prometheus (AMP)**                                  |
+| Kubernetes / container Prometheus metrics | **Amazon Managed Service for Prometheus (AMP)**                                  |
 
----
-
-# Final Memory
-
-```text
-SSM Session Manager
-= SECURE INSTANCE ACCESS
-= NO SSH / NO BASTION REQUIRED
-
-SSM Run Command
-= RUN COMMANDS ON MANY INSTANCES
-
-SSM Patch Manager
-= PATCH INSTANCES
-
-AWS Personal Health Dashboard
-= AWS EVENTS RELEVANT TO MY RESOURCES
-
-EventBridge
-= REACT TO / ROUTE AWS HEALTH EVENTS
-
-SNS
-= SEND NOTIFICATIONS
-
-AWS X-Ray
-= DISTRIBUTED TRACING
-= TRACE REQUESTS ACROSS SERVICES
-
-Amazon Managed Service for Prometheus
-= MANAGED PROMETHEUS
-= PROMQL
-= CONTAINER / KUBERNETES METRICS
-```
-
-# The Golden Rule
-
-```text
-Secure access to private EC2
-→ Session Manager
-
-Run commands across instances
-→ Run Command
-
-Patch instances
-→ Patch Manager
-
-AWS event may affect my resources
-→ Personal Health Dashboard
-
-Automatically react to the AWS Health event
-→ EventBridge
-
-Send the notification
-→ SNS
-
-Find which service causes request latency
-→ X-Ray
-
-Prometheus / PromQL / Kubernetes metrics
-→ Managed Service for Prometheus
-```
-
-> **Don't memorize the implementation.**
->
-> **Memorize the unique signal.**
-
-For example:
-
-```text
-Private EC2 + no SSH       → Session Manager
-Many instances + command  → Run Command
-Many instances + patches  → Patch Manager
-AWS event + my resources  → Personal Health Dashboard
-Health event + automation → EventBridge
-Notification              → SNS
-Distributed latency       → X-Ray
-Prometheus / PromQL       → Managed Prometheus
-```
