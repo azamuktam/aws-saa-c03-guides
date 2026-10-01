@@ -2,15 +2,11 @@
 
 ## The idea
 
-These are AWS services that commonly appear in SAA questions as **specific migration, messaging, database migration, or disaster-recovery use cases**.
+These AWS services commonly appear in SAA questions for **migration, messaging, database migration, and disaster recovery**.
 
-You generally don't need deep knowledge of each one.
-
-The best strategy is:
+Best approach:
 
 > **Read the requirement → identify the unique keyword → choose the service.**
-
-For example:
 
 ```text
 Existing RabbitMQ application
@@ -23,33 +19,33 @@ Disaster recovery for servers
 → AWS Elastic Disaster Recovery (DRS)
 
 Migrate database data
-→ AWS DMS
+→ AWS Database Migration Service (DMS)
 
 Different database engines
-→ AWS SCT + DMS
+→ AWS Schema Conversion Tool (SCT) + DMS
 ```
 
 ---
 
 # Amazon MQ
 
-**Amazon MQ = managed message broker for applications that already use traditional messaging systems.**
+**Amazon MQ = managed message broker for applications already using traditional messaging systems.**
 
-It supports managed brokers such as:
+Managed brokers include:
 
 * ActiveMQ
 * RabbitMQ
 
-It is useful when an existing application already uses traditional messaging protocols or APIs and you want to migrate it to AWS without rewriting the application.
+Use it when an existing application already depends on traditional messaging protocols/APIs and you want to migrate to AWS with minimal application changes.
 
-Common keywords:
+### Common keywords
 
 * RabbitMQ
 * ActiveMQ
 * JMS
 * AMQP
-* existing message broker
-* minimal application changes
+* Existing message broker
+* Minimal application changes
 
 ### Important distinction
 
@@ -77,12 +73,12 @@ New AWS-native application
 
 **AWS Application Migration Service (MGN) = rehost / lift-and-shift servers to AWS.**
 
-The service continuously replicates the source server's **block-level data** to AWS.
+MGN continuously replicates the source server's **block-level data** to AWS.
 
 ```text
 On-premises server
         ↓
-    MGN agent
+AWS Replication Agent
         ↓
 Continuous replication
         ↓
@@ -97,9 +93,9 @@ The goal is to move the server to AWS with **minimal changes**.
 
 > "Move existing physical or virtual servers to AWS without redesigning the application."
 
-→ **MGN**
+→ **AWS Application Migration Service (MGN)**
 
-MGN provides continuous data protection with recovery points near seconds and can achieve recovery in minutes in appropriate configurations.
+MGN provides continuous data protection with **recovery points near seconds** and can achieve **recovery in minutes** in appropriate configurations.
 
 ## Important terminology
 
@@ -114,7 +110,7 @@ MGN is associated with:
 
 ### Remember
 
-> **Rehost / lift-and-shift → MGN**
+> **Rehost / lift-and-shift → AWS Application Migration Service (MGN)**
 
 ### Example
 
@@ -125,18 +121,18 @@ No major redesign
         ↓
 Move server to AWS
         ↓
-MGN
+AWS Application Migration Service (MGN)
 ```
 
 ### Memory
 
-> **MGN = MOVE SERVERS**
+> **MGN = move servers**
 
 ---
 
 # AWS Elastic Disaster Recovery (DRS)
 
-**AWS Elastic Disaster Recovery = disaster recovery for servers.**
+**AWS Elastic Disaster Recovery (DRS) = disaster recovery for servers.**
 
 It continuously replicates workloads into AWS, but the recovery environment is mainly used **when a disaster happens**.
 
@@ -156,9 +152,9 @@ Launch recovery instances
 
 > "We need a cost-effective disaster recovery solution for physical, virtual, or cloud servers."
 
-→ **AWS DRS**
+→ **AWS Elastic Disaster Recovery (DRS)**
 
-DRS is designed to provide disaster recovery rather than simply being a migration mechanism.
+DRS is designed for **disaster recovery**, rather than simply being a migration mechanism.
 
 ### Memory
 
@@ -172,15 +168,15 @@ DRS
 
 # MGN vs DRS
 
-Both services use continuous replication, so they can look very similar in SAA questions.
+Both services use continuous replication, so SAA questions can make them look similar.
 
-The key difference is the **goal**.
+The key difference is the **goal**:
 
 ```text
-MGN
+AWS Application Migration Service (MGN)
 = migrate to AWS
 
-DRS
+AWS Elastic Disaster Recovery (DRS)
 = recover in AWS when disaster happens
 ```
 
@@ -188,18 +184,18 @@ DRS
 
 ```text
 Need to MOVE the workload
-→ MGN
+→ AWS Application Migration Service (MGN)
 
 Need to RECOVER the workload after a disaster
-→ DRS
+→ AWS Elastic Disaster Recovery (DRS)
 ```
 
 ### Comparison
 
-| Service     | Main purpose                    | Typical signal                   |
-| ----------- | ------------------------------- | -------------------------------- |
-| **AWS MGN** | Rehost / migrate servers to AWS | Lift-and-shift / minimal changes |
-| **AWS DRS** | Disaster recovery for servers   | Recover after a disaster         |
+| Service                                     | Main purpose                    | Typical signal                   |
+| ------------------------------------------- | ------------------------------- | -------------------------------- |
+| **AWS Application Migration Service (MGN)** | Rehost / migrate servers to AWS | Lift-and-shift / minimal changes |
+| **AWS Elastic Disaster Recovery (DRS)**     | Disaster recovery for servers   | Recover after a disaster         |
 
 ### Important distinction
 
@@ -233,14 +229,14 @@ It is used to migrate data between databases and can also support ongoing replic
 
 **AWS Schema Conversion Tool (SCT) = convert schema/code when changing database engines.**
 
-For example:
+Example:
 
 ```text
 Oracle
    ↓
-SCT → convert schema
+AWS SCT → convert schema
    ↓
-DMS → move data
+AWS DMS → move data
    ↓
 Aurora PostgreSQL
 ```
@@ -253,23 +249,21 @@ Aurora PostgreSQL
 
 # DMS vs SCT
 
-The easiest way to remember them:
-
 ```text
 DMS
-= MOVE DATA
+= move data
 
 SCT
-= CONVERT SCHEMA
+= convert schema
 ```
 
 ### Same database engine
 
-When the source and target use the same or compatible database engine:
+When source and target use the same or compatible database engine:
 
 ```text
 Same database engine
-→ DMS
+→ AWS Database Migration Service (DMS)
 ```
 
 ### Different database engine
@@ -278,7 +272,7 @@ When changing database engines:
 
 ```text
 Different database engine
-→ SCT + DMS
+→ AWS Schema Conversion Tool (SCT) + DMS
 ```
 
 ### Important pattern
@@ -295,7 +289,7 @@ Different database engine
 
 > "Migrate an Oracle database to Amazon Aurora PostgreSQL."
 
-→ **AWS SCT + DMS**
+→ **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)**
 
 Why?
 
@@ -317,15 +311,15 @@ Aurora PostgreSQL
 
 The **7 Rs** describe different migration strategies.
 
-| R                           | Meaning                    | Simple idea                            |
-| --------------------------- | -------------------------- | -------------------------------------- |
-| **Rehost**                  | Move without major changes | Lift and shift                         |
-| **Replatform**              | Move with small changes    | Use a managed AWS service              |
-| **Repurchase**              | Replace the application    | Buy a SaaS product                     |
-| **Refactor / Re-architect** | Redesign the application   | Build it for cloud-native architecture |
-| **Relocate**                | Move the whole environment | VMware Cloud on AWS, for example       |
-| **Retain**                  | Keep it where it is        | Don't migrate yet                      |
-| **Retire**                  | Stop using it              | Decommission it                        |
+| R                           | Meaning                    | Simple idea                         |
+| --------------------------- | -------------------------- | ----------------------------------- |
+| **Rehost**                  | Move without major changes | Lift-and-shift                      |
+| **Replatform**              | Move with small changes    | Use a managed AWS service           |
+| **Repurchase**              | Replace the application    | Buy/use a SaaS product              |
+| **Refactor / Re-architect** | Redesign the application   | Build for cloud-native architecture |
+| **Relocate**                | Move the whole environment | VMware Cloud on AWS, for example    |
+| **Retain**                  | Keep it where it is        | Don't migrate yet                   |
+| **Retire**                  | Stop using it              | Decommission it                     |
 
 ---
 
@@ -349,7 +343,7 @@ Typical signal:
 
 ```text
 Rehost
-→ MGN
+→ AWS Application Migration Service (MGN)
 ```
 
 ---
@@ -358,7 +352,7 @@ Rehost
 
 **Move with small changes.**
 
-You move the workload while taking advantage of a managed AWS service.
+Move the workload while taking advantage of a managed AWS service.
 
 Example:
 
@@ -374,7 +368,7 @@ The application architecture is not completely redesigned, but the underlying pl
 
 ## Repurchase
 
-**Replace the existing application with a different product or SaaS solution.**
+**Replace the existing application with another product or SaaS solution.**
 
 Example:
 
@@ -384,13 +378,13 @@ Self-hosted CRM
 SaaS CRM
 ```
 
-You effectively abandon the old application and purchase/use a new one.
+You effectively abandon the old application and use the new one.
 
 ---
 
 ## Refactor / Re-architect
 
-**Redesign the application to take advantage of cloud-native architecture.**
+**Redesign the application to use cloud-native architecture.**
 
 Example:
 
@@ -400,7 +394,7 @@ Monolith
 Lambda / containers / serverless architecture
 ```
 
-This usually involves significant application changes.
+Usually involves significant application changes.
 
 ---
 
@@ -432,12 +426,12 @@ On-premises
 Keep it there
 ```
 
-Reasons can include:
+Possible reasons:
 
-* business requirements
-* technical dependencies
-* compliance constraints
-* migration not currently justified
+* Business requirements
+* Technical dependencies
+* Compliance constraints
+* Migration not currently justified
 
 ---
 
@@ -486,48 +480,36 @@ Retire
 
 # Migration Service Decision Tree
 
-A useful SAA decision process is:
-
 ```text
-What is the question asking?
-
-          ┌───────────────────────────┐
-          │ Existing message broker?  │
-          └─────────────┬─────────────┘
-                        ↓
-                 RabbitMQ / ActiveMQ
-                        ↓
-                   Amazon MQ
+Existing message broker?
+        ↓
+RabbitMQ / ActiveMQ
+        ↓
+Amazon MQ
 ```
 
 ```text
-          ┌───────────────────────────┐
-          │ Existing server migration?│
-          └─────────────┬─────────────┘
-                        ↓
-              Rehost / lift-and-shift
-                        ↓
-                     MGN
+Existing server migration?
+        ↓
+Rehost / lift-and-shift
+        ↓
+AWS Application Migration Service (MGN)
 ```
 
 ```text
-          ┌───────────────────────────┐
-          │ Disaster recovery?        │
-          └─────────────┬─────────────┘
-                        ↓
-                       DRS
+Disaster recovery?
+        ↓
+AWS Elastic Disaster Recovery (DRS)
 ```
 
 ```text
-          ┌───────────────────────────┐
-          │ Database migration?       │
-          └─────────────┬─────────────┘
-                        ↓
-             ┌──────────┴──────────┐
-             ↓                     ↓
-       Same engine           Different engine
-             ↓                     ↓
-            DMS                SCT + DMS
+Database migration?
+        ↓
+   ┌────┴──────────┐
+   ↓               ↓
+Same engine   Different engine
+   ↓               ↓
+DMS            SCT + DMS
 ```
 
 ---
@@ -546,7 +528,7 @@ What is the question asking?
 
 ---
 
-> **"Need disaster recovery for physical/virtual/cloud servers."**
+> **"Need disaster recovery for physical, virtual, or cloud servers."**
 
 → **AWS Elastic Disaster Recovery (DRS)**
 
@@ -554,7 +536,7 @@ What is the question asking?
 
 > **"Migrate Oracle to Aurora PostgreSQL."**
 
-→ **AWS SCT + DMS**
+→ **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)**
 
 ---
 
@@ -588,10 +570,10 @@ Look at the objective:
 
 ```text
 "Move / migrate to AWS"
-→ MGN
+→ AWS Application Migration Service (MGN)
 
 "Recover after disaster"
-→ DRS
+→ AWS Elastic Disaster Recovery (DRS)
 ```
 
 ---
@@ -618,88 +600,19 @@ SCT + DMS
 
 # Pocket Card
 
-| Keyword                                        | Answer                                  |
-| ---------------------------------------------- | --------------------------------------- |
-| Existing RabbitMQ / ActiveMQ application       | **Amazon MQ**                           |
-| Existing message broker / minimal code changes | **Amazon MQ**                           |
-| Minimal-change server migration / rehost       | **AWS MGN**                             |
-| Lift-and-shift servers                         | **AWS MGN**                             |
-| Disaster recovery for servers                  | **AWS Elastic Disaster Recovery (DRS)** |
-| Move database data                             | **DMS**                                 |
-| Database replication / migration               | **DMS**                                 |
-| Different database engines                     | **SCT + DMS**                           |
-| Convert database schema                        | **SCT**                                 |
-| Oracle → Aurora PostgreSQL                     | **SCT + DMS**                           |
+| Keyword                                        | Answer                                                                      |
+| ---------------------------------------------- | --------------------------------------------------------------------------- |
+| Existing RabbitMQ / ActiveMQ application       | **Amazon MQ**                                                               |
+| Existing message broker / minimal code changes | **Amazon MQ**                                                               |
+| Minimal-change server migration / rehost       | **AWS Application Migration Service (MGN)**                                 |
+| Lift-and-shift servers                         | **AWS Application Migration Service (MGN)**                                 |
+| Disaster recovery for servers                  | **AWS Elastic Disaster Recovery (DRS)**                                     |
+| Move database data                             | **AWS Database Migration Service (DMS)**                                    |
+| Database replication / migration               | **AWS Database Migration Service (DMS)**                                    |
+| Different database engines                     | **AWS Schema Conversion Tool (SCT) + DMS**                                  |
+| Convert database schema                        | **AWS Schema Conversion Tool (SCT)**                                        |
+| Oracle → Aurora PostgreSQL                     | **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)** |
 
 ---
 
-# Final Memory
 
-```text
-Amazon MQ
-= EXISTING MESSAGE BROKER
-= RABBITMQ / ACTIVEMQ
-= MINIMAL CODE CHANGES
-
-MGN
-= MOVE SERVERS
-= REHOST
-= LIFT-AND-SHIFT
-
-DRS
-= RECOVER SERVERS
-= DISASTER RECOVERY
-
-DMS
-= MOVE DATABASE DATA
-= DATABASE MIGRATION / REPLICATION
-
-SCT
-= CONVERT DATABASE SCHEMA
-= DIFFERENT DATABASE ENGINES
-
-7 Rs
-= REHOST
-= REPLATFORM
-= REPURCHASE
-= REFACTOR / RE-ARCHITECT
-= RELOCATE
-= RETAIN
-= RETIRE
-```
-
-# The Golden Rule
-
-```text
-Existing RabbitMQ / ActiveMQ
-→ Amazon MQ
-
-Rehost / lift-and-shift
-→ MGN
-
-Disaster recovery
-→ DRS
-
-Move database data
-→ DMS
-
-Different database engines
-→ SCT + DMS
-```
-
-> **Don't memorize the implementation.**
->
-> **Memorize the unique signal.**
-
-For example:
-
-```text
-RabbitMQ            → MQ
-ActiveMQ            → MQ
-Rehost              → MGN
-Lift-and-shift      → MGN
-Disaster recovery   → DRS
-Database migration  → DMS
-Different engines   → SCT + DMS
-Schema conversion   → SCT
-```
