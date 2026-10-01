@@ -2,7 +2,7 @@
 
 ## The idea
 
-These AWS services commonly appear in SAA questions involving **instance management, secure access, command execution, patching, AWS operational events, distributed tracing, and Prometheus-compatible monitoring**.
+These AWS services commonly appear in SAA questions involving **instance management, secure access, command execution, patching, AWS operational events, and Prometheus-compatible monitoring**.
 
 Best strategy:
 
@@ -19,7 +19,7 @@ Automatically patch hundreds of EC2 instances
 → AWS Systems Manager Patch Manager
 
 AWS event specifically associated with your account/resources
-→ AWS Health Dashboard account-specific events
+→ AWS Health Dashboard – Your account health
    (older SAA material: Personal Health Dashboard)
 
 Automatically react to AWS Health events
@@ -27,9 +27,6 @@ Automatically react to AWS Health events
 
 Send notifications
 → Amazon Simple Notification Service (Amazon SNS)
-
-Find which microservice is causing latency
-→ AWS X-Ray
 
 Prometheus / PromQL + container metrics
 → Amazon Managed Service for Prometheus (AMP)
@@ -210,9 +207,11 @@ Public events are **not specific to an AWS account** and can describe a Regional
 
 ---
 
-## Account-Specific / Personal Health
+## Account-Specific / Your Account Health
 
-The signed-in **AWS Health Dashboard – Your account health** shows events specific to your account, including **upcoming scheduled changes** and affected resources. Older SAA material commonly calls this the **AWS Personal Health Dashboard (PHD)**.
+The signed-in **AWS Health Dashboard – Your account health** shows events specific to your account, including **upcoming scheduled changes** and affected resources.
+
+Older SAA material commonly calls this the **AWS Personal Health Dashboard (PHD)**.
 
 ```text
 AWS event
@@ -224,7 +223,7 @@ Your account health
 
 ### Signal
 
-> **AWS event specifically associated with my account/resources → AWS Health Dashboard account-specific events**
+> **AWS event specifically associated with my account/resources → AWS Health Dashboard – Your account health**
 
 ### Important distinction
 
@@ -244,7 +243,7 @@ The distinction is **not** whether the event could affect resources generally; p
 
 # EventBridge + AWS Health
 
-**Amazon EventBridge** can detect and route AWS Health events so you can automate actions or notifications. AWS Health events can include both public and account-specific events.
+**Amazon EventBridge** can detect and route AWS Health events so you can automate actions or notifications.
 
 Typical notification pattern:
 
@@ -275,9 +274,9 @@ Amazon SNS
 
 > "Notify administrators about upcoming AWS events that may affect specific EC2 instances."
 
-→ **AWS Health Dashboard account-specific events + Amazon EventBridge + Amazon SNS**
+→ **AWS Health Dashboard – Your account health + Amazon EventBridge + Amazon SNS**
 
-This matches the older SAA wording of:
+This matches the older SAA wording:
 
 → **Personal Health Dashboard + EventBridge + SNS**
 
@@ -312,99 +311,13 @@ Amazon Simple Notification Service (Amazon SNS)
 
 > **"An EC2 instance was unexpectedly powered down. Management wants notifications about upcoming AWS events that may affect their EC2 instances."**
 
-→ **AWS Health Dashboard account-specific events + Amazon EventBridge + Amazon SNS**
+→ **AWS Health Dashboard – Your account health + Amazon EventBridge + Amazon SNS**
 
 ---
 
 > **"A company wants general information about the status of an AWS service."**
 
 → **AWS Health Dashboard – Service health**
-
----
-
-# AWS X-Ray
-
-**AWS X-Ray = distributed tracing.**
-
-It follows a request through multiple services and helps identify:
-
-* which service is slow
-* where a request failed
-* where latency is occurring
-
-Example:
-
-```text
-Client
-  ↓
-API Gateway
-  ↓
-Lambda
-  ↓
-Service A
-  ↓
-Service B
-```
-
-### Signal
-
-> **Find which microservice is causing latency → AWS X-Ray**
-
-### Examples
-
-> "A distributed application has high latency and the team needs to identify which microservice is responsible."
-
-→ **AWS X-Ray**
-
-> "Trace a request across API Gateway, Lambda, and multiple downstream services."
-
-→ **AWS X-Ray**
-
-### Memory
-
-> **AWS X-Ray = TRACE one request across services**
-
----
-
-# CloudWatch vs X-Ray
-
-**Amazon CloudWatch (CloudWatch)** focuses on metrics, logs, alarms, and general monitoring.
-
-**AWS X-Ray** focuses on distributed request tracing.
-
-```text
-Amazon CloudWatch
-= metrics + logs + alarms + monitoring
-
-AWS X-Ray
-= request path + service latency + failures
-```
-
-### CloudWatch clues
-
-```text
-CPU utilization
-Memory
-Application logs
-Alarms
-Metrics
-AWS resource monitoring
-```
-
-### X-Ray clues
-
-```text
-Request
- ↓
-Service A
- ↓
-Service B
- ↓
-Service C
-
-Where did it become slow?
-Where did it fail?
-```
 
 ---
 
@@ -426,7 +339,7 @@ Uses the **Prometheus data model and PromQL**.
 
 > **Prometheus / PromQL + container/Kubernetes metrics → Amazon Managed Service for Prometheus (AMP)**
 
-### Example
+### Examples
 
 > "A company uses Kubernetes and wants Prometheus and PromQL for monitoring without managing Prometheus infrastructure."
 
@@ -466,41 +379,6 @@ Amazon Managed Grafana
 
 ---
 
-# Prometheus / AMP vs CloudWatch
-
-```text
-Amazon Managed Service for Prometheus (AMP)
-= Prometheus-compatible metrics
-= PromQL
-= especially useful for Kubernetes/container monitoring
-
-Amazon CloudWatch
-= AWS-native metrics
-= logs
-= alarms
-= general resource monitoring
-```
-
-### SAA clue
-
-```text
-Prometheus
-PromQL
-Kubernetes
-container metrics
-→ Amazon Managed Service for Prometheus (AMP)
-```
-
-```text
-AWS metrics
-logs
-alarms
-resource monitoring
-→ Amazon CloudWatch (CloudWatch)
-```
-
----
-
 # Operations Service Comparison
 
 | Service                                                                              | What it does                   | Signal keyword                         |
@@ -512,7 +390,6 @@ resource monitoring
 | **AWS Health Dashboard – Service health**                                            | Public AWS service events      | General service/Regional status        |
 | **Amazon EventBridge**                                                               | Detect/route AWS Health events | Automatically react to an event        |
 | **Amazon Simple Notification Service (Amazon SNS)**                                  | Send notifications             | Notify administrators                  |
-| **AWS X-Ray**                                                                        | Distributed request tracing    | Find latency/failure across services   |
 | **Amazon Managed Service for Prometheus (AMP)**                                      | Managed Prometheus monitoring  | Prometheus / PromQL / Kubernetes       |
 
 ---
@@ -554,26 +431,6 @@ What kind of Health information is needed?
               Amazon EventBridge
                   ↓
           Amazon Simple Notification Service (Amazon SNS)
-```
-
----
-
-# Monitoring Decision Tree
-
-```text
-What is the monitoring requirement?
-          │
-          ├── Trace one request through multiple services?
-          │       ↓
-          │   AWS X-Ray
-          │
-          ├── Prometheus / PromQL?
-          │       ↓
-          │   Amazon Managed Service for Prometheus (AMP)
-          │
-          └── General AWS metrics/logs/alarms?
-                  ↓
-          Amazon CloudWatch (CloudWatch)
 ```
 
 ---
@@ -666,37 +523,6 @@ AWS Health event
 
 ---
 
-## X-Ray vs CloudWatch
-
-```text
-Metrics / logs / alarms
-→ Amazon CloudWatch
-
-Request path / service latency
-→ AWS X-Ray
-```
-
----
-
-## Prometheus vs CloudWatch
-
-```text
-Prometheus
-PromQL
-Kubernetes metrics
-→ Amazon Managed Service for Prometheus (AMP)
-```
-
-```text
-AWS-native monitoring
-Metrics
-Logs
-Alarms
-→ Amazon CloudWatch
-```
-
----
-
 # Hybrid Environment Example
 
 **AWS Systems Manager (SSM)** can manage supported on-premises servers as well as AWS instances when configured appropriately.
@@ -731,8 +557,5 @@ The on-premises server requires the required agent and connectivity configuratio
 | General AWS service status                | **AWS Health Dashboard – Service health**                                        |
 | Automatically react to AWS Health event   | **Amazon EventBridge**                                                           |
 | Send AWS Health notifications             | **Amazon Simple Notification Service (Amazon SNS)**                              |
-| Distributed request tracing               | **AWS X-Ray**                                                                    |
-| Find microservice latency                 | **AWS X-Ray**                                                                    |
 | Prometheus / PromQL                       | **Amazon Managed Service for Prometheus (AMP)**                                  |
 | Kubernetes / container Prometheus metrics | **Amazon Managed Service for Prometheus (AMP)**                                  |
-
