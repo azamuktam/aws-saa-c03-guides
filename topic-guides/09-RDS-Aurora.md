@@ -918,6 +918,8 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > An application stores time-series data such as IoT sensor measurements and application metrics.
 > → **Amazon Timestream**
 
+> An **Aurora** cluster needs highly available storage across Availability Zones.
+> → **Aurora automatically replicates storage across 3 Availability Zones**
 ---
 
 # Pocket card
