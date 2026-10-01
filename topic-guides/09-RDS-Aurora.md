@@ -799,71 +799,116 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 
 # Question patterns
 
-> **AZ failure + automatic failover** → **Multi-AZ**
+> A database must remain available if an Availability Zone fails, and the application should automatically connect to the database after the failure.
+> → **Multi-AZ**
 
-> **Read-heavy workload** → **Read Replica**
+> An application has a large number of read requests and the primary database is becoming overloaded. The company wants to offload read traffic to separate database instances.
+> → **Read Replica**
 
-> **Lambda creates too many DB connections** → **RDS Proxy**
+> A serverless application using Lambda creates a very large number of short-lived connections to an RDS database, causing connection-limit problems.
+> → **RDS Proxy**
 
-> **Storage grows unpredictably** → **RDS Storage Auto Scaling**
+> An RDS database is growing unpredictably and the company wants storage capacity to increase automatically when the database approaches its storage limit.
+> → **RDS Storage Auto Scaling**
 
-> **Restore to a specific point in time** → **Automated backups / Point-in-Time Recovery (PITR)**
+> A company accidentally deleted or changed data at 14:30 and needs to restore the database to its state at 14:25.
+> → **Automated backups / Point-in-Time Recovery (PITR)**
 
-> **Keep backup for years** → **Manual snapshot**
+> A company must retain a database backup for several years and does not want AWS to delete it automatically.
+> → **Manual snapshot**
 
-> **Encrypt existing unencrypted RDS** → **Snapshot → encrypted copy → restore**
+> An existing RDS database is unencrypted and the company now requires encryption at rest.
+> → **Snapshot → encrypted snapshot copy → restore encrypted DB**
 
-> **RDS MySQL/PostgreSQL/MariaDB + short-lived authentication token** → **IAM Database Authentication**
+> An application must connect to RDS using a temporary authentication token instead of storing a permanent database password.
+> → **IAM Database Authentication**
 
-> **MySQL + `AWSAuthenticationPlugin`** → **IAM Database Authentication**
+> An RDS MySQL database uses `AWSAuthenticationPlugin` for database login.
+> → **IAM Database Authentication**
 
-> **Database password must be stored and rotated** → **Secrets Manager**
+> An IAM role must be allowed to authenticate directly to an RDS database using IAM database authentication.
+> → **`rds-db:connect`**
 
-> **IAM identity must be allowed to connect to RDS** → **`rds-db:connect`**
+> A company wants to securely store database credentials and automatically rotate the database password.
+> → **AWS Secrets Manager**
 
-> **Oracle → RDS Oracle** → **AWS Database Migration Service (DMS)**
+> A company wants to migrate an Oracle database to Amazon RDS for Oracle while keeping Oracle as the database engine.
+> → **AWS DMS**
 
-> **Oracle → different DB engine** → **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)**
+> A company wants to migrate an Oracle database to PostgreSQL and needs to convert the schema and database code before moving the data.
+> → **AWS SCT + AWS DMS**
 
-> **Oracle backup/recovery** → **Oracle Recovery Manager (RMAN)**
+> A database administrator needs an Oracle-specific tool for database backup and recovery.
+> → **Oracle RMAN**
 
-> **Oracle AZ HA** → **RDS for Oracle Multi-AZ**
+> An Oracle database must automatically fail over to a standby database when its Availability Zone fails.
+> → **RDS for Oracle Multi-AZ**
 
-> **Existing Oracle license** → **Bring Your Own License (BYOL)**
+> A company already owns eligible Oracle licenses and wants to use those licenses with Amazon RDS for Oracle.
+> → **BYOL**
 
-> **OS-level DB control** → **EC2 / RDS Custom**
+> A database workload requires OS-level access and custom server configuration that standard managed RDS does not allow.
+> → **EC2 / RDS Custom**
 
-> **SQL Server → Aurora PostgreSQL + minimal application changes** → **Babelfish**
+> A company wants to migrate a SQL Server application to Aurora PostgreSQL while minimizing changes to the existing application.
+> → **Babelfish**
 
-> **SQL Server schema conversion** → **AWS Schema Conversion Tool (SCT)**
+> A company needs to convert SQL Server database schemas and database objects before moving them to PostgreSQL.
+> → **AWS SCT**
 
-> **Database data migration** → **AWS Database Migration Service (DMS)**
+> A company needs to migrate the actual database data from one database engine to another.
+> → **AWS DMS**
 
-> **Aurora read balancing** → **Reader endpoint**
+> An application must always connect to whichever Aurora DB instance is currently the primary writer, including after a failover.
+> → **Cluster / Writer endpoint**
 
-> **Current Aurora writer** → **Cluster / Writer endpoint**
+> An Aurora cluster has multiple Replicas and the application needs to distribute read connections across them.
+> → **Reader endpoint**
 
-> **One Aurora instance** → **Instance endpoint**
+> An administrator needs to connect directly to one specific Aurora DB instance rather than the cluster as a whole.
+> → **Instance endpoint**
 
-> **Different Aurora instance groups for workloads** → **Custom endpoint**
+> Production, reporting, and analytics workloads need to connect to different selected groups of Aurora DB instances.
+> → **Custom endpoint**
 
-> **Aurora primary failure + Replica exists** → **Promote Aurora Replica**
+> The primary Aurora DB instance fails and the cluster already has an Aurora Replica available.
+> → **Promote the Aurora Replica**
 
-> **Aurora primary failure + no Replica** → **Recreate primary DB instance**
+> An Aurora cluster has only one DB instance and that instance fails. There is no Aurora Replica available for promotion.
+> → **Recreate the primary DB instance**
 
-> **Unpredictable Aurora workload** → **Aurora Serverless v2**
+> An Aurora database has unpredictable traffic with long periods of low usage and occasional spikes, and the company does not want to manage fixed database capacity.
+> → **Aurora Serverless v2**
 
-> **Aurora cross-Region DR** → **Aurora Global Database**
+> A company runs Aurora in one Region and needs cross-Region disaster recovery, very low replication lag, and read access from another Region.
+> → **Aurora Global Database**
 
-> **RDS cross-Region DR** → **Cross-Region Read Replica**
+> A standard RDS database must have a copy in another AWS Region for disaster recovery and possible read scaling.
+> → **Cross-Region Read Replica**
 
-> **Quick Aurora copy** → **Aurora Cloning**
+> Developers need a fast production-like copy of an Aurora database for testing and development.
+> → **Aurora Cloning**
 
-> **Rewind Aurora MySQL** → **Aurora Backtrack**
+> A team accidentally made changes to an Aurora MySQL database and wants to rewind it to an earlier point without performing a traditional restore.
+> → **Aurora Backtrack**
 
-> **Multi-Region NoSQL** → **DynamoDB Global Tables**
+> A company needs a relational database for application transactions, orders, payments, and complex SQL queries, but there is no special requirement for Aurora features.
+> → **RDS or Aurora**
 
-> **Time-series database** → **Timestream**
+> A relational database workload requires very large and rapidly growing storage capacity.
+> → **Aurora**
+
+> A company needs a managed data warehouse for large-scale analytical queries.
+> → **Amazon Redshift**
+
+> An application requires a NoSQL database.
+> → **Amazon DynamoDB**
+
+> A company needs a multi-Region NoSQL database with data available across multiple AWS Regions.
+> → **DynamoDB Global Tables**
+
+> An application stores time-series data such as IoT sensor measurements and application metrics.
+> → **Amazon Timestream**
 
 ---
 
