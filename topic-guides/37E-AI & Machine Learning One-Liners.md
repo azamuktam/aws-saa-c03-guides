@@ -28,6 +28,9 @@ Text → another language
 Text analysis / sentiment
 → Comprehend
 
+Medical / clinical text / PHI
+→ Comprehend Medical
+
 Scanned documents / tables / forms
 → Textract
 
@@ -51,19 +54,20 @@ Build your own ML model
 
 # AI / ML Service Family
 
-| Service                | What it does                                                                                     | Signal                         |
-| ---------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------ |
-| **Amazon Rekognition** | Looks at images and videos and detects things such as faces, objects, people, and unsafe content | Faces, objects, video          |
-| **Amazon Transcribe**  | Takes audio/speech and turns it into written text                                                | Call recording → transcript    |
-| **Amazon Polly**       | Takes written text and turns it into spoken audio                                                | App reads text aloud           |
-| **Amazon Translate**   | Takes text in one language and translates it into another language                               | English → French               |
-| **Amazon Comprehend**  | Takes text and analyzes its meaning, such as sentiment, entities, and key phrases                | Positive/negative review       |
-| **Amazon Textract**    | Takes scanned documents/images and extracts text, tables, and form fields                        | Invoice/form → structured data |
-| **Amazon Kendra**      | Searches company documents and finds relevant answers using natural-language queries             | Find vacation policy           |
-| **Amazon Personalize** | Uses user/item behavior to generate personalized recommendations                                 | Customers also bought          |
-| **Amazon Forecast**    | Uses historical time-series data to predict future values                                        | Predict future sales/demand    |
-| **Amazon Lex**         | Lets you build conversational chatbots that understand user messages and respond                 | Customer-service chatbot       |
-| **Amazon SageMaker**   | Lets data scientists build, train, tune, and deploy their own ML models                          | Train your own ML model        |
+| Service                       | What it does                                                                                     | Signal                         |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------ |
+| **Amazon Rekognition**        | Looks at images and videos and detects things such as faces, objects, people, and unsafe content | Faces, objects, video          |
+| **Amazon Transcribe**         | Takes audio/speech and turns it into written text                                                | Call recording → transcript    |
+| **Amazon Polly**              | Takes written text and turns it into spoken audio                                                | App reads text aloud           |
+| **Amazon Translate**          | Takes text in one language and translates it into another language                               | English → French               |
+| **Amazon Comprehend**         | Takes text and analyzes its meaning, such as sentiment, entities, and key phrases                | Positive/negative review       |
+| **Amazon Comprehend Medical** | Analyzes clinical/medical text and detects medical information and PHI                           | Medical text / PHI             |
+| **Amazon Textract**           | Takes scanned documents/images and extracts text, tables, and form fields                        | Invoice/form → structured data |
+| **Amazon Kendra**             | Searches company documents and finds relevant answers using natural-language queries             | Find vacation policy           |
+| **Amazon Personalize**        | Uses user/item behavior to generate personalized recommendations                                 | Customers also bought          |
+| **Amazon Forecast**           | Uses historical time-series data to predict future values                                        | Predict future sales/demand    |
+| **Amazon Lex**                | Lets you build conversational chatbots that understand user messages and respond                 | Customer-service chatbot       |
+| **Amazon SageMaker**          | Lets data scientists build, train, tune, and deploy their own ML models                          | Train your own ML model        |
 
 ---
 
@@ -262,6 +266,58 @@ Text
 Comprehend
  ↓
 Meaning / sentiment / entities / key phrases
+```
+
+---
+
+# Amazon Comprehend Medical
+
+**Amazon Comprehend Medical = analyze clinical and medical text.**
+
+It is designed for healthcare-related text and can identify medical information and **Protected Health Information (PHI)**.
+
+### Signal
+
+> **Clinical / medical text → Comprehend Medical**
+
+> **PHI detection → Comprehend Medical**
+
+### Example
+
+> "A hospital needs to identify patient names, addresses, and other PHI in clinical reports."
+
+→ **Amazon Comprehend Medical**
+
+### Important distinction
+
+```text
+General text analysis
+→ Comprehend
+```
+
+```text
+Medical / clinical text
+→ Comprehend Medical
+```
+
+```text
+Medical PDF
+→ Textract
+→ Comprehend Medical
+```
+
+So:
+
+```text
+PDF report
+   ↓
+Textract
+   ↓
+Extracted text
+   ↓
+Comprehend Medical
+   ↓
+PHI detection
 ```
 
 ---
@@ -631,6 +687,16 @@ Comprehend
 Sentiment / entities / key phrases / insights
 ```
 
+## Medical text → PHI / medical information
+
+```text
+Clinical text
+ ↓
+Comprehend Medical
+ ↓
+PHI / medical entities
+```
+
 ## Scanned document → structured information
 
 ```text
@@ -699,12 +765,21 @@ Custom ML model
 
 ---
 
+> **"A hospital needs to detect PHI in clinical text."**
+
+→ **Amazon Comprehend Medical**
+
+---
+
 > **"A company needs to automatically extract fields and tables from scanned invoices."**
 
 → **Amazon Textract**
 
 ---
 
+> **"A hospital has scanned PDF medical reports and needs to identify PHI."**
+
+→ **Amazon Textract
 > **"Employees need to search internal company documents using natural-language queries."**
 
 → **Amazon Kendra**
@@ -799,6 +874,35 @@ English → French
 
 ---
 
+## Comprehend vs Comprehend Medical
+
+```text
+General text analysis
+→ Comprehend
+```
+
+```text
+Clinical / medical text
+→ Comprehend Medical
+```
+
+```text
+PHI detection
+→ Comprehend Medical
+```
+
+### Example
+
+> "Analyze customer reviews for positive or negative sentiment."
+
+→ **Comprehend**
+
+> "Detect patient names, medical conditions, and other PHI in clinical reports."
+
+→ **Comprehend Medical**
+
+---
+
 ## Kendra vs Comprehend
 
 These can both work with text, but the question's objective matters.
@@ -845,177 +949,29 @@ Build / train / deploy a custom ML model
 
 ---
 
-# AI / ML Decision Tree
-
-```text
-What is the input or goal?
-          │
-          ├── Image / video?
-          │       ↓
-          │   Rekognition
-          │
-          ├── Speech → text?
-          │       ↓
-          │   Transcribe
-          │
-          ├── Text → speech?
-          │       ↓
-          │     Polly
-          │
-          ├── Translate language?
-          │       ↓
-          │   Translate
-          │
-          ├── Analyze text / sentiment?
-          │       ↓
-          │   Comprehend
-          │
-          ├── Scanned document / forms / tables?
-          │       ↓
-          │   Textract
-          │
-          ├── Search company documents?
-          │       ↓
-          │    Kendra
-          │
-          ├── Personalized recommendations?
-          │       ↓
-          │   Personalize
-          │
-          ├── Future time-series values?
-          │       ↓
-          │   Forecast
-          │
-          ├── Conversational chatbot?
-          │       ↓
-          │     Lex
-          │
-          └── Custom ML model?
-                  ↓
-               SageMaker
-```
-
----
-
 # Pocket Card
 
-| Keyword                                      | Answer          |
-| -------------------------------------------- | --------------- |
-| Images / video                               | **Rekognition** |
-| Faces / objects / people                     | **Rekognition** |
-| Speech → text                                | **Transcribe**  |
-| Call recording → transcript                  | **Transcribe**  |
-| Text → speech                                | **Polly**       |
-| Application reads text aloud                 | **Polly**       |
-| Text → another language                      | **Translate**   |
-| Sentiment / text analysis                    | **Comprehend**  |
-| Scanned documents / invoices                 | **Textract**    |
-| Tables / forms / fields from documents       | **Textract**    |
-| Enterprise document search                   | **Kendra**      |
-| Natural-language search of company documents | **Kendra**      |
-| Recommendations                              | **Personalize** |
-| User behavior → recommendations              | **Personalize** |
-| Time-series forecasting                      | **Forecast**    |
-| Future sales / demand                        | **Forecast**    |
-| Chatbot                                      | **Lex**         |
-| Conversational interface                     | **Lex**         |
-| Build/train/deploy custom ML model           | **SageMaker**   |
+| Keyword                                      | Answer                 |
+| -------------------------------------------- | ---------------------- |
+| Images / video                               | **Rekognition**        |
+| Faces / objects / people                     | **Rekognition**        |
+| Speech → text                                | **Transcribe**         |
+| Call recording → transcript                  | **Transcribe**         |
+| Text → speech                                | **Polly**              |
+| Application reads text aloud                 | **Polly**              |
+| Text → another language                      | **Translate**          |
+| Sentiment / text analysis                    | **Comprehend**         |
+| Medical / clinical text                      | **Comprehend Medical** |
+| PHI detection                                | **Comprehend Medical** |
+| Scanned documents / invoices                 | **Textract**           |
+| Tables / forms / fields from documents       | **Textract**           |
+| Enterprise document search                   | **Kendra**             |
+| Natural-language search of company documents | **Kendra**             |
+| Recommendations                              | **Personalize**        |
+| User behavior → recommendations              | **Personalize**        |
+| Time-series forecasting                      | **Forecast**           |
+| Future sales / demand                        | **Forecast**           |
+| Chatbot                                      | **Lex**                |
+| Conversational interface                     | **Lex**                |
+| Build/train/deploy custom ML model           | **SageMaker**          |
 
----
-
-# Final Memory
-
-```text
-Rekognition
-= IMAGE / VIDEO ANALYSIS
-
-Transcribe
-= SPEECH → TEXT
-
-Polly
-= TEXT → SPEECH
-
-Translate
-= TEXT → ANOTHER LANGUAGE
-
-Comprehend
-= UNDERSTAND TEXT
-= SENTIMENT / ENTITIES / KEY PHRASES
-
-Textract
-= SCANNED DOCUMENTS
-= TEXT / TABLES / FORMS
-
-Kendra
-= ENTERPRISE DOCUMENT SEARCH
-
-Personalize
-= RECOMMENDATIONS
-
-Forecast
-= TIME-SERIES FORECASTING
-
-Lex
-= CHATBOT
-
-SageMaker
-= CUSTOM ML
-= BUILD / TRAIN / TUNE / DEPLOY MODELS
-```
-
-# The Golden Rule
-
-```text
-Image / video
-→ Rekognition
-
-Speech → text
-→ Transcribe
-
-Text → speech
-→ Polly
-
-Text → another language
-→ Translate
-
-Text meaning / sentiment
-→ Comprehend
-
-Scanned document → structured information
-→ Textract
-
-Search company documents
-→ Kendra
-
-Recommendations
-→ Personalize
-
-Time-series forecasting
-→ Forecast
-
-Chatbot
-→ Lex
-
-Build your own ML model
-→ SageMaker
-```
-
-> **Don't memorize the implementation.**
->
-> **Memorize the unique signal.**
-
-For example:
-
-```text
-Image / video       → Rekognition
-Speech → text       → Transcribe
-Text → speech       → Polly
-Translation         → Translate
-Sentiment           → Comprehend
-Scanned invoice     → Textract
-Company search      → Kendra
-Recommendations     → Personalize
-Future demand       → Forecast
-Chatbot             → Lex
-Custom ML           → SageMaker
-```
