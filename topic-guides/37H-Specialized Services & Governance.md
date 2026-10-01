@@ -19,6 +19,9 @@ File-based video transcoding
 AWS compliance reports
 → AWS Artifact
 
+Software license limits
+→ AWS License Manager
+
 Stream desktop applications to users
 → Amazon AppStream 2.0
 
@@ -152,9 +155,64 @@ AWS compliance documents
 > **Artifact = COMPLIANCE DOCUMENTS**
 
 ---
+
+# AWS License Manager
+
+**AWS License Manager = track and control software licenses used by AWS resources.**
+
+Use it when a company has a limited number of software licenses, such as **Windows Server licenses for EC2**.
+
+### Signal
+
+> **Software licenses + track usage + enforce license limit → AWS License Manager**
+
+---
+
+## Example
+
+A company has **50 Windows Server licenses**.
+
+The licenses are counted based on the **vCPU count** of EC2 instances.
+
+```text
+50 licenses
+    ↓
+AWS License Manager
+    ↓
+Track EC2 license usage
+    ↓
+Limit reached?
+ ├─ No → EC2 launch allowed
+ └─ Yes → Prevent additional launch
+```
+
+Enable **license limit enforcement** to prevent usage from exceeding the available licenses.
+
+**Amazon SNS** can be used for notifications.
+
+### Memory
+
+> **Software licenses + EC2 + enforce license limit → License Manager**
+
+---
+
+## Important distinction
+
+Do not confuse License Manager with **Systems Manager Fleet Manager**.
+
+```text
+Fleet Manager
+→ Manage / inspect EC2 instances
+
+License Manager
+→ Track / enforce software licenses
+```
+
+---
+
 ### AWS ParallelCluster
 
-**AWS ParallelCluster** is a service for **deploying and managing HPC (High Performance Computing) clusters on AWS**.
+**AWS ParallelCluster = deploy and manage HPC (High Performance Computing) clusters on AWS.**
 
 Commonly used with:
 
@@ -175,7 +233,7 @@ Typical use cases:
 
 > **ParallelCluster = deploy and manage HPC clusters**
 
-
+---
 
 # Amazon AppStream 2.0
 
@@ -293,12 +351,14 @@ Typical use cases include:
 
 # Specialized Services Comparison
 
-| Service            | What it does                         | Signal keyword                |
-| ------------------ | ------------------------------------ | ----------------------------- |
-| **MediaConvert**   | File-based video transcoding         | Video transcoding             |
-| **Artifact**       | AWS compliance documents and reports | Compliance / auditor          |
-| **AppStream 2.0**  | Streams desktop applications         | Desktop application streaming |
-| **Aurora Cloning** | Fast Aurora database copy            | Aurora copy for testing       |
+| Service             | What it does                          | Signal keyword                   |
+| ------------------- | ------------------------------------- | -------------------------------- |
+| **MediaConvert**    | File-based video transcoding          | Video transcoding                |
+| **Artifact**        | AWS compliance documents and reports  | Compliance / auditor             |
+| **License Manager** | Tracks and enforces software licenses | Software license limit           |
+| **ParallelCluster** | Deploys and manages HPC clusters      | HPC / High Performance Computing |
+| **AppStream 2.0**   | Streams desktop applications          | Desktop application streaming    |
+| **Aurora Cloning**  | Fast Aurora database copy             | Aurora copy for testing          |
 
 ---
 
@@ -337,6 +397,24 @@ CloudWatch
 If the requirement is for an auditor to obtain AWS compliance reports:
 
 → **Artifact**
+
+---
+
+## License Manager vs Fleet Manager
+
+```text
+License Manager
+= software license tracking + enforcement
+
+Fleet Manager
+= EC2 instance management / inspection
+```
+
+So:
+
+> **Software licenses + license limit → License Manager**
+
+> **Manage / inspect EC2 servers → Fleet Manager**
 
 ---
 
@@ -404,6 +482,18 @@ For SAA, remember the unique signal:
 
 ---
 
+> **"A company has 50 Windows Server licenses and wants to stop EC2 launches when all licenses are used."**
+
+→ **AWS License Manager**
+
+---
+
+> **"Software licenses are counted based on EC2 vCPUs and the company wants to enforce the license limit."**
+
+→ **AWS License Manager**
+
+---
+
 > **"Users need to access a Windows application without installing it locally."**
 
 → **Amazon AppStream 2.0**
@@ -441,6 +531,14 @@ What is the requirement?
           │       ↓
           │    Artifact
           │
+          ├── Software license limits?
+          │       ↓
+          │  License Manager
+          │
+          ├── HPC cluster deployment?
+          │       ↓
+          │  ParallelCluster
+          │
           ├── Stream desktop applications?
           │       ↓
           │   AppStream 2.0
@@ -461,60 +559,16 @@ What is the requirement?
 | Legacy video transcoding                       | **Elastic Transcoder — discontinued** |
 | AWS compliance reports                         | **AWS Artifact**                      |
 | SOC / PCI / ISO compliance documents           | **AWS Artifact**                      |
+| Software license limits                        | **AWS License Manager**               |
+| Windows Server licenses on EC2                 | **AWS License Manager**               |
+| Enforce software license limit                 | **AWS License Manager**               |
+| HPC cluster                                    | **ParallelCluster**                   |
 | Stream desktop applications                    | **AppStream 2.0**                     |
 | Windows application without local installation | **AppStream 2.0**                     |
 | Fast Aurora database copy                      | **Aurora Cloning**                    |
 | Aurora copy for testing                        | **Aurora Cloning**                    |
 
 ---
-
-# Final Memory
-
-```text
-MediaConvert
-= FILE-BASED VIDEO TRANSCODING
-
-Elastic Transcoder
-= LEGACY / DISCONTINUED
-
-Artifact
-= AWS COMPLIANCE DOCUMENTS
-
-AppStream 2.0
-= STREAM DESKTOP APPLICATIONS
-
-Aurora Cloning
-= FAST AURORA COPY
-```
-
-# The Golden Rule
-
-```text
-Video file transcoding
-→ MediaConvert
-
-AWS compliance reports
-→ Artifact
-
-Desktop application streaming
-→ AppStream 2.0
-
-Fast Aurora copy
-→ Aurora Cloning
-```
-
-> **Don't memorize the implementation.**
->
-> **Memorize the unique signal.**
-
-For example:
-
-```text
-Video transcoding       → MediaConvert
-Compliance              → Artifact
-Desktop application    → AppStream 2.0
-Fast Aurora copy        → Aurora Cloning
-```
 
 # Section 37 Complete
 
