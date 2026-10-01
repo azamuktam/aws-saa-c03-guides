@@ -119,8 +119,6 @@ Enable **license limit enforcement** to prevent usage from exceeding the availab
 
 > **Software licenses + EC2 + enforce license limit → License Manager**
 
-```
-
 ---
 
 ### AWS ParallelCluster
