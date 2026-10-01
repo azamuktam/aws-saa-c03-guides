@@ -2,48 +2,23 @@
 
 ## The idea
 
-These are AWS services that commonly appear in SAA questions involving **big-data processing, analytical SQL, streaming data, Kafka, Apache Flink, BI dashboards, and video processing**.
+Match the requirement to the unique service keyword.
 
-You generally don't need deep knowledge of each one.
-
-The best strategy is:
-
-> **Read the requirement → identify the unique keyword → choose the service.**
-
-For example:
-
-```text
-Spark / Hadoop
-→ Amazon EMR
-
-SQL directly on S3
-→ Amazon Athena
-
-BI + standard SQL + analytical workloads
-→ Amazon Redshift
-
-Apache Flink / real-time stream processing
-→ Managed Service for Apache Flink
-
-Interactive Flink streaming analysis
-→ Flink Studio
-
-Kafka
-→ Amazon MSK
-
-BI dashboards
-→ Amazon QuickSight
-
-File-based video transcoding
-→ AWS Elemental MediaConvert
-
-Legacy video transcoding service
-→ Amazon Elastic Transcoder
-```
+| Requirement / keyword                          | Service                                             |
+| ---------------------------------------------- | --------------------------------------------------- |
+| **Spark / Hadoop**                             | **Amazon EMR (Elastic MapReduce)**                  |
+| **SQL directly on S3**                         | **Amazon Athena**                                   |
+| **BI + standard SQL + analytical workloads**   | **Amazon Redshift**                                 |
+| **Apache Flink / real-time stream processing** | **Amazon Managed Service for Apache Flink**         |
+| **Interactive Flink streaming analysis**       | **Flink Studio**                                    |
+| **Kafka**                                      | **Amazon MSK (Managed Streaming for Apache Kafka)** |
+| **BI dashboards**                              | **Amazon QuickSight**                               |
+| **File-based video transcoding**               | **AWS Elemental MediaConvert**                      |
+| **Legacy video transcoding**                   | **Amazon Elastic Transcoder**                       |
 
 ---
 
-# Amazon EMR
+# Amazon EMR (Elastic MapReduce)
 
 **Amazon EMR = managed big-data processing using frameworks such as Apache Spark and Hadoop.**
 
@@ -55,13 +30,11 @@ Use it for:
 
 ### Signal
 
-> **Spark / Hadoop → EMR**
+> **Spark / Hadoop → Amazon EMR**
 
----
+### Example
 
-## Example
-
-A company has a large amount of data stored in S3 and wants to process it using Apache Spark.
+Large data in S3 must be processed with Apache Spark:
 
 ```text
 S3
@@ -75,49 +48,35 @@ Processed data
 
 → **Amazon EMR**
 
----
+### Spot Instances with EMR
 
-## Spot Instances with EMR
-
-You can use **Spot Instances for suitable EMR task nodes** to reduce cost.
-
-This is useful when the workload can tolerate interruption and the task nodes are suitable for Spot capacity.
+You can use **Spot Instances for suitable EMR task nodes** to reduce cost when the workload can tolerate interruption and the task nodes are suitable for Spot capacity.
 
 ### Memory
 
-> **Large-scale Spark/Hadoop processing → EMR**
+> **Large-scale Spark/Hadoop processing → Amazon EMR**
 
 ---
 
 # Amazon EMR vs Amazon Redshift
 
-These services can both appear in the same architecture, but they solve different problems.
+| Amazon EMR                         | Amazon Redshift            |
+| ---------------------------------- | -------------------------- |
+| Managed big-data processing        | Managed data warehouse     |
+| Spark / Hadoop                     | Analytical SQL             |
+| Process / transform large datasets | BI / reporting / analytics |
 
-```text
-EMR
-= managed big-data processing
-= Spark / Hadoop
-= process / transform large datasets
+### Signal
 
-Redshift
-= managed data warehouse
-= analytical SQL queries
-= BI / reporting / analytics
-```
+> **Spark / Hadoop → Amazon EMR**
 
-### Important distinction
+> **BI + standard SQL + analytical workloads → Amazon Redshift**
 
-> **Spark / Hadoop → EMR**
-
-> **BI + standard SQL + analytical workloads → Redshift**
-
-A question can require **both** services.
+A question can require **both**.
 
 ---
 
 # EMR + Redshift Pattern
-
-A common architecture is:
 
 ```text
 S3 data lake
@@ -130,115 +89,73 @@ Amazon Redshift
 BI tools + standard SQL
 ```
 
-Here:
-
 ```text
 EMR
 → processes the large dataset
 
 Redshift
-→ stores/analyzes the processed data
-  for analytical SQL and BI workloads
+→ stores/analyzes processed data
+  for analytical SQL and BI
 ```
 
----
-
-## Example
+### Example
 
 > "A company stores large datasets in S3 and wants to use big-data processing frameworks to process the data. Business users then need high-performance access using BI tools and standard SQL queries."
 
 → **Amazon EMR + Amazon Redshift**
 
-### Signal
-
-```text
-Spark / Hadoop
-→ EMR
-
-BI + standard SQL + analytical workloads
-→ Redshift
-```
-
 ---
 
 # Amazon Athena
 
-**Amazon Athena = query data in S3 using SQL.**
+**Amazon Athena = serverless interactive SQL queries directly against data in S3.**
 
-Athena is a serverless interactive query service.
-
-### Signal
-
-> **SQL + S3 → Athena**
-
----
-
-## Example
-
-Suppose CSV, JSON, or Parquet data is already stored in S3.
+Use it when CSV, JSON, Parquet, or similar data is already in S3.
 
 ```text
 S3
  ↓
-Athena
+Amazon Athena
  ↓
 SQL query
 ```
 
 No database server needs to be provisioned just to query the data.
 
----
+### Signal
 
-## Important distinction
+> **SQL + S3 → Amazon Athena**
 
-```text
-Athena
-= query data directly in S3
+### Memory
 
-Redshift
-= data warehouse for analytical workloads
-```
-
-### Simple memory
-
-> **Athena = SQL ON S3**
+> **Amazon Athena = SQL ON S3**
 
 ---
 
 # Amazon Redshift
 
-**Amazon Redshift = managed cloud data warehouse designed for analytical workloads.**
+**Amazon Redshift = managed cloud data warehouse for analytical workloads.**
 
-Use it when users need:
+Use it for:
 
 * analytical SQL queries
 * high-performance analytics
-* BI/reporting
+* BI / reporting
 * data warehousing
 
 ### Signal
 
-> **BI + standard SQL + analytical workloads → Redshift**
+> **BI + standard SQL + analytical workloads → Amazon Redshift**
 
 ---
 
-## Athena vs Redshift
+# Athena vs Redshift
 
-This distinction is especially useful in SAA questions.
-
-```text
-Data is in S3
-+
-Need to query it directly with SQL
-→ Athena
-```
-
-```text
-Need a dedicated analytical data warehouse
-+
-BI / reporting / high-performance SQL
-→ Redshift
-```
+| Requirement                           | Service             |
+| ------------------------------------- | ------------------- |
+| Query data directly in S3 with SQL    | **Amazon Athena**   |
+| Dedicated analytical data warehouse   | **Amazon Redshift** |
+| BI / reporting / high-performance SQL | **Amazon Redshift** |
 
 ### Mental model
 
@@ -250,23 +167,31 @@ Redshift
 = ANALYTICAL DATA WAREHOUSE
 ```
 
+### Examples
+
+> "Analysts need to query files already stored in S3 using SQL, with no need to provision a database."
+
+→ **Amazon Athena**
+
+> "Business users need high-performance analytical SQL queries against a data warehouse."
+
+→ **Amazon Redshift**
+
 ---
 
-# Managed Service for Apache Flink
+# Amazon Managed Service for Apache Flink
 
-**Amazon Managed Service for Apache Flink = managed real-time stream processing using Apache Flink.**
+**Amazon Managed Service for Apache Flink = managed real-time stream processing with Apache Flink.**
 
-Use it when you need to process **streaming data continuously and in real time**.
-
-It is useful for:
+Use it for:
 
 * real-time analytics
 * streaming ETL
-* processing events continuously
-* transforming streaming data
+* continuous event processing
+* stream transformations
 * detecting patterns in streams
 
-Typical streaming sources include:
+Typical sources:
 
 * Amazon Kinesis Data Streams
 * Amazon MSK / Apache Kafka
@@ -276,7 +201,7 @@ Typical pattern:
 ```text
 Kinesis / Kafka
       ↓
-Managed Service for Apache Flink
+Amazon Managed Service for Apache Flink
       ↓
 Real-time processing
       ↓
@@ -285,21 +210,15 @@ Kinesis / S3 / other destinations
 
 ### Signal
 
-> **Apache Flink + real-time streaming analytics → Managed Service for Apache Flink**
+> **Apache Flink + real-time streaming analytics → Amazon Managed Service for Apache Flink**
 
----
-
-## Example
+### Example
 
 > "A company receives continuous streaming data from Amazon Kinesis and needs to perform real-time analytics using Apache Flink."
 
 → **Amazon Managed Service for Apache Flink**
 
----
-
-## Flink use cases
-
-Managed Service for Apache Flink can be used for workloads such as:
+### Flink use cases
 
 ```text
 Continuous event stream
@@ -311,7 +230,7 @@ Transform / aggregate / analyze
 Real-time results
 ```
 
-Examples include:
+Examples:
 
 * real-time analytics
 * streaming ETL
@@ -325,15 +244,13 @@ Examples include:
 
 **Flink Studio = interactive environment for developing and analyzing Apache Flink streaming workloads.**
 
-Use it when you need to **interactively query, explore, or develop Flink streaming applications**.
+Use it for **interactive querying, exploration, development, or streaming analysis**.
 
 ### Signal
 
 > **Interactive Flink development / streaming analysis → Flink Studio**
 
----
-
-## Example
+### Example
 
 > "A company wants to interactively query and analyze streaming data using Apache Flink."
 
@@ -343,51 +260,35 @@ Use it when you need to **interactively query, explore, or develop Flink streami
 
 # Flink Studio vs Managed Service for Apache Flink
 
-These names are very similar, so focus on the requirement.
+| Requirement                                                 | Answer                                      |
+| ----------------------------------------------------------- | ------------------------------------------- |
+| Run managed production Flink stream-processing applications | **Amazon Managed Service for Apache Flink** |
+| Interactive Flink development                               | **Flink Studio**                            |
+| Interactive streaming analysis                              | **Flink Studio**                            |
+
+### Memory
 
 ```text
-Managed Service for Apache Flink
-= run managed Flink stream-processing applications
+Production stream processing
+→ Amazon Managed Service for Apache Flink
 
-Flink Studio
-= interactively develop / analyze Flink streaming workloads
-```
-
-### Mental model
-
-```text
-Need a managed production Flink application
-→ Managed Service for Apache Flink
-
-Need interactive development / exploration / analysis
+Interactive development / exploration / analysis
 → Flink Studio
 ```
 
-### Signal comparison
-
-| Requirement                                    | Answer                               |
-| ---------------------------------------------- | ------------------------------------ |
-| Apache Flink + real-time streaming application | **Managed Service for Apache Flink** |
-| Interactive Flink development                  | **Flink Studio**                     |
-| Interactive streaming analysis                 | **Flink Studio**                     |
-
 ---
 
-# Amazon MSK
+# Amazon MSK (Managed Streaming for Apache Kafka)
 
-**Amazon Managed Streaming for Apache Kafka (Amazon MSK) = managed Apache Kafka.**
+**Amazon MSK = managed Apache Kafka.**
 
-You can run Kafka-compatible workloads without managing the underlying Kafka infrastructure yourself.
+Use it for Kafka-compatible workloads without managing the underlying Kafka infrastructure yourself.
 
 ### Signal
 
-> **Kafka → MSK**
+> **Kafka → Amazon MSK**
 
-Don't overthink it.
-
----
-
-## Example
+### Example
 
 > "An existing application uses Apache Kafka and the company wants a managed Kafka service on AWS."
 
@@ -401,14 +302,12 @@ Don't overthink it.
 
 # MSK vs Managed Service for Apache Flink
 
-These services may appear together because Kafka can provide the streaming data and Flink can process it.
-
 ```text
 Kafka
-→ MSK
+→ Amazon MSK
 
 Process streaming data with Apache Flink
-→ Managed Service for Apache Flink
+→ Amazon Managed Service for Apache Flink
 ```
 
 Typical architecture:
@@ -419,22 +318,19 @@ Applications
 Amazon MSK
 (Kafka)
     ↓
-Managed Service for Apache Flink
+Amazon Managed Service for Apache Flink
     ↓
 Real-time processing
     ↓
 S3 / Kinesis / other destination
 ```
 
-### Important distinction
+### Distinction
 
-```text
-MSK
-= STREAMING PLATFORM / KAFKA
-
-Flink
-= STREAM PROCESSING
-```
+| Service                                     | Role                       |
+| ------------------------------------------- | -------------------------- |
+| **Amazon MSK**                              | Streaming platform / Kafka |
+| **Amazon Managed Service for Apache Flink** | Stream processing          |
 
 ---
 
@@ -442,7 +338,7 @@ Flink
 
 **Amazon QuickSight = business intelligence and dashboards.**
 
-Use it to create:
+Use it for:
 
 * dashboards
 * charts
@@ -451,21 +347,15 @@ Use it to create:
 
 ### Signal
 
-> **Business dashboard → QuickSight**
+> **Business dashboard → Amazon QuickSight**
 
----
-
-## Example
+### Example
 
 > "Business users need dashboards and visual reports based on analytical data."
 
 → **Amazon QuickSight**
 
----
-
-## QuickSight in an analytics architecture
-
-A common architecture can look like:
+### Analytics architecture
 
 ```text
 Data
@@ -474,7 +364,7 @@ Processing / warehouse
  ↓
 Amazon Redshift
  ↓
-QuickSight
+Amazon QuickSight
  ↓
 Dashboards / reports
 ```
@@ -487,15 +377,13 @@ QuickSight is the **visualization / BI layer**, not the primary big-data process
 
 **AWS Elemental MediaConvert = managed file-based video transcoding service.**
 
-Use it to convert and process **video files for on-demand delivery**.
+Use it to convert/process **video files for on-demand delivery**.
 
 ### Signal
 
-> **File-based video transcoding → MediaConvert**
+> **File-based video transcoding → AWS Elemental MediaConvert**
 
----
-
-## Example
+### Example
 
 ```text
 Video file
@@ -505,23 +393,16 @@ MediaConvert
 Transcoded video
 ```
 
-For example, a company may upload a video and need versions in different resolutions or formats for on-demand playback.
-
-→ **AWS Elemental MediaConvert**
+Example: create multiple resolutions or formats for on-demand playback.
 
 ---
 
 # MediaConvert vs MediaLive
 
-A common distinction is:
-
-```text
-File-based video transcoding
-→ MediaConvert
-
-Live video encoding
-→ MediaLive
-```
+| Requirement                  | Service                        |
+| ---------------------------- | ------------------------------ |
+| File-based video transcoding | **AWS Elemental MediaConvert** |
+| Live video encoding          | **AWS Elemental MediaLive**    |
 
 ### Memory
 
@@ -533,21 +414,15 @@ Live video encoding
 
 # Legacy Service: Amazon Elastic Transcoder
 
-**Amazon Elastic Transcoder was the older managed video/audio transcoding service.**
+**Amazon Elastic Transcoder = older managed video/audio transcoding service.**
 
-It was **discontinued on November 13, 2025**.
+It was **discontinued on November 13, 2025**. AWS recommends **AWS Elemental MediaConvert** for file-based transcoding workflows.
 
-AWS recommends **MediaConvert** for file-based transcoding workflows.
-
-### SAA memory
+### Exam memory
 
 > **Video transcoding → MediaConvert**
 
 > **Old question mentioning Elastic Transcoder → recognize it as the legacy service**
-
----
-
-## Important distinction
 
 ```text
 Current file-based video transcoding
@@ -561,38 +436,59 @@ Do not select Elastic Transcoder for a new modern AWS architecture.
 
 ---
 
-# Analytics Family
+# Amazon Timestream
 
-A useful way to group these services is by the job they perform.
+**Amazon Timestream = fully managed time-series database for data that changes over time.**
+
+Typical use cases:
+
+* IoT sensor data
+* application / infrastructure metrics
+* monitoring data
+* device telemetry
+
+Example:
 
 ```text
-             ANALYTICS
-                 │
-      ┌──────────┼──────────┐
-      ↓          ↓          ↓
-   Process      Query      Visualize
-      │          │          │
-     EMR       Athena    QuickSight
-      │
- Spark / Hadoop
+10:00 → CPU = 45%
+10:01 → CPU = 52%
+10:02 → CPU = 61%
 ```
 
-For streaming:
+### Signal
+
+> **Timestream = time-series data over time**
+
+---
+
+# Analytics Family
+
+| Job                             | Service                                     |
+| ------------------------------- | ------------------------------------------- |
+| Big-data processing             | **Amazon EMR**                              |
+| SQL on S3                       | **Amazon Athena**                           |
+| Data warehouse / analytical SQL | **Amazon Redshift**                         |
+| Real-time Flink processing      | **Amazon Managed Service for Apache Flink** |
+| Kafka                           | **Amazon MSK**                              |
+| BI dashboards                   | **Amazon QuickSight**                       |
+| Time-series data                | **Amazon Timestream**                       |
+
+Streaming pattern:
 
 ```text
 Kafka / Kinesis
       ↓
-Flink
+Apache Flink
       ↓
 Real-time processing
 ```
 
-For data warehousing:
+Data warehouse pattern:
 
 ```text
 Processed data
       ↓
-Redshift
+Amazon Redshift
       ↓
 BI / SQL analytics
 ```
@@ -601,17 +497,18 @@ BI / SQL analytics
 
 # Service Comparison
 
-| Service                              | What it does                               | Signal keyword                     |
-| ------------------------------------ | ------------------------------------------ | ---------------------------------- |
-| **Amazon EMR**                       | Managed big-data processing                | Spark / Hadoop                     |
-| **Amazon Athena**                    | SQL directly on S3                         | SQL on S3                          |
-| **Amazon Redshift**                  | Data warehouse / analytical SQL            | BI / analytical workloads          |
-| **Managed Service for Apache Flink** | Managed real-time stream processing        | Apache Flink / real-time streaming |
-| **Flink Studio**                     | Interactive Flink development and analysis | Interactive Flink                  |
-| **Amazon MSK**                       | Managed Apache Kafka                       | Kafka                              |
-| **Amazon QuickSight**                | Business intelligence dashboards           | BI / dashboards                    |
-| **MediaConvert**                     | File-based video transcoding               | Video transcoding                  |
-| **Elastic Transcoder**               | Legacy video/audio transcoding             | Old/legacy service                 |
+| Service                                             | What it does                               | Signal keyword                     |
+| --------------------------------------------------- | ------------------------------------------ | ---------------------------------- |
+| **Amazon EMR (Elastic MapReduce)**                  | Managed big-data processing                | Spark / Hadoop                     |
+| **Amazon Athena**                                   | SQL directly on S3                         | SQL on S3                          |
+| **Amazon Redshift**                                 | Data warehouse / analytical SQL            | BI / analytical workloads          |
+| **Amazon Managed Service for Apache Flink**         | Managed real-time stream processing        | Apache Flink / real-time streaming |
+| **Flink Studio**                                    | Interactive Flink development and analysis | Interactive Flink                  |
+| **Amazon MSK (Managed Streaming for Apache Kafka)** | Managed Apache Kafka                       | Kafka                              |
+| **Amazon QuickSight**                               | Business intelligence dashboards           | BI / dashboards                    |
+| **Amazon Timestream**                               | Time-series database                       | IoT / metrics / telemetry          |
+| **AWS Elemental MediaConvert**                      | File-based video transcoding               | Video transcoding                  |
+| **Amazon Elastic Transcoder**                       | Legacy video/audio transcoding             | Old/legacy service                 |
 
 ---
 
@@ -619,18 +516,18 @@ BI / SQL analytics
 
 ## EMR vs Redshift
 
-Don't choose Redshift just because the question says "large data."
+Do not choose Redshift just because the question says **large data**.
 
-Look for the actual operation:
+Look at the operation:
 
 ```text
 Spark / Hadoop processing
-→ EMR
+→ Amazon EMR
 ```
 
 ```text
 Analytical SQL / data warehouse / BI
-→ Redshift
+→ Amazon Redshift
 ```
 
 A question can require both:
@@ -644,69 +541,31 @@ Redshift
 ```
 
 ---
-### Amazon Timestream
 
-**Amazon Timestream** is a fully managed **time-series database** designed for data that changes over time.
-
-Typical use cases:
-
-* IoT sensor data
-* Application and infrastructure metrics
-* Monitoring data
-* Device telemetry
-
-Example:
-
-```text
-10:00 → CPU = 45%
-10:01 → CPU = 52%
-10:02 → CPU = 61%
-```
-
-**Remember:**
-
-> **Timestream = time-series data over time**
- 
 ## Athena vs Redshift
-
-The key distinction is where and how the data is queried.
 
 ```text
 SQL directly against S3
-→ Athena
+→ Amazon Athena
 ```
 
 ```text
 Dedicated analytical warehouse
-→ Redshift
+→ Amazon Redshift
 ```
-
-### Example
-
-> "Analysts need to query files already stored in S3 using SQL, with no need to provision a database."
-
-→ **Athena**
-
----
-
-> "Business users need high-performance analytical SQL queries against a data warehouse."
-
-→ **Redshift**
 
 ---
 
 ## MSK vs Flink
 
-Don't confuse the streaming platform with the stream processor.
-
 ```text
 Kafka
-→ MSK
+→ Amazon MSK
 ```
 
 ```text
 Process streams using Apache Flink
-→ Managed Service for Apache Flink
+→ Amazon Managed Service for Apache Flink
 ```
 
 They can work together.
@@ -715,11 +574,9 @@ They can work together.
 
 ## Flink Studio vs Managed Service for Apache Flink
 
-Look for **interactive development/analysis** versus a managed streaming application.
-
 ```text
 Production stream-processing application
-→ Managed Service for Apache Flink
+→ Amazon Managed Service for Apache Flink
 
 Interactive Flink exploration / analysis
 → Flink Studio
@@ -748,23 +605,23 @@ What is the requirement?
           │
           ├── Spark / Hadoop?
           │       ↓
-          │      EMR
+          │   Amazon EMR
           │
           ├── SQL directly on S3?
           │       ↓
-          │     Athena
+          │   Amazon Athena
           │
           ├── Data warehouse / BI / analytical SQL?
           │       ↓
-          │    Redshift
+          │   Amazon Redshift
           │
           ├── Kafka?
           │       ↓
-          │      MSK
+          │   Amazon MSK
           │
           ├── Apache Flink + real-time processing?
           │       ↓
-          │   Managed Service
+          │   Amazon Managed Service
           │   for Apache Flink
           │
           ├── Interactive Flink analysis?
@@ -773,11 +630,11 @@ What is the requirement?
           │
           ├── BI dashboards?
           │       ↓
-          │   QuickSight
+          │   Amazon QuickSight
           │
           └── File-based video transcoding?
                   ↓
-             MediaConvert
+            AWS Elemental MediaConvert
 ```
 
 ---
@@ -788,25 +645,17 @@ What is the requirement?
 
 → **Amazon EMR**
 
----
-
 > **"A company needs to process a large dataset using Apache Hadoop."**
 
 → **Amazon EMR**
-
----
 
 > **"Query files in S3 using SQL."**
 
 → **Amazon Athena**
 
----
-
 > **"Business users need high-performance analytical SQL queries and BI access."**
 
 → **Amazon Redshift**
-
----
 
 > **"A company stores large datasets in S3 and wants big-data processing frameworks to process the data. Business users then need high-performance access using BI tools and standard SQL queries."**
 
@@ -820,37 +669,25 @@ Redshift
 → analyze
 ```
 
----
-
 > **"A company receives continuous streaming data from Amazon Kinesis and needs to perform real-time analytics using Apache Flink."**
 
 → **Amazon Managed Service for Apache Flink**
-
----
 
 > **"A company wants to interactively query and analyze streaming data using Apache Flink."**
 
 → **Flink Studio**
 
----
-
 > **"An existing workload uses Apache Kafka."**
 
 → **Amazon MSK**
-
----
 
 > **"Business users need dashboards and visual reports."**
 
 → **Amazon QuickSight**
 
----
-
 > **"File-based video transcoding for on-demand content."**
 
 → **AWS Elemental MediaConvert**
-
----
 
 > **"An old question mentions Elastic Transcoder."**
 
@@ -860,101 +697,21 @@ Redshift
 
 # Pocket Card
 
-| Keyword                                  | Answer                                |
-| ---------------------------------------- | ------------------------------------- |
-| Spark / Hadoop                           | **Amazon EMR**                        |
-| Large-scale big-data processing          | **Amazon EMR**                        |
-| SQL on S3                                | **Amazon Athena**                     |
-| Data warehouse                           | **Amazon Redshift**                   |
-| BI + standard SQL + analytical workloads | **Amazon Redshift**                   |
-| Apache Flink / real-time streaming       | **Managed Service for Apache Flink**  |
-| Interactive Flink streaming analysis     | **Flink Studio**                      |
-| Kafka                                    | **Amazon MSK**                        |
-| BI dashboards                            | **Amazon QuickSight**                 |
-| File-based video transcoding             | **MediaConvert**                      |
-| Live video encoding                      | **MediaLive**                         |
-| Legacy video transcoding                 | **Elastic Transcoder — discontinued** |
+| Keyword                                  | Answer                                              |
+| ---------------------------------------- | --------------------------------------------------- |
+| Spark / Hadoop                           | **Amazon EMR (Elastic MapReduce)**                  |
+| Large-scale big-data processing          | **Amazon EMR**                                      |
+| SQL on S3                                | **Amazon Athena**                                   |
+| Data warehouse                           | **Amazon Redshift**                                 |
+| BI + standard SQL + analytical workloads | **Amazon Redshift**                                 |
+| Apache Flink / real-time streaming       | **Amazon Managed Service for Apache Flink**         |
+| Interactive Flink streaming analysis     | **Flink Studio**                                    |
+| Kafka                                    | **Amazon MSK (Managed Streaming for Apache Kafka)** |
+| BI dashboards                            | **Amazon QuickSight**                               |
+| Time-series data / IoT / metrics         | **Amazon Timestream**                               |
+| File-based video transcoding             | **AWS Elemental MediaConvert**                      |
+| Live video encoding                      | **AWS Elemental MediaLive**                         |
+| Legacy video transcoding                 | **Amazon Elastic Transcoder — discontinued**        |
 
 ---
 
-# Final Memory
-
-```text
-EMR
-= SPARK / HADOOP
-= BIG-DATA PROCESSING
-
-Athena
-= SQL ON S3
-
-Redshift
-= ANALYTICAL DATA WAREHOUSE
-= BI + STANDARD SQL
-
-Managed Service for Apache Flink
-= REAL-TIME STREAM PROCESSING
-= APACHE FLINK
-
-Flink Studio
-= INTERACTIVE FLINK STREAM ANALYSIS
-
-MSK
-= KAFKA
-
-QuickSight
-= BI DASHBOARDS
-
-MediaConvert
-= FILE-BASED VIDEO TRANSCODING
-
-Elastic Transcoder
-= LEGACY / DISCONTINUED
-```
-
-# The Golden Rule
-
-```text
-Spark
-→ EMR
-
-Hadoop
-→ EMR
-
-SQL on S3
-→ Athena
-
-BI + analytical SQL
-→ Redshift
-
-Kafka
-→ MSK
-
-Apache Flink + real-time streaming
-→ Managed Service for Apache Flink
-
-Interactive Flink analysis
-→ Flink Studio
-
-BI dashboards
-→ QuickSight
-
-File-based video transcoding
-→ MediaConvert
-```
-
-> **Don't memorize the implementation.**
->
-> **Memorize the unique signal.**
-
-For example:
-
-```text
-Spark / Hadoop       → EMR
-SQL on S3            → Athena
-Data warehouse       → Redshift
-Kafka                → MSK
-Apache Flink         → Managed Service for Apache Flink
-Interactive Flink   → Flink Studio
-BI dashboard         → QuickSight
-Video transcoding    → MediaConvert
-```
