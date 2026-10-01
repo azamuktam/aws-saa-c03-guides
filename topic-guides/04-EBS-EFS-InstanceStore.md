@@ -130,6 +130,31 @@ Do not confuse this with EFS:
 * **EBS Multi-Attach** → shared **block device**
 * **EFS** → shared **file system**
 
+### Important Multi-Attach traps
+
+**Only `io1` and `io2` support EBS Multi-Attach.**
+
+```text
+gp3    → ❌ Multi-Attach
+st1    → ❌
+sc1    → ❌
+standard/Magnetic → ❌
+io1    → ✅
+io2    → ✅
+```
+
+Multi-Attach does **not** provide multi-AZ resiliency because all attached instances must be in the **same AZ**.
+
+So:
+
+> **"gp3 with Multi-Attach provides multi-AZ resiliency."**
+
+→ **Wrong**
+
+The correct concept is:
+
+> **io1/io2 Multi-Attach → multiple EC2 instances in the same AZ**
+
 ### Exam clue
 
 > "Several EC2 instances must access the same block volume in the same AZ, and the application is cluster-aware."
@@ -263,6 +288,36 @@ Important:
 
 > **st1 and sc1 cannot be used as root/boot volumes.**
 
+### Previous-generation Magnetic
+
+There is also:
+
+* **Magnetic (`standard`)**
+
+It is a **previous-generation EBS volume type** designed for small datasets where data is accessed infrequently and performance is not the primary concern.
+
+For modern workloads, `sc1` is the current EBS choice for **infrequently accessed data where minimizing storage cost is important**.
+
+### Exam trap
+
+Some older practice questions describe:
+
+> **Magnetic = lowest-cost EBS storage for infrequently accessed data**
+
+That is legacy terminology associated with the `standard` / Magnetic volume type.
+
+For current EBS thinking:
+
+```text
+Current low-cost infrequently accessed HDD
+→ sc1
+
+Legacy / previous-generation infrequent-access EBS
+→ Magnetic (standard)
+```
+
+Do not confuse the two.
+
 ---
 
 # General Purpose SSD — gp3
@@ -274,7 +329,7 @@ It provides:
 * **3,000 baseline IOPS**
 * **125 MB/s baseline throughput**
 * IOPS and throughput can be provisioned **independently of volume size**
-* up to **16,000 IOPS**
+* up to **80,000 IOPS**
 
 This last point is very important.
 
@@ -345,27 +400,58 @@ Do not interpret "gp2 appears in the question" as an automatic answer. The impor
 
 # Provisioned IOPS SSD — io1 / io2
 
-Use **io1 or io2** when the workload requires higher, more predictable IOPS than gp3 provides.
+Use **io1 or io2** when the workload requires **high, predictable IOPS and consistently low latency**, especially when the workload is more demanding than a general-purpose SSD is intended for.
 
 Typical workloads:
 
-* high-performance databases
+* high-performance relational databases
 * demanding transactional applications
+* high-performance NoSQL databases
 * applications with strict I/O requirements
 
-The important exam distinction is:
+### Key exam wording
+
+> **"Consistent and low-latency performance"**
+
+→ Think **Provisioned IOPS**
+
+> **"I/O-intensive database"**
+
+→ Think **io1/io2**
+
+The important distinction is:
 
 ```text
-Up to 16,000 IOPS
-        ↓
-gp3
+General-purpose SSD
+→ gp3
 
-More than 16,000 IOPS
-        ↓
-io1 / io2
+Provisioned, predictable IOPS
+→ io1/io2
 ```
 
-## io2 Block Express
+### Exam clue
+
+> "The application requires consistent and low-latency I/O performance and is highly I/O intensive."
+
+→ **io1/io2**
+
+### gp3 vs Provisioned IOPS
+
+Do not automatically choose `io1/io2` simply because the question says "database".
+
+Use the workload requirements:
+
+```text
+Normal database / general-purpose
+→ gp3
+
+Very high / predictable IOPS
+→ io1/io2
+```
+
+---
+
+# io2 Block Express
 
 For extremely high-performance workloads, **io2 Block Express** supports up to:
 
@@ -413,6 +499,61 @@ Use **sc1** for data that is accessed infrequently and where minimizing storage 
 
 ---
 
+# Magnetic — standard
+
+**Magnetic (`standard`)** is a previous-generation EBS volume type.
+
+It is suited for:
+
+* small datasets
+* infrequently accessed data
+* workloads where performance is not the primary concern
+
+It offers much lower and less consistent performance than modern SSD volume types.
+
+### Important exam wording
+
+A legacy question may describe:
+
+> "Magnetic volumes provide the lowest cost per gigabyte and are ideal for infrequently accessed data."
+
+This is the kind of wording used in older EBS questions.
+
+The key recognition is:
+
+```text
+Magnetic
+= standard
+= previous-generation
+= infrequent access
+= performance not primary concern
+```
+
+Do not confuse it with:
+
+```text
+sc1
+= current Cold HDD
+= infrequent access
+= low-cost current-generation EBS
+```
+
+### Exam trap
+
+> **"Spot volume"**
+
+→ There is **no EBS volume type called Spot**.
+
+Spot is an EC2 purchasing option, not an EBS storage type.
+
+> **"SR-IOV volume"**
+
+→ There is **no EBS volume type called SR-IOV**.
+
+SR-IOV is a virtualization/I/O technology, not an EBS volume type.
+
+---
+
 # EBS decision guide
 
 ```text
@@ -426,13 +567,14 @@ What does the workload need?
                      SSD
                   ┌────┴────┐
                   ↓         ↓
-             ≤16k IOPS   >16k IOPS
+             General     Provisioned
+            purpose       IOPS?
                   ↓         ↓
                  gp3     io1/io2
                             │
                             ↓
-                    256k / ultra-low
-                       latency?
+                    Extreme performance?
+                            │
                             ↓
                      io2 Block Express
 
@@ -447,6 +589,25 @@ Large sequential workload?
     access      access
        ↓         ↓
       st1        sc1
+
+
+Legacy / previous-generation
+infrequent-access workload
+          ↓
+   Magnetic / standard
+```
+
+### Modern performance shortcut
+
+```text
+General-purpose SSD
+→ gp3
+
+Provisioned IOPS / predictable low latency
+→ io1/io2
+
+Extreme IOPS / 256,000
+→ io2 Block Express
 ```
 
 ---
@@ -947,15 +1108,27 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 
 # Question patterns
 
-> **"Database needs 12,000 IOPS and does not require more than 16,000 IOPS."**
+> **"Database needs 12,000 IOPS and does not require extreme I/O performance."**
 
 → **gp3**
 
 ---
 
-> **"Database requires 50,000 IOPS."**
+> **"The application needs more IOPS without increasing storage capacity."**
+
+→ **gp3**
+
+---
+
+> **"The application requires consistent and low-latency performance for an I/O-intensive relational or NoSQL database."**
 
 → **io1 or io2**
+
+---
+
+> **"Database requires very high, predictable IOPS."**
+
+→ **io1/io2**
 
 ---
 
@@ -977,7 +1150,21 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 
 ---
 
-> **"Application uses gp2 and needs more IOPS without increasing storage unnecessarily."**
+> **"A legacy application uses Magnetic EBS for a small, infrequently accessed dataset where performance is not important."**
+
+→ **Magnetic (`standard`)**
+
+---
+
+> **"An older question says Magnetic provides the lowest cost per GB and is suitable for infrequently accessed data."**
+
+→ Recognize **Magnetic (`standard`) as a previous-generation EBS volume type**.
+
+Do not confuse it with **sc1**, which is the current Cold HDD option for infrequently accessed, low-cost EBS storage.
+
+---
+
+> **"The company uses gp2 and wants more performance without paying for unnecessary storage."**
 
 → **Migrate to gp3**
 
@@ -986,6 +1173,44 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 > **"Multiple EC2 instances in different AZs must access the same files."**
 
 → **EFS**
+
+---
+
+> **"Multiple EC2 instances in the same AZ must access the same block volume."**
+
+→ **io1/io2 Multi-Attach**
+
+---
+
+> **"Up to 16 supported EC2 instances need simultaneous read/write access to the same block volume in one AZ."**
+
+→ **io1/io2 Multi-Attach**
+
+---
+
+> **"gp3 Multi-Attach provides multi-AZ resiliency."**
+
+→ **Wrong**
+
+`gp3` does not support Multi-Attach, and Multi-Attach itself is limited to instances in the **same AZ**.
+
+---
+
+> **"A storage option called Spot provides the lowest EBS cost per GB."**
+
+→ **Wrong**
+
+There is no **Spot EBS volume type**.
+
+Spot is an EC2 purchasing model.
+
+---
+
+> **"SR-IOV volume is suitable for boot volumes and small databases."**
+
+→ **Wrong**
+
+SR-IOV is not an EBS volume type.
 
 ---
 
@@ -1073,21 +1298,15 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 
 ---
 
-> **"Up to 16 instances need to access the same block volume in one AZ."**
-
-→ **io1/io2 Multi-Attach**
-
----
-
-> **"Data can be recreated and the application needs the highest local storage performance."**
-
-→ **Instance Store**
-
----
-
-> **"An Auto Scaling Group of Linux instances needs to share uploaded files."**
+> **"Multiple Linux instances in different AZs need access to the same shared file system."**
 
 → **EFS**
+
+---
+
+> **"Windows + SMB + AD."**
+
+→ **FSx for Windows File Server**
 
 ---
 
@@ -1103,6 +1322,12 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 
 ---
 
+> **"Data can be recreated and the application needs the highest local storage performance."**
+
+→ **Instance Store**
+
+---
+
 # Pocket card
 
 | Keyword                                           | Answer                                     |
@@ -1113,14 +1338,20 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 | random I/O / database                             | **SSD**                                    |
 | large sequential workload / throughput            | **HDD**                                    |
 | general-purpose SSD                               | **gp3**                                    |
-| ≤ 16,000 IOPS                                     | **gp3**                                    |
-| > 16,000 IOPS                                     | **io1/io2**                                |
+| gp3 independent IOPS/throughput                   | **Yes**                                    |
+| gp3 baseline IOPS                                 | **3,000**                                  |
+| gp3 baseline throughput                           | **125 MB/s**                               |
+| gp3 maximum IOPS                                  | **80,000**                                 |
+| provisioned / predictable IOPS                    | **io1/io2**                                |
 | 256,000 IOPS / extremely high performance         | **io2 Block Express**                      |
 | frequent sequential access                        | **st1**                                    |
-| infrequent / cheapest HDD storage                 | **sc1**                                    |
+| infrequent / cheapest current HDD storage         | **sc1**                                    |
+| legacy / previous-generation infrequent storage   | **Magnetic (`standard`)**                  |
 | gp2 → better performance flexibility              | **gp3**                                    |
 | same block volume attached to multiple instances  | **io1/io2 Multi-Attach**                   |
 | Multi-Attach limit                                | **up to 16 instances, same AZ**            |
+| gp3 Multi-Attach                                  | **No**                                     |
+| Multi-Attach multi-AZ                             | **No — same AZ only**                      |
 | root volume survives termination                  | **DeleteOnTermination = false**            |
 | new EBS data volume                               | **format + mount**                         |
 | EBS volume usable during snapshot                 | **Yes — read/write continues**             |
@@ -1149,3 +1380,5 @@ Do not choose Instance Store just because the question says "highest IOPS" if it
 | instance store + terminate                        | **data lost**                              |
 | instance store + hibernate                        | **data lost**                              |
 | high IOPS + persistence required                  | **EBS, typically io2 for extreme IOPS**    |
+| fake EBS type: Spot                               | **Not an EBS volume type**                 |
+| fake EBS type: SR-IOV                             | **Not an EBS volume type**                 |
