@@ -148,6 +148,28 @@ Use it for:
 
 > **BI + standard SQL + analytical workloads → Amazon Redshift**
 
+## Redshift Cross-Region Snapshots
+
+**Redshift Cross-Region Snapshot Copy** automatically copies snapshots of a **Redshift cluster** to another AWS Region.
+
+Use it for **disaster recovery from an entire Region outage**.
+
+```text
+Redshift Cluster (Region A)
+        ↓
+Cross-Region Snapshot Copy
+        ↓
+Snapshot (Region B)
+        ↓
+Restore Redshift Cluster
+```
+
+### Signal
+
+> **Redshift cluster + Region outage → Cross-Region Snapshot Copy**
+
+**Automated snapshots alone are not enough for Regional DR** because the snapshot needs to be available in another Region.
+
 ---
 
 # Amazon Redshift Spectrum
@@ -659,6 +681,20 @@ Live video stream
 
 ---
 
+## Redshift Regional DR
+
+```text
+Redshift cluster + entire Region outage
+→ Cross-Region Snapshot Copy
+```
+
+```text
+Redshift automated snapshots
+→ Recovery within the Region
+```
+
+---
+
 # Common Question Patterns
 
 > **"Managed Apache Spark processing."**
@@ -717,6 +753,10 @@ Redshift
 
 → **Recognize it as the legacy service**
 
+> **"A Redshift cluster must remain recoverable if an entire AWS Region becomes unavailable."**
+
+→ **Enable Cross-Region Snapshot Copy**
+
 ---
 
 # Pocket Card
@@ -729,6 +769,7 @@ Redshift
 | S3 + existing Redshift                   | **Redshift Spectrum**                               |
 | Data warehouse                           | **Amazon Redshift**                                 |
 | BI + standard SQL + analytical workloads | **Amazon Redshift**                                 |
+| **Redshift + Region outage**             | **Cross-Region Snapshot Copy**                      |
 | Apache Flink / real-time streaming       | **Amazon Managed Service for Apache Flink**         |
 | Interactive Flink streaming analysis     | **Flink Studio**                                    |
 | Kafka                                    | **Amazon MSK (Managed Streaming for Apache Kafka)** |
