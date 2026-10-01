@@ -14,6 +14,8 @@ This section covers AWS certificate management and TLS/HTTPS patterns that commo
 | Third-party certificate import alternative           | **IAM certificate store**             |
 | CloudFront TLS certificate                           | **ACM in us-east-1**                  |
 | ALB TLS certificate                                  | **ACM in the same Region as the ALB** |
+| Regional API Gateway TLS certificate                 | **ACM in the same Region as the API** |
+| Edge-optimized API Gateway certificate               | **ACM in us-east-1**                  |
 | Multiple unrelated domains on one ALB HTTPS listener | **Multiple ACM certificates + SNI**   |
 | Multiple subdomains of one domain                    | **Wildcard certificate**              |
 | Multiple names in one certificate                    | **SAN certificate**                   |
@@ -233,6 +235,55 @@ CloudFront
 
 ---
 
+## API Gateway certificate region
+
+API Gateway has an important **Regional vs Edge-optimized** distinction.
+
+### Regional API Gateway
+
+```text
+Regional API in us-east-2
+→ ACM certificate in us-east-2
+```
+
+The certificate must be in the **same Region as the Regional API**.
+
+### Edge-optimized API Gateway
+
+An **Edge-optimized API Gateway endpoint uses an API Gateway-managed CloudFront distribution**.
+
+Therefore:
+
+```text
+Edge-optimized API Gateway
+→ API Gateway-managed CloudFront
+→ ACM certificate in us-east-1
+```
+
+### SAA memory
+
+```text
+ALB
+→ ACM same Region as ALB
+
+Regional API Gateway
+→ ACM same Region as API
+
+CloudFront
+→ ACM us-east-1
+
+Edge-optimized API Gateway
+→ ACM us-east-1
+```
+
+Do not use the broad rule:
+
+> **"API Gateway → ACM us-east-1"**
+
+First check whether the API is **Regional** or **Edge-optimized**.
+
+---
+
 # ACM certificate types
 
 ## ACM-issued public certificate
@@ -390,6 +441,14 @@ Use the ACM certificate in the **same Region as the ALB**.
 
 → **ACM in us-east-1**
 
+> **"A Regional API Gateway needs a custom HTTPS domain."**
+
+→ **ACM certificate in the same Region as the API**
+
+> **"An Edge-optimized API Gateway needs a custom HTTPS domain."**
+
+→ **ACM certificate in us-east-1**
+
 > **"A company obtained a certificate from a third-party CA and needs to import it into AWS."**
 
 → **ACM**
@@ -417,7 +476,13 @@ Use the ACM certificate in the **same Region as the ALB**.
 ALB
 → ACM certificate in same Region
 
+Regional API Gateway
+→ ACM certificate in same Region
+
 CloudFront
+→ ACM certificate in us-east-1
+
+Edge-optimized API Gateway
 → ACM certificate in us-east-1
 ```
 
@@ -481,7 +546,9 @@ Multiple unrelated domains on one ALB
 | Third-party certificate store alternative | **IAM certificate store**        |
 | Imported certificate renewal              | **Manual / re-import**           |
 | ALB certificate                           | **ACM in same Region as ALB**    |
+| Regional API Gateway certificate          | **ACM in same Region as API**    |
 | CloudFront certificate                    | **ACM in us-east-1**             |
+| Edge-optimized API Gateway certificate    | **ACM in us-east-1**             |
 | Multiple unrelated domains on one ALB     | **SNI + multiple certificates**  |
 | Multiple subdomains of one domain         | **Wildcard certificate**         |
 | Multiple names in one certificate         | **SAN certificate**              |
