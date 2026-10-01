@@ -2,7 +2,7 @@
 
 ## The idea
 
-**Amazon RDS** is a managed relational database service. AWS manages infrastructure, OS maintenance, backups, patching, and database setup.
+**Amazon Relational Database Service (Amazon RDS)** is a managed relational database service. AWS manages infrastructure, operating system (OS) maintenance, backups, patching, and database setup.
 
 Supported engines:
 
@@ -20,7 +20,7 @@ Need:
 * Custom database software
 * OS-level configuration
 
-→ **EC2** or, for supported Oracle/SQL Server scenarios, **RDS Custom**.
+→ **Amazon Elastic Compute Cloud (Amazon EC2)** or, for supported Oracle/SQL Server scenarios, **RDS Custom**.
 
 ---
 
@@ -46,21 +46,29 @@ Standard relational database
 Very large / rapidly growing relational workload
 → Aurora
 
-OLTP + complex SQL
+Online Transaction Processing (OLTP) + complex SQL
 → RDS or Aurora
 
 Analytics / data warehouse
-→ Redshift
+→ Amazon Redshift
 
 NoSQL
-→ DynamoDB
+→ Amazon DynamoDB
 ```
+
+**OLTP** = **Online Transaction Processing**: transactional workloads such as application requests, orders, payments, and account updates.
+
+**ACID** = **Atomicity, Consistency, Isolation, Durability**: the standard properties associated with reliable database transactions.
 
 **Important:** OLTP, ACID, and complex SQL alone do **not** automatically mean Aurora. Both RDS and Aurora can support these workloads. Very large and growing storage requirements can be an important reason to choose Aurora.
 
 ---
 
 # Multi-AZ vs Read Replicas
+
+**Multi-AZ** = **Multiple Availability Zones**.
+
+An **Availability Zone (AZ)** is an isolated location within an AWS Region.
 
 |                    | **Multi-AZ**                            | **Read Replica**                                               |
 | ------------------ | --------------------------------------- | -------------------------------------------------------------- |
@@ -69,6 +77,8 @@ NoSQL
 | Read from standby? | **No** for traditional Multi-AZ standby | **Yes**                                                        |
 | Automatic failover | **Yes**                                 | **No** as normal RR feature                                    |
 | Location           | Another AZ / depends on deployment      | Same Region, another AZ, or another Region depending on engine |
+
+**Read Replica (RR)** = a separate copy of a database that primarily handles read traffic.
 
 ### Multi-AZ
 
@@ -117,6 +127,8 @@ Read Replica → read scaling
 
 Provide **Point-in-Time Recovery (PITR)**.
 
+**PITR** = **Point-in-Time Recovery**: restore a database to a specific time within the backup retention period.
+
 Standard RDS DB instance retention:
 
 **0–35 days**
@@ -162,7 +174,7 @@ You cannot simply enable encryption on an existing unencrypted RDS DB instance.
 RDS supports several database authentication methods depending on the engine:
 
 * **Password authentication** → traditional database username/password.
-* **IAM Database Authentication** → temporary IAM-generated authentication token instead of a database password.
+* **IAM Database Authentication** → temporary authentication token generated through **AWS Identity and Access Management (IAM)** instead of a database password.
 * **Kerberos authentication** → external authentication through Kerberos / Microsoft Active Directory for supported engines.
 
 ## IAM Database Authentication
@@ -192,10 +204,10 @@ Temporary DB authentication
 
 * The token is valid for **15 minutes**.
 * The token is used **instead of a database password**.
-* Authentication is managed through **IAM**, so the application does not need to store a long-lived DB password.
+* Authentication is managed through IAM, so the application does not need to store a long-lived DB password.
 * The IAM policy needs permission for **`rds-db:connect`**.
-* AWS CLI and AWS SDKs can generate/sign the token.
-* IAM DB authentication can also be used from services such as **Lambda**.
+* AWS Command Line Interface (**AWS CLI**) and AWS Software Development Kits (**AWS SDKs**) can generate/sign the token.
+* IAM DB authentication can also be used from services such as **AWS Lambda**.
 
 ### MySQL / MariaDB
 
@@ -217,14 +229,18 @@ The database account is created with the AWS authentication plugin instead of a 
 
 ### Important distinction
 
-| Requirement                                 | Solution                                      |
-| ------------------------------------------- | --------------------------------------------- |
-| Temporary token to connect to RDS           | **IAM Database Authentication**               |
-| Store/rotate database passwords             | **Secrets Manager**                           |
-| Control whether an IAM identity can connect | **IAM policy / `rds-db:connect`**             |
-| Network access to the DB                    | **Security Group**                            |
-| Workforce SSO / AWS application access      | **IAM Identity Center**                       |
-| MFA-based AWS authentication                | **MFA**; not the RDS database-token mechanism |
+| Requirement                                 | Solution                                                                    |
+| ------------------------------------------- | --------------------------------------------------------------------------- |
+| Temporary token to connect to RDS           | **IAM Database Authentication**                                             |
+| Store/rotate database passwords             | **AWS Secrets Manager**                                                     |
+| Control whether an IAM identity can connect | **IAM policy / `rds-db:connect`**                                           |
+| Network access to the DB                    | **Security Group**                                                          |
+| Workforce SSO / AWS application access      | **IAM Identity Center**                                                     |
+| MFA-based AWS authentication                | **Multi-Factor Authentication (MFA)**; not the RDS database-token mechanism |
+
+**SSO** = **Single Sign-On**.
+
+**MFA** = **Multi-Factor Authentication**.
 
 **THE trap:** Secrets Manager does **not** generate IAM DB authentication tokens. It is used to store and rotate database credentials.
 
@@ -244,7 +260,7 @@ The database account is created with the AWS authentication plugin instead of a 
 
 # RDS Proxy
 
-**RDS Proxy = managed database connection pool.**
+**Amazon RDS Proxy = managed database connection pool.**
 
 Useful when many short-lived applications, especially Lambda, create too many connections.
 
@@ -287,11 +303,11 @@ RDS for Oracle
 
 ## Oracle migration: DMS vs SCT vs RMAN
 
-| Tool            | Purpose                                      |
-| --------------- | -------------------------------------------- |
-| **AWS DMS**     | Migrate/replicate database data              |
-| **AWS SCT**     | Convert schema/code between database engines |
-| **Oracle RMAN** | Oracle backup/recovery                       |
+| Tool            | Full name / purpose                                                           |
+| --------------- | ----------------------------------------------------------------------------- |
+| **AWS DMS**     | **AWS Database Migration Service** — migrate/replicate database data          |
+| **AWS SCT**     | **AWS Schema Conversion Tool** — convert schema/code between database engines |
+| **Oracle RMAN** | **Oracle Recovery Manager** — Oracle backup/recovery                          |
 
 ```text
 Oracle → RDS Oracle
@@ -304,9 +320,25 @@ Oracle backup/recovery
 → RMAN
 ```
 
+### What each tool does
+
+**AWS Database Migration Service (AWS DMS)**
+
+→ Moves or continuously replicates database data.
+
+**AWS Schema Conversion Tool (AWS SCT)**
+
+→ Converts database schemas, code, and other database objects when moving between different database engines.
+
+**Oracle Recovery Manager (RMAN)**
+
+→ Oracle's backup and recovery tool.
+
 ---
 
 # Oracle High Availability
+
+**High Availability (HA)** means keeping the database available despite infrastructure failure.
 
 Oracle database + AZ failure + automatic failover:
 
@@ -331,7 +363,7 @@ AWS provides the Oracle license under the supported RDS model.
 
 ### BYOL
 
-**Bring Your Own License**
+**BYOL = Bring Your Own License**
 
 > Company already owns eligible Oracle licenses → **BYOL**
 
@@ -351,7 +383,7 @@ Need:
 
 # Aurora
 
-**Aurora** is AWS's managed relational database engine compatible with:
+**Amazon Aurora** is AWS's managed relational database engine compatible with:
 
 * MySQL
 * PostgreSQL
@@ -380,7 +412,7 @@ Aurora supports:
 
 **Babelfish for Aurora PostgreSQL** is a compatibility feature that helps applications originally built for **Microsoft SQL Server** work with **Aurora PostgreSQL** with fewer application code changes.
 
-It supports the **SQL Server Tabular Data Stream (TDS) protocol** and commonly used **T-SQL** functionality.
+It supports the **SQL Server Tabular Data Stream (TDS) protocol** and commonly used **Transact-SQL (T-SQL)** functionality.
 
 ### Main use case
 
@@ -524,6 +556,8 @@ Aurora promotes an existing Aurora Replica to become the new primary. Failover i
 
 **Aurora flips the canonical name record (CNAME) for your DB Instance to point at the healthy replica, which in turn is promoted to become the new primary.**
 
+**CNAME** = **Canonical Name record**, a DNS record that points one domain name to another canonical name.
+
 > **Primary failure + Aurora Replica** → **Promote the Aurora Replica**
 
 For high availability, Aurora Replicas should ideally be placed in different Availability Zones.
@@ -607,10 +641,12 @@ Designed for **cross-Region** architectures.
 
 Use for:
 
-* Cross-Region DR
+* Cross-Region Disaster Recovery (DR)
 * Very low replication lag
 * Fast recovery after Regional failure
 * Low-latency reads across Regions
+
+**DR = Disaster Recovery**: recovering an application/database after a major failure such as a Regional outage.
 
 ```text
 Primary Region
@@ -623,6 +659,8 @@ Secondary Region
 Secondary Regions can also serve reads.
 
 > Aurora + cross-Region DR + very low RPO / fast recovery → **Aurora Global Database**
+
+**RPO = Recovery Point Objective**: how much recent data loss is acceptable after a failure.
 
 ---
 
@@ -686,12 +724,16 @@ Cross-Region Read Replica
 
 # Relational vs non-relational global databases
 
-| Service                    | Type        | Clue                        |
-| -------------------------- | ----------- | --------------------------- |
-| **RDS**                    | Relational  | SQL                         |
-| **Aurora**                 | Relational  | MySQL/PostgreSQL-compatible |
-| **DynamoDB Global Tables** | NoSQL       | Multi-Region NoSQL          |
-| **Timestream**             | Time-series | IoT / metrics               |
+| Service                    | Type        | Clue                               |
+| -------------------------- | ----------- | ---------------------------------- |
+| **RDS**                    | Relational  | SQL                                |
+| **Aurora**                 | Relational  | MySQL/PostgreSQL-compatible        |
+| **DynamoDB Global Tables** | NoSQL       | Multi-Region NoSQL                 |
+| **Amazon Timestream**      | Time-series | Internet of Things (IoT) / metrics |
+
+**NoSQL** = **non-relational database**.
+
+**IoT** = **Internet of Things**, such as connected devices and sensors.
 
 > Relational → **RDS / Aurora**
 
@@ -765,7 +807,7 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 
 > **Storage grows unpredictably** → **RDS Storage Auto Scaling**
 
-> **Restore to a specific point in time** → **Automated backups / PITR**
+> **Restore to a specific point in time** → **Automated backups / Point-in-Time Recovery (PITR)**
 
 > **Keep backup for years** → **Manual snapshot**
 
@@ -779,23 +821,23 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 
 > **IAM identity must be allowed to connect to RDS** → **`rds-db:connect`**
 
-> **Oracle → RDS Oracle** → **DMS**
+> **Oracle → RDS Oracle** → **AWS Database Migration Service (DMS)**
 
-> **Oracle → different DB engine** → **SCT + DMS**
+> **Oracle → different DB engine** → **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)**
 
-> **Oracle backup/recovery** → **RMAN**
+> **Oracle backup/recovery** → **Oracle Recovery Manager (RMAN)**
 
 > **Oracle AZ HA** → **RDS for Oracle Multi-AZ**
 
-> **Existing Oracle license** → **BYOL**
+> **Existing Oracle license** → **Bring Your Own License (BYOL)**
 
 > **OS-level DB control** → **EC2 / RDS Custom**
 
 > **SQL Server → Aurora PostgreSQL + minimal application changes** → **Babelfish**
 
-> **SQL Server schema conversion** → **AWS SCT**
+> **SQL Server schema conversion** → **AWS Schema Conversion Tool (SCT)**
 
-> **Database data migration** → **AWS DMS**
+> **Database data migration** → **AWS Database Migration Service (DMS)**
 
 > **Aurora read balancing** → **Reader endpoint**
 
@@ -827,41 +869,41 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 
 # Pocket card
 
-| Keyword                                   | Answer                                  |
-| ----------------------------------------- | --------------------------------------- |
-| AZ failure                                | **Multi-AZ**                            |
-| Automatic regional failover               | **Multi-AZ**                            |
-| Scale reads                               | **Read Replica**                        |
-| Cross-Region RDS DR                       | **Cross-Region Read Replica**           |
-| Aurora cross-Region DR                    | **Aurora Global Database**              |
-| Very low RPO + fast cross-Region recovery | **Aurora Global Database**              |
-| Lambda + too many DB connections          | **RDS Proxy**                           |
-| Point-in-time restore                     | **Automated backup / PITR**             |
-| Long-term backup                          | **Manual snapshot**                     |
-| Existing unencrypted RDS → encrypted      | **Snapshot → encrypted copy → restore** |
-| Temporary DB auth token                   | **IAM Database Authentication**         |
-| IAM DB token lifetime                     | **15 minutes**                          |
-| MySQL IAM authentication                  | **`AWSAuthenticationPlugin`**           |
-| Allow IAM identity to connect             | **`rds-db:connect`**                    |
-| Store/rotate DB passwords                 | **Secrets Manager**                     |
-| Oracle → RDS Oracle                       | **DMS**                                 |
-| Oracle → different engine                 | **SCT + DMS**                           |
-| Oracle backup/recovery                    | **RMAN**                                |
-| Oracle AZ HA                              | **RDS Multi-AZ**                        |
-| Existing Oracle license                   | **BYOL**                                |
-| OS-level DB control                       | **EC2 / RDS Custom**                    |
-| SQL Server → Aurora PostgreSQL            | **Babelfish**                           |
-| SQL Server schema conversion              | **AWS SCT**                             |
-| Database data migration                   | **AWS DMS**                             |
-| Aurora current writer                     | **Writer/Cluster endpoint**             |
-| Aurora read balancing                     | **Reader endpoint**                     |
-| One Aurora instance                       | **Instance endpoint**                   |
-| Different Aurora instance groups          | **Custom endpoint**                     |
-| Aurora failure + Replica exists           | **Promote Replica**                     |
-| Aurora failure + no Replica               | **Recreate primary instance**           |
-| Spiky/unpredictable Aurora workload       | **Serverless v2**                       |
-| Aurora cross-Region DR                    | **Global Database**                     |
-| Quick Aurora copy                         | **Cloning**                             |
-| Rewind Aurora MySQL                       | **Backtrack**                           |
-| Multi-Region NoSQL                        | **DynamoDB Global Tables**              |
-| Time-series database                      | **Timestream**                          |
+| Keyword                                   | Answer                                                                      |
+| ----------------------------------------- | --------------------------------------------------------------------------- |
+| AZ failure                                | **Multi-AZ**                                                                |
+| Automatic regional failover               | **Multi-AZ**                                                                |
+| Scale reads                               | **Read Replica**                                                            |
+| Cross-Region RDS DR                       | **Cross-Region Read Replica**                                               |
+| Aurora cross-Region DR                    | **Aurora Global Database**                                                  |
+| Very low RPO + fast cross-Region recovery | **Aurora Global Database**                                                  |
+| Lambda + too many DB connections          | **RDS Proxy**                                                               |
+| Point-in-time restore                     | **Automated backup / PITR**                                                 |
+| Long-term backup                          | **Manual snapshot**                                                         |
+| Existing unencrypted RDS → encrypted      | **Snapshot → encrypted copy → restore**                                     |
+| Temporary DB auth token                   | **IAM Database Authentication**                                             |
+| IAM DB token lifetime                     | **15 minutes**                                                              |
+| MySQL IAM authentication                  | **`AWSAuthenticationPlugin`**                                               |
+| Allow IAM identity to connect             | **`rds-db:connect`**                                                        |
+| Store/rotate DB passwords                 | **Secrets Manager**                                                         |
+| Oracle → RDS Oracle                       | **AWS Database Migration Service (DMS)**                                    |
+| Oracle → different engine                 | **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)** |
+| Oracle backup/recovery                    | **Oracle Recovery Manager (RMAN)**                                          |
+| Oracle AZ HA                              | **RDS Multi-AZ**                                                            |
+| Existing Oracle license                   | **Bring Your Own License (BYOL)**                                           |
+| OS-level DB control                       | **EC2 / RDS Custom**                                                        |
+| SQL Server → Aurora PostgreSQL            | **Babelfish**                                                               |
+| SQL Server schema conversion              | **AWS Schema Conversion Tool (SCT)**                                        |
+| Database data migration                   | **AWS Database Migration Service (DMS)**                                    |
+| Aurora current writer                     | **Writer/Cluster endpoint**                                                 |
+| Aurora read balancing                     | **Reader endpoint**                                                         |
+| One Aurora instance                       | **Instance endpoint**                                                       |
+| Different Aurora instance groups          | **Custom endpoint**                                                         |
+| Aurora failure + Replica exists           | **Promote Replica**                                                         |
+| Aurora failure + no Replica               | **Recreate primary instance**                                               |
+| Spiky/unpredictable Aurora workload       | **Aurora Serverless v2**                                                    |
+| Aurora cross-Region DR                    | **Aurora Global Database**                                                  |
+| Quick Aurora copy                         | **Aurora Cloning**                                                          |
+| Rewind Aurora MySQL                       | **Aurora Backtrack**                                                        |
+| Multi-Region NoSQL                        | **DynamoDB Global Tables**                                                  |
+| Time-series database                      | **Amazon Timestream**                                                       |
