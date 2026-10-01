@@ -407,6 +407,14 @@ Aurora supports:
 **1 primary + up to 15 Aurora Replicas**
 
 ---
+## Aurora vs RDS Multi-AZ
+| Requirement                   | RDS MySQL                     | Aurora                                                   |
+| ----------------------------- | ----------------------------- | -------------------------------------------------------- |
+| Automatic AZ failover         | **Multi-AZ**                  | **Aurora reader + automatic failover**                   |
+| Storage replicated across AZs | Multi-AZ standby architecture | **Aurora storage automatically replicated across 3 AZs** |
+| Read scaling                  | Read Replicas                 | **Aurora Replicas**                                      |
+| Cross-Region DR               | Cross-Region Read Replica     | Aurora Global Database                                   |
+
 
 # Aurora PostgreSQL — Babelfish
 
