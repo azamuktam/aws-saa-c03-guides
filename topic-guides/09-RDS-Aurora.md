@@ -376,6 +376,88 @@ Aurora supports:
 
 ---
 
+# Aurora PostgreSQL — Babelfish
+
+**Babelfish for Aurora PostgreSQL** is a compatibility feature that helps applications originally built for **Microsoft SQL Server** work with **Aurora PostgreSQL** with fewer application code changes.
+
+It supports the **SQL Server Tabular Data Stream (TDS) protocol** and commonly used **T-SQL** functionality.
+
+### Main use case
+
+```text
+Existing SQL Server application
+          ↓
+     Aurora PostgreSQL
+          +
+       Babelfish
+```
+
+Instead of rewriting the application completely for PostgreSQL, Babelfish allows many existing SQL Server applications to continue using their SQL Server-compatible connection protocol and syntax.
+
+### SAA exam signal
+
+> **SQL Server → Aurora PostgreSQL + minimize application code changes**
+
+→ **Babelfish**
+
+### Typical migration architecture
+
+```text
+SQL Server
+   │
+   ├── AWS SCT
+   │      ↓
+   │   Convert schema
+   │
+   └── AWS DMS
+          ↓
+Aurora PostgreSQL
+      + Babelfish
+          ↓
+Existing application
+```
+
+The tools have different jobs:
+
+| Requirement                                     | Service       |
+| ----------------------------------------------- | ------------- |
+| SQL Server compatibility with Aurora PostgreSQL | **Babelfish** |
+| Convert schema/database objects                 | **AWS SCT**   |
+| Migrate/replicate database data                 | **AWS DMS**   |
+
+### Important distinction
+
+**Babelfish is not a database migration service.**
+
+It provides **compatibility** so the existing application can communicate with Aurora PostgreSQL with fewer code modifications.
+
+```text
+Babelfish
+→ application compatibility
+
+SCT
+→ schema conversion
+
+DMS
+→ data migration
+```
+
+### Example
+
+> A company uses SQL Server and wants to migrate to Aurora PostgreSQL while minimizing application code modifications.
+
+→ **Babelfish + AWS SCT + AWS DMS**
+
+The exact combination depends on the question's answer choices. If the question asks for the two actions that achieve the migration:
+
+> **Enable Babelfish on Aurora PostgreSQL**
+
+*
+
+> **Use AWS SCT for schema conversion and AWS DMS for data migration**
+
+---
+
 # Aurora endpoints
 
 | Endpoint                      | Purpose                                     |
@@ -675,9 +757,9 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 
 # Question patterns
 
-> **AZ failure + automatic failover** → **RDS Multi-AZ**
+> **AZ failure + automatic failover** → **Multi-AZ**
 
-> **Reporting queries overload primary** → **Read Replica**
+> **Read-heavy workload** → **Read Replica**
 
 > **Lambda creates too many DB connections** → **RDS Proxy**
 
@@ -707,7 +789,13 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 
 > **Existing Oracle license** → **BYOL**
 
-> **OS-level Oracle control** → **EC2 / RDS Custom**
+> **OS-level DB control** → **EC2 / RDS Custom**
+
+> **SQL Server → Aurora PostgreSQL + minimal application changes** → **Babelfish**
+
+> **SQL Server schema conversion** → **AWS SCT**
+
+> **Database data migration** → **AWS DMS**
 
 > **Aurora read balancing** → **Reader endpoint**
 
@@ -762,6 +850,9 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 | Oracle AZ HA                              | **RDS Multi-AZ**                        |
 | Existing Oracle license                   | **BYOL**                                |
 | OS-level DB control                       | **EC2 / RDS Custom**                    |
+| SQL Server → Aurora PostgreSQL            | **Babelfish**                           |
+| SQL Server schema conversion              | **AWS SCT**                             |
+| Database data migration                   | **AWS DMS**                             |
 | Aurora current writer                     | **Writer/Cluster endpoint**             |
 | Aurora read balancing                     | **Reader endpoint**                     |
 | One Aurora instance                       | **Instance endpoint**                   |
