@@ -384,163 +384,32 @@ EC2 → Database
 
 If outbound traffic is allowed, the response is automatically allowed.
 
-### Security Group can reference another Security Group
+### Security Group references
 
-This is an important SAA pattern.
-
-A Security Group inbound rule can use **another Security Group as its source**.
+A Security Group can use **another Security Group as the source** of an inbound rule.
 
 Example:
 
 ```text
-Application SG = sg-app
-Database SG    = sg-db
-```
-
-Database Security Group:
-
-```text
-Inbound:
-TCP 1433
-Source: sg-app
-```
-
-This means:
-
-> **Allow TCP 1433 from resources that have `sg-app` attached.**
-
-It does **not** mean:
-
-```text
-sg-app → sg-db
-```
-
-as if one Security Group is directly "giving permission" to another.
-
-Instead:
-
-> **`sg-db` says: traffic from resources associated with `sg-app` is allowed.**
-
-Think of it like this:
-
-```text
-EC2 App 1 ─┐
-EC2 App 2 ─┼──→ sg-app
-EC2 App 3 ─┘
-
-             ↓
-        DB Security Group
-        TCP 1433
-        Source = sg-app
-```
-
-So every resource associated with `sg-app` can be a permitted source for that inbound rule.
-
----
-
-## Why this is useful with Auto Scaling
-
-Suppose an Auto Scaling Group has:
-
-```text
-ASG
-├── EC2 #1 → sg-app
-├── EC2 #2 → sg-app
-├── EC2 #3 → sg-app
-└── EC2 #4 → sg-app
-```
-
-Database:
-
-```text
-DB SG:
-TCP 1433
-Source = sg-app
-```
-
-If EC2 #2 terminates:
-
-```text
-EC2 #2 ❌
-```
-
-and ASG launches a replacement:
-
-```text
-EC2 #5 → sg-app
-```
-
-The DB Security Group rule does **not** need to change.
-
-The rule is based on:
-
-```text
-Security Group membership
-```
-
-not:
-
-```text
-Individual EC2 instance ID
-Individual private IP
-```
-
-This is why it works well for dynamic EC2 fleets.
-
-> **Dynamic EC2 fleet → reference the application Security Group, not individual instance IPs/IDs.**
-
-### Example
-
-```text
-ALB SG
-   ↓
 App SG
-   ↓
+  ↓ TCP 1433
 DB SG
 ```
 
-Database Security Group:
+DB SG:
 
 ```text
 TCP 1433
-Source = App SG
+Source: App SG
 ```
 
 This means:
 
-```text
-Resources with App SG
-        ↓
-      TCP 1433
-        ↓
-       DB
-```
+> Allow traffic from resources that have **App SG** attached.
 
-It is a common way to implement **least-privilege access between application tiers**.
+This is useful for **Auto Scaling Groups** because instance IPs change.
 
-### Important distinction
-
-Use:
-
-```text
-Source = Security Group
-```
-
-when the requirement is:
-
-> "Only these application resources should access the database."
-
-Use:
-
-```text
-Source = CIDR/IP
-```
-
-when the requirement is specifically based on an IP/network range.
-
-Do **not** use individual EC2 instance IDs for a dynamic Auto Scaling Group.
-
----
+> **Dynamic EC2 fleet → reference the Security Group, not individual instance IPs/IDs.**
 
 ### SG-to-SG example
 
@@ -1334,13 +1203,9 @@ VPN CloudHub
 
 > **Only app servers connect to DB** → **DB SG allows App SG**
 
-> **Dynamic EC2 / Auto Scaling Group → DB** → **Reference the App Security Group, not individual instance IDs/IPs**
+> **Dynamic EC2 / Auto Scaling Group → DB** → **Use App SG as the DB SG source**
 
-> **Security Group needs to allow another tier** → **Use the other tier's Security Group as the source**
-
-> **EC2 instances change IPs but must keep DB access** → **Use SG-to-SG reference**
-
-> **Least-privilege app-to-DB access** → **DB SG inbound rule with Source = App SG**
+> **Least-privilege app → DB** → **DB SG Source = App SG**
 
 > **Private EC2 → private/free S3** → **Gateway Endpoint**
 
