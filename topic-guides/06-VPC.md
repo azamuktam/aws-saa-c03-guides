@@ -270,6 +270,53 @@ Common sizes:
 
 ---
 
+# VPC DNS
+
+A VPC provides DNS functionality for resources such as EC2 instances.
+
+Two important VPC settings:
+
+| Setting            | Meaning                                                               |
+| ------------------ | --------------------------------------------------------------------- |
+| **DNS resolution** | Allows resources in the VPC to use the Amazon-provided DNS resolver   |
+| **DNS hostnames**  | Allows AWS to assign DNS hostnames to resources such as EC2 instances |
+
+Example:
+
+```text
+EC2
+Private IP: 10.0.1.25
+DNS hostname: ip-10-0-1-25.ec2.internal
+```
+
+Think:
+
+```text
+DNS resolution
+→ Can I resolve DNS names?
+
+DNS hostnames
+→ Does AWS give my EC2 a DNS hostname?
+```
+
+For a normal EC2 private DNS hostname:
+
+> **DNS hostnames must be enabled.**
+
+You do **not** need Route 53 for the default EC2 private DNS hostname.
+
+### SAA memory
+
+```text
+EC2 has no private DNS hostname
+→ Check VPC DNS hostnames
+
+EC2 cannot resolve DNS names
+→ Check VPC DNS resolution
+```
+
+---
+
 # Lambda + VPC capacity
 
 A VPC-connected Lambda function that scales heavily can run into **ENI or subnet IP capacity** limits.
@@ -1073,6 +1120,12 @@ Traffic Mirroring
 
 SSM Session Manager
 = Private EC2 administration
+
+DNS resolution
+= VPC resources can resolve DNS names
+
+DNS hostnames
+= AWS can assign DNS hostnames to resources
 ```
 
 # Hybrid Networking — one-line mental model
@@ -1150,6 +1203,10 @@ VPN CloudHub
 
 > **Two VPCs need private communication** → **VPC Peering + routes to each other's CIDRs**
 
+> **EC2 has no private DNS hostname** → **Check DNS hostnames**
+
+> **Resources cannot resolve DNS names** → **Check DNS resolution**
+
 ---
 
 # Pocket card
@@ -1188,3 +1245,7 @@ VPN CloudHub
 | Central transit routing         | **Transit Gateway**                         |
 | Multiple remote VPN sites       | **VPN CloudHub**                            |
 | Lambda + VPC + high concurrency | **ENI + subnet IP capacity**                |
+| DNS resolution                  | **VPC can resolve DNS names**               |
+| DNS hostnames                   | **AWS assigns DNS hostnames to resources**  |
+| EC2 missing private DNS name    | **Check DNS hostnames**                     |
+| DNS names cannot be resolved    | **Check DNS resolution**                    |
