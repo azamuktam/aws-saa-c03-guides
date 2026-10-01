@@ -15,6 +15,7 @@ It can:
 * Reduce requests reaching the origin
 * Accelerate dynamic HTTP/HTTPS requests even when content is not cacheable
 * Protect private S3 content with Origin Access Control (OAC)
+* Run custom logic at edge locations using Lambda@Edge
 
 ### Global Accelerator
 
@@ -36,6 +37,7 @@ CloudFront
 → Content delivery
 → HTTP/HTTPS
 → Caching
+→ Lambda@Edge for edge processing
 
 Global Accelerator
 → Network traffic acceleration
@@ -208,6 +210,100 @@ Dynamic/non-cacheable HTTP content
 
 ---
 
+# Lambda@Edge
+
+**Lambda@Edge** lets you run custom Lambda code at **CloudFront edge locations**.
+
+It is used when the application needs to **process or modify requests/responses at the edge**.
+
+Typical uses:
+
+* Modify viewer requests or responses
+* Modify origin requests or responses
+* Authentication/authorization
+* Redirects
+* Header manipulation
+* Personalization
+* Custom request/response processing
+
+Example:
+
+```text
+User
+  │
+  ▼
+CloudFront Edge Location
+  │
+  ▼
+Lambda@Edge
+  │
+  ▼
+Origin
+```
+
+### Exam clue
+
+> **"Execute custom application logic at CloudFront edge locations."**
+
+→ **Lambda@Edge**
+
+---
+
+# CloudFront + Lambda@Edge + Kinesis
+
+For globally distributed applications that need **real-time streaming data processing** together with edge processing:
+
+```text
+Users
+  │
+  ▼
+CloudFront
+  │
+  ▼
+Lambda@Edge
+  │
+  ▼
+Kinesis
+  │
+  ▼
+S3
+```
+
+Use:
+
+* **CloudFront** → global HTTP/HTTPS delivery
+* **Lambda@Edge** → execute custom logic at the edge
+* **Kinesis** → real-time streaming data
+* **S3** → durable storage
+
+Typical data:
+
+* Clickstreams
+* User activity
+* Application events
+* Real-time telemetry
+
+### Exam clue
+
+> **"Process user activity in real time and execute processing close to global users."**
+
+→ **CloudFront + Lambda@Edge + Kinesis**
+
+### Important distinction
+
+```text
+Route 53 latency-based routing
+→ routes users to an endpoint
+
+Lambda@Edge
+→ executes code at CloudFront edge locations
+
+Kinesis
+→ processes real-time streaming data
+```
+
+---
+
 # CloudFront Origin Access Control (OAC)
 
 **Origin Access Control (OAC)** allows CloudFront to securely access an S3 bucket while keeping the bucket private.
@@ -233,7 +329,7 @@ Users can access the content through CloudFront without needing direct public ac
 
 OAC can use **AWS Signature Version 4 (SigV4)** to sign requests from CloudFront to S3.
 
-The recommended configuration is to have CloudFront sign requests to the S3 origin. ([docs.aws.amazon.com](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html))
+The recommended configuration is to have CloudFront sign requests to the S3 origin.
 
 ### Important exam clue
 
@@ -253,11 +349,9 @@ OAC supports capabilities that OAI does not, including:
 * SSE-KMS
 * authenticated dynamic requests such as `PUT`, `POST`, and `DELETE`
 
-([docs.aws.amazon.com](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html))
-
 ### Important S3 condition
 
-OAC is designed for a **regular S3 bucket origin**, not an S3 static website endpoint. ([docs.aws.amazon.com](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html))
+OAC is designed for a **regular S3 bucket origin**, not an S3 static website endpoint.
 
 ### Memory rule
 
@@ -336,8 +430,6 @@ Typical use cases:
 | URL changes   | Yes                    | No                       |
 | Example       | One private download   | Premium video library    |
 
-AWS explicitly recommends signed URLs when restricting individual files and signed cookies when granting access to multiple restricted files. ([docs.aws.amazon.com](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-choosing-signed-urls-cookies.html))
-
 ---
 
 # CloudFront Geo Restriction
@@ -357,7 +449,7 @@ Typical use case:
 
 ### Important
 
-CloudFront's built-in geographic restriction works at the **country level**. ([docs.aws.amazon.com](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/georestrictions.html))
+CloudFront's built-in geographic restriction works at the **country level**.
 
 ### Exam clue
 
@@ -373,7 +465,7 @@ For a custom domain on CloudFront, the ACM certificate used by CloudFront must b
 
 > **`us-east-1` (US East — N. Virginia)**
 
-This applies even if the application's origin is in another AWS Region. ([docs.aws.amazon.com](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cnames-and-https-requirements.html))
+This applies even if the application's origin is in another AWS Region.
 
 Example:
 
@@ -409,7 +501,7 @@ credit_card_number  ← encrypted
 
 The sensitive field remains encrypted as it travels through the application stack.
 
-Only the application that has the corresponding private key can decrypt the field. ([docs.aws.amazon.com](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/field-level-encryption.html))
+Only the application that has the corresponding private key can decrypt the field.
 
 ### Important
 
@@ -450,7 +542,7 @@ Typical use case:
 
 > High availability through origin failover.
 
-CloudFront origin failover is configured for specific HTTP status codes and applies to viewer requests using supported methods such as `GET`, `HEAD`, and `OPTIONS`. ([docs.aws.amazon.com](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/high_availability_origin_failover.html))
+CloudFront origin failover is configured for specific HTTP status codes and applies to viewer requests using supported methods such as `GET`, `HEAD`, and `OPTIONS`.
 
 ### Exam clue
 
@@ -516,8 +608,6 @@ Supported standard accelerator endpoints include:
 * Network Load Balancers
 * EC2 instances
 * Elastic IP address endpoints
-
-([docs.aws.amazon.com](https://docs.aws.amazon.com/global-accelerator/latest/dg/introduction-how-it-works.html))
 
 ---
 
@@ -601,7 +691,7 @@ Health checks can use:
 * HTTP
 * HTTPS
 
-When an endpoint becomes unhealthy, Global Accelerator can route **new connections** to healthy endpoints. ([docs.aws.amazon.com](https://docs.aws.amazon.com/global-accelerator/latest/dg/introduction-how-it-works.html))
+When an endpoint becomes unhealthy, Global Accelerator can route **new connections** to healthy endpoints.
 
 This is different from DNS-based failover because clients continue using the same Global Accelerator IP addresses.
 
@@ -611,7 +701,7 @@ Do not memorize:
 
 > "Global Accelerator always fails over in exactly 30 seconds."
 
-The health-check interval and threshold are configurable, so the detection and failover time depends on the configuration. ([docs.aws.amazon.com](https://docs.aws.amazon.com/global-accelerator/latest/api/API_CreateEndpointGroup.html))
+The health-check interval and threshold are configurable, so the detection and failover time depends on the configuration.
 
 ### Exam clue
 
@@ -664,7 +754,7 @@ Typical:
 
 Used when users are **transferring files to or from S3 over long distances** and need improved transfer performance.
 
-It uses CloudFront's globally distributed edge locations to route data to S3 over an optimized network path. ([docs.aws.amazon.com](https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration.html))
+It uses CloudFront's globally distributed edge locations to route data to S3 over an optimized network path.
 
 Typical clue:
 
@@ -811,6 +901,12 @@ Global users use a TCP/UDP application
 
 ---
 
+> **"Process global user activity in real time at the edge and stream the data for processing."**
+
+→ **CloudFront + Lambda@Edge + Kinesis**
+
+---
+
 # Important SAA traps
 
 ## OAC vs Signed URL
@@ -885,6 +981,34 @@ If UDP is required:
 
 ---
 
+## CloudFront vs Lambda@Edge
+
+```text
+CloudFront
+→ delivers/caches HTTP/HTTPS content
+
+Lambda@Edge
+→ executes custom code at CloudFront edge locations
+```
+
+If the question says:
+
+> **"Execute custom logic at the edge."**
+
+→ **Lambda@Edge**
+
+If it says:
+
+> **"Real-time streaming data."**
+
+→ **Kinesis**
+
+If both are required:
+
+→ **CloudFront + Lambda@Edge + Kinesis**
+
+---
+
 ## CloudFront vs S3 Transfer Acceleration
 
 ```text
@@ -921,56 +1045,15 @@ Change where CloudFront gets content from
 
 ---
 
-# Decision tree
-
-```text
-What does the application need?
-          │
-          ├── Global HTTP/HTTPS content delivery
-          │       ↓
-          │    CloudFront
-          │
-          ├── Private S3 origin behind CloudFront
-          │       ↓
-          │    OAC
-          │
-          ├── One private file
-          │       ↓
-          │    Signed URL
-          │
-          ├── Many private files
-          │       ↓
-          │    Signed Cookies
-          │
-          ├── Country-level content restriction
-          │       ↓
-          │    Geo Restriction
-          │
-          ├── Fixed global IPs
-          │       ↓
-          │    Global Accelerator
-          │
-          ├── TCP/UDP application
-          │       ↓
-          │    Global Accelerator
-          │
-          ├── Large file transfers to S3
-          │       ↓
-          │    S3 Transfer Acceleration
-          │
-          └── CloudFront primary/secondary origin
-                  ↓
-              Origin Group
-```
-
----
-
 # Pocket card
 
 | Keyword in question                               | Answer                                       |
 | ------------------------------------------------- | -------------------------------------------- |
 | Global static content, low latency                | **CloudFront**                               |
 | HTTP/HTTPS content delivery                       | **CloudFront**                               |
+| Execute custom code at CloudFront edge            | **Lambda@Edge**                              |
+| Real-time streaming data                          | **Kinesis**                                  |
+| Edge processing + real-time streaming             | **CloudFront + Lambda@Edge + Kinesis**       |
 | Private S3 bucket through CloudFront              | **CloudFront OAC**                           |
 | OAI vs OAC                                        | **OAC**                                      |
 | One private file                                  | **Signed URL**                               |
@@ -989,69 +1072,3 @@ What does the application need?
 | Global file transfers to S3                       | **S3 Transfer Acceleration**                 |
 
 ---
-
-# Final memory
-
-```text
-CloudFront
-= HTTP/HTTPS content delivery + caching + edge acceleration
-
-OAC
-= CloudFront securely accesses a private S3 origin
-
-Signed URL
-= temporary access to a specific private resource
-
-Signed Cookies
-= temporary access to multiple private resources
-
-Geo Restriction
-= country-level access control
-
-Origin Group
-= primary + secondary CloudFront origin
-
-Price Class
-= CloudFront cost/edge-location selection
-
-Global Accelerator
-= TCP/UDP network acceleration + static anycast IPs + health-based routing
-
-S3 Transfer Acceleration
-= faster long-distance file transfers to/from S3
-```
-
-## Golden rules
-
-```text
-Global web/content delivery
-→ CloudFront
-
-Private S3 + CloudFront
-→ OAC
-
-One private file
-→ Signed URL
-
-Many private files
-→ Signed Cookies
-
-Country restriction
-→ CloudFront Geo Restriction
-
-TCP/UDP + static IPs
-→ Global Accelerator
-
-Large global file transfer to S3
-→ S3 Transfer Acceleration
-
-CloudFront primary/secondary origin
-→ Origin Group
-
-CloudFront certificate
-→ ACM in us-east-1
-```
-
----
-
-CloudFront and Global Accelerator solve the **global access/performance** problem. The next section covers **RDS and Aurora**, which solve database availability, scaling, and storage requirements.
