@@ -22,12 +22,16 @@ AWS compliance reports
 Software license limits
 → AWS License Manager
 
+Share AWS resources across accounts
+→ AWS Resource Access Manager (RAM)
+
 Stream desktop applications to users
 → Amazon AppStream 2.0
 
 Create a fast copy of an Aurora database for testing
 → Aurora Cloning
 ```
+
 ---
 
 # AWS Artifact
@@ -118,6 +122,46 @@ Enable **license limit enforcement** to prevent usage from exceeding the availab
 ### Memory
 
 > **Software licenses + EC2 + enforce license limit → License Manager**
+
+---
+
+# AWS Resource Access Manager (RAM)
+
+**AWS RAM = share supported AWS resources across AWS accounts.**
+
+It is commonly used in **multi-account AWS environments**.
+
+### Signal
+
+> **Share AWS resources across accounts → AWS RAM**
+
+---
+
+## Example
+
+A company has multiple AWS accounts and wants them to use a shared **VPC subnet** or **Transit Gateway**.
+
+```text
+AWS Account A
+      │
+      ├── Share resource
+      ↓
+    AWS RAM
+      ↓
+AWS Account B
+```
+
+### Examples
+
+RAM can be used to share supported resources such as:
+
+* VPC subnets
+* Transit Gateways
+* Route 53 Resolver rules
+
+### Memory
+
+> **RAM = SHARE AWS RESOURCES ACROSS ACCOUNTS**
 
 ---
 
@@ -262,13 +306,14 @@ Typical use cases include:
 
 # Specialized Services Comparison
 
-| Service             | What it does                          | Signal keyword                   |
-| ------------------- | ------------------------------------- | -------------------------------- |
-| **Artifact**        | AWS compliance documents and reports  | Compliance / auditor             |
-| **License Manager** | Tracks and enforces software licenses | Software license limit           |
-| **ParallelCluster** | Deploys and manages HPC clusters      | HPC / High Performance Computing |
-| **AppStream 2.0**   | Streams desktop applications          | Desktop application streaming    |
-| **Aurora Cloning**  | Fast Aurora database copy             | Aurora copy for testing          |
+| Service             | What it does                                   | Signal keyword                       |
+| ------------------- | ---------------------------------------------- | ------------------------------------ |
+| **Artifact**        | AWS compliance documents and reports           | Compliance / auditor                 |
+| **License Manager** | Tracks and enforces software licenses          | Software license limit               |
+| **AWS RAM**         | Shares supported AWS resources across accounts | Resource sharing / multiple accounts |
+| **ParallelCluster** | Deploys and manages HPC clusters               | HPC / High Performance Computing     |
+| **AppStream 2.0**   | Streams desktop applications                   | Desktop application streaming        |
+| **Aurora Cloning**  | Fast Aurora database copy                      | Aurora copy for testing              |
 
 ---
 
@@ -287,6 +332,18 @@ CloudWatch
 If the requirement is for an auditor to obtain AWS compliance reports:
 
 → **Artifact**
+
+---
+
+## License Manager vs AWS RAM
+
+```text
+License Manager
+= Manage / enforce software licenses
+
+AWS RAM
+= Share supported AWS resources
+```
 
 ---
 
@@ -348,6 +405,18 @@ For SAA, remember the unique signal:
 
 ---
 
+> **"A company has multiple AWS accounts and wants to share a VPC subnet between them."**
+
+→ **AWS Resource Access Manager (RAM)**
+
+---
+
+> **"A company wants to share a Transit Gateway with other AWS accounts."**
+
+→ **AWS Resource Access Manager (RAM)**
+
+---
+
 > **"Users need to access a Windows application without installing it locally."**
 
 → **Amazon AppStream 2.0**
@@ -372,38 +441,6 @@ For SAA, remember the unique signal:
 
 ---
 
-# Specialized Services Decision Tree
-
-```text
-What is the requirement?
-          │
-          ├── File-based video transcoding?
-          │       ↓
-          │   MediaConvert
-          │
-          ├── AWS compliance reports/documents?
-          │       ↓
-          │    Artifact
-          │
-          ├── Software license limits?
-          │       ↓
-          │  License Manager
-          │
-          ├── HPC cluster deployment?
-          │       ↓
-          │  ParallelCluster
-          │
-          ├── Stream desktop applications?
-          │       ↓
-          │   AppStream 2.0
-          │
-          └── Fast Aurora database copy?
-                  ↓
-            Aurora Cloning
-```
-
----
-
 # Pocket Card
 
 | Keyword                                        | Answer                                |
@@ -416,6 +453,9 @@ What is the requirement?
 | Software license limits                        | **AWS License Manager**               |
 | Windows Server licenses on EC2                 | **AWS License Manager**               |
 | Enforce software license limit                 | **AWS License Manager**               |
+| Share resources across AWS accounts            | **AWS RAM**                           |
+| Share VPC subnets across accounts              | **AWS RAM**                           |
+| Share Transit Gateway across accounts          | **AWS RAM**                           |
 | HPC cluster                                    | **ParallelCluster**                   |
 | Stream desktop applications                    | **AppStream 2.0**                     |
 | Windows application without local installation | **AppStream 2.0**                     |
