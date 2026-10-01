@@ -119,18 +119,6 @@ Enable **license limit enforcement** to prevent usage from exceeding the availab
 
 > **Software licenses + EC2 + enforce license limit → License Manager**
 
----
-
-## Important distinction
-
-Do not confuse License Manager with **Systems Manager Fleet Manager**.
-
-```text
-Fleet Manager
-→ Manage / inspect EC2 instances
-
-License Manager
-→ Track / enforce software licenses
 ```
 
 ---
