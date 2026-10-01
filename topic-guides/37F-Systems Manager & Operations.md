@@ -18,15 +18,15 @@ Run the same command on hundreds of EC2 instances
 Automatically patch hundreds of EC2 instances
 → AWS Systems Manager Patch Manager
 
+Manage / inspect EC2 instances
+→ AWS Systems Manager Fleet Manager
+
 AWS event specifically associated with your account/resources
 → AWS Health Dashboard – Your account health
    (older SAA material: Personal Health Dashboard)
 
 Automatically react to AWS Health events
 → Amazon EventBridge
-
-Send notifications
-→ Amazon Simple Notification Service (Amazon SNS)
 
 Prometheus / PromQL + container metrics
 → Amazon Managed Service for Prometheus (AMP)
@@ -43,11 +43,13 @@ Most important SAA services:
 * **AWS Systems Manager Session Manager**
 * **AWS Systems Manager Run Command**
 * **AWS Systems Manager Patch Manager**
+* **AWS Systems Manager Fleet Manager**
 
 ```text
 Session Manager = ACCESS
 Run Command     = RUN
 Patch Manager   = PATCH
+Fleet Manager   = MANAGE / INSPECT
 ```
 
 ---
@@ -146,13 +148,42 @@ Run the same script
 
 ---
 
-# Session Manager vs Run Command vs Patch Manager
+# Fleet Manager
 
-| Service                                 | Main purpose              | Signal                         |
-| --------------------------------------- | ------------------------- | ------------------------------ |
-| **AWS Systems Manager Session Manager** | Interactive secure access | Access private EC2 without SSH |
-| **AWS Systems Manager Run Command**     | Execute commands/scripts  | Same command on many instances |
-| **AWS Systems Manager Patch Manager**   | Automate OS patching      | Patch many instances           |
+**AWS Systems Manager Fleet Manager = remotely inspect and manage EC2 instances.**
+
+It helps administrators view and manage things such as:
+
+* Files
+* Processes
+* Services
+* Windows Registry
+* Instance information
+
+### Signal
+
+> **Manage / inspect EC2 instances remotely → Fleet Manager**
+
+### Example
+
+> "Administrators need to inspect files and Windows services on EC2 instances without manually connecting to each server."
+
+→ **AWS Systems Manager Fleet Manager**
+
+### Memory
+
+> **Fleet Manager = MANAGE / INSPECT EC2**
+
+---
+
+# Session Manager vs Run Command vs Patch Manager vs Fleet Manager
+
+| Service                                 | Main purpose              | Signal                               |
+| --------------------------------------- | ------------------------- | ------------------------------------ |
+| **AWS Systems Manager Session Manager** | Interactive secure access | Access private EC2 without SSH       |
+| **AWS Systems Manager Run Command**     | Execute commands/scripts  | Same command on many instances       |
+| **AWS Systems Manager Patch Manager**   | Automate OS patching      | Patch many instances                 |
+| **AWS Systems Manager Fleet Manager**   | Manage / inspect EC2      | Files, processes, services, Registry |
 
 ```text
 ACCESS an instance
@@ -163,6 +194,9 @@ RUN a command/script
 
 PATCH the OS
 → AWS Systems Manager Patch Manager
+
+MANAGE / INSPECT an EC2 fleet
+→ AWS Systems Manager Fleet Manager
 ```
 
 ---
@@ -229,32 +263,30 @@ Your account health
 
 ```text
 PUBLIC
-= general AWS service/Regional event
+= general AWS service / Regional event
 = not specific to my account
 
 ACCOUNT-SPECIFIC
-= specific to my account/organization
+= specific to my account / organization
 = affected resources may be identified
 ```
 
-The distinction is **not** whether the event could affect resources generally; public events can also affect users. The distinction is whether the event is **specific to your account**.
+The distinction is **not** whether the event could affect resources generally. Public events can also affect users. The distinction is whether the event is **specific to your account**.
 
 ---
 
 # EventBridge + AWS Health
 
-**Amazon EventBridge** can detect and route AWS Health events so you can automate actions or notifications.
+**Amazon EventBridge** can detect and route AWS Health events so you can automate actions.
 
-Typical notification pattern:
+Typical pattern:
 
 ```text
 AWS Health event
       ↓
 Amazon EventBridge
       ↓
-Amazon Simple Notification Service (Amazon SNS)
-      ↓
-Notification
+Automation / target action
 ```
 
 ### Roles
@@ -264,21 +296,18 @@ AWS Health
 = provides the health event
 
 Amazon EventBridge
-= detects/routes/triggers from the event
-
-Amazon SNS
-= sends the notification
+= detects / routes / triggers from the event
 ```
 
 ### Example
 
-> "Notify administrators about upcoming AWS events that may affect specific EC2 instances."
+> "Automatically react when AWS reports an event that may affect resources in the account."
 
-→ **AWS Health Dashboard – Your account health + Amazon EventBridge + Amazon SNS**
+→ **AWS Health Dashboard – Your account health + Amazon EventBridge**
 
 This matches the older SAA wording:
 
-→ **Personal Health Dashboard + EventBridge + SNS**
+→ **Personal Health Dashboard + EventBridge**
 
 ---
 
@@ -295,29 +324,32 @@ Event specific to my account/resources
   (older term: Personal Health Dashboard)
 ```
 
-## EventBridge vs SNS
+## EventBridge
 
 ```text
 Amazon EventBridge
 = detect / route / trigger
-
-Amazon Simple Notification Service (Amazon SNS)
-= send notifications
 ```
 
 ---
 
 # AWS Health Question Patterns
 
-> **"An EC2 instance was unexpectedly powered down. Management wants notifications about upcoming AWS events that may affect their EC2 instances."**
+> **"An EC2 instance may be affected by an upcoming AWS event specific to the company's account."**
 
-→ **AWS Health Dashboard – Your account health + Amazon EventBridge + Amazon SNS**
+→ **AWS Health Dashboard – Your account health**
 
 ---
 
 > **"A company wants general information about the status of an AWS service."**
 
 → **AWS Health Dashboard – Service health**
+
+---
+
+> **"Automatically take action when an AWS Health event occurs."**
+
+→ **Amazon EventBridge**
 
 ---
 
@@ -381,16 +413,16 @@ Amazon Managed Grafana
 
 # Operations Service Comparison
 
-| Service                                                                              | What it does                   | Signal keyword                         |
-| ------------------------------------------------------------------------------------ | ------------------------------ | -------------------------------------- |
-| **AWS Systems Manager Session Manager**                                              | Secure interactive EC2 access  | Private EC2 without SSH                |
-| **AWS Systems Manager Run Command**                                                  | Run commands/scripts           | Same command on many instances         |
-| **AWS Systems Manager Patch Manager**                                                | Automate OS patching           | Patch many instances                   |
-| **AWS Health Dashboard – Your account health** / **Personal Health Dashboard (PHD)** | Account-specific Health events | Event specific to my account/resources |
-| **AWS Health Dashboard – Service health**                                            | Public AWS service events      | General service/Regional status        |
-| **Amazon EventBridge**                                                               | Detect/route AWS Health events | Automatically react to an event        |
-| **Amazon Simple Notification Service (Amazon SNS)**                                  | Send notifications             | Notify administrators                  |
-| **Amazon Managed Service for Prometheus (AMP)**                                      | Managed Prometheus monitoring  | Prometheus / PromQL / Kubernetes       |
+| Service                                                                          | What it does                     | Signal keyword                         |
+| -------------------------------------------------------------------------------- | -------------------------------- | -------------------------------------- |
+| **AWS Systems Manager Session Manager**                                          | Secure interactive EC2 access    | Private EC2 without SSH                |
+| **AWS Systems Manager Run Command**                                              | Run commands/scripts             | Same command on many instances         |
+| **AWS Systems Manager Patch Manager**                                            | Automate OS patching             | Patch many instances                   |
+| **AWS Systems Manager Fleet Manager**                                            | Manage / inspect EC2             | Files, processes, services, Registry   |
+| **AWS Health Dashboard – Your account health / Personal Health Dashboard (PHD)** | Account-specific Health events   | Event specific to my account/resources |
+| **AWS Health Dashboard – Service health**                                        | Public AWS service events        | General service / Regional status      |
+| **Amazon EventBridge**                                                           | Detect / route AWS Health events | Automatically react to an event        |
+| **Amazon Managed Service for Prometheus (AMP)**                                  | Managed Prometheus monitoring    | Prometheus / PromQL / Kubernetes       |
 
 ---
 
@@ -407,9 +439,13 @@ What does the administrator need to do?
           │       ↓
           │   AWS Systems Manager Run Command
           │
-          └── Patch the operating system?
+          ├── Patch the operating system?
+          │       ↓
+          │   AWS Systems Manager Patch Manager
+          │
+          └── Inspect / manage an EC2 fleet?
                   ↓
-          AWS Systems Manager Patch Manager
+          AWS Systems Manager Fleet Manager
 ```
 
 ---
@@ -429,8 +465,6 @@ What kind of Health information is needed?
           (older term: Personal Health Dashboard)
                   ↓
               Amazon EventBridge
-                  ↓
-          Amazon Simple Notification Service (Amazon SNS)
 ```
 
 ---
@@ -473,6 +507,18 @@ OS patching
 
 ---
 
+## Fleet Manager vs Session Manager
+
+```text
+Interactive shell access
+→ Session Manager
+
+Manage / inspect instance details
+→ Fleet Manager
+```
+
+---
+
 ## Session Manager vs SSH
 
 > **"Access private instances without opening port 22."**
@@ -502,14 +548,11 @@ A public EC2 event can still potentially affect your resources; what distinguish
 
 ---
 
-## EventBridge vs SNS
+## EventBridge
 
 ```text
 Amazon EventBridge
 = detect / route / trigger
-
-Amazon Simple Notification Service (Amazon SNS)
-= send notifications
 ```
 
 Typical pattern:
@@ -517,8 +560,7 @@ Typical pattern:
 ```text
 AWS Health event
 → Amazon EventBridge
-→ Amazon SNS
-→ Administrators
+→ Automated action
 ```
 
 ---
@@ -553,9 +595,10 @@ The on-premises server requires the required agent and connectivity configuratio
 | Run same script on many instances         | **AWS Systems Manager Run Command**                                              |
 | Automated OS patching                     | **AWS Systems Manager Patch Manager**                                            |
 | Patch many instances                      | **AWS Systems Manager Patch Manager**                                            |
+| Manage / inspect EC2 instances            | **AWS Systems Manager Fleet Manager**                                            |
 | Event specific to my account/resources    | **AWS Health Dashboard – Your account health / Personal Health Dashboard (PHD)** |
 | General AWS service status                | **AWS Health Dashboard – Service health**                                        |
 | Automatically react to AWS Health event   | **Amazon EventBridge**                                                           |
-| Send AWS Health notifications             | **Amazon Simple Notification Service (Amazon SNS)**                              |
 | Prometheus / PromQL                       | **Amazon Managed Service for Prometheus (AMP)**                                  |
 | Kubernetes / container Prometheus metrics | **Amazon Managed Service for Prometheus (AMP)**                                  |
+
