@@ -747,24 +747,3 @@ Specific city / metropolitan low latency
 
 ---
 
-# One-line memory
-
-```text
-On-prem → AWS DNS
-= INBOUND Resolver
-
-AWS → On-prem DNS
-= OUTBOUND Resolver
-
-IPv6 + outbound-only
-= Egress-Only IGW
-
-AWS in your data center
-= Outposts
-
-AWS near a city
-= Local Zones
-
-AWS on 5G
-= Wavelength
-```
