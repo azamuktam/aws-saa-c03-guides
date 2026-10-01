@@ -445,57 +445,44 @@ This is one of the most important federation patterns for SAA.
 
 ---
 
-# Federation + S3 per-user folders
+# Non-SAML LDAP: Custom Identity Broker
 
-A common exam scenario is:
+Sometimes the on-premises identity store is **LDAP-based but cannot use SAML**.
 
-> A company has hundreds or thousands of employees in corporate AD/LDAP. Each employee should access their own folder in an S3 bucket. The company does not want to create an IAM user for every employee.
+In this case, a **custom identity broker** can act as the bridge between LDAP and AWS.
 
-The solution uses:
-
-```text
-Corporate AD / LDAP
-        ↓
-Identity Provider / Federation
-        ↓
-STS
-        ↓
-IAM Role
-        ↓
-IAM Policy
-        ↓
-S3 prefix
-```
-
-For example:
+Typical architecture:
 
 ```text
-s3://company-documents/alice/
-s3://company-documents/bob/
-s3://company-documents/john/
+On-premises LDAP
+        ↓
+Custom identity broker
+        ↓
+AWS STS
+        ↓
+Temporary AWS credentials
+        ↓
+AWS resources
 ```
 
-The authorization policy can restrict Alice to:
+The broker:
 
-```text
-company-documents/alice/*
-```
+1. Authenticates the user against LDAP.
+2. Determines which IAM role the user should use.
+3. Calls **STS**.
+4. Returns temporary AWS credentials to the user.
 
-while Bob can access:
+### Exam signal
 
-```text
-company-documents/bob/*
-```
+> **On-premises LDAP + not SAML-compatible → Custom Identity Broker + STS**
 
-### Exam pattern
+Do not confuse this with IAM Identity Center. The key clue is that the existing identity store is **not compatible with SAML**.
 
-> "1200 employees already exist in corporate AD/LDAP. They need S3 access and SSO. Each user should access only their own folder."
+### Small question
 
-Think:
+> A company needs to integrate its on-premises LDAP directory with AWS. The existing identity store is not compatible with SAML. Which approach provides the most appropriate integration?
 
-**Federation + STS + IAM role/policy + S3 prefix**
-
-Do **not** automatically create 1,200 IAM users.
+→ **Develop an on-premises custom identity broker and use AWS STS to issue temporary credentials.**
 
 ---
 
@@ -1126,6 +1113,9 @@ They are completely different.
 > **"Employees need one login to access many AWS accounts."**
 > → **IAM Identity Center**.
 
+> **"The corporate LDAP directory is not compatible with SAML, but users need temporary AWS credentials."**
+> → **Custom identity broker + STS**.
+
 > **"Customers sign in to an application using Google or Facebook."**
 > → **Amazon Cognito**.
 
@@ -1164,6 +1154,7 @@ They are completely different.
 | Maximum permissions for an AWS account/OU  | SCP                                   |
 | External corporate users                   | Federation                            |
 | Corporate AD/LDAP → AWS                    | Federation / IdP                      |
+| LDAP not SAML-compatible                   | Custom identity broker + STS          |
 | Federation → temporary AWS credentials     | STS                                   |
 | One login → multiple AWS accounts          | IAM Identity Center                   |
 | Enterprise SSO with SAML                   | IAM Identity Center / SAML federation |
