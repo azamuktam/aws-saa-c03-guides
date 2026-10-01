@@ -2,7 +2,7 @@
 
 ## The idea
 
-These AWS services commonly appear in SAA questions involving **instance management, secure access, command execution, patching, AWS operational events, and Prometheus-compatible monitoring**.
+These AWS services commonly appear in SAA questions involving **instance management, secure access, command execution, patching, operational issues, AWS operational events, and Prometheus-compatible monitoring**.
 
 Best strategy:
 
@@ -20,6 +20,9 @@ Automatically patch hundreds of EC2 instances
 
 Manage / inspect EC2 instances
 → AWS Systems Manager Fleet Manager
+
+Centrally track and investigate operational issues
+→ AWS Systems Manager OpsCenter
 
 AWS event specifically associated with your account/resources
 → AWS Health Dashboard – Your account health
@@ -44,12 +47,14 @@ Most important SAA services:
 * **AWS Systems Manager Run Command**
 * **AWS Systems Manager Patch Manager**
 * **AWS Systems Manager Fleet Manager**
+* **AWS Systems Manager OpsCenter**
 
 ```text
 Session Manager = ACCESS
 Run Command     = RUN
 Patch Manager   = PATCH
 Fleet Manager   = MANAGE / INSPECT
+OpsCenter       = TRACK / INVESTIGATE ISSUES
 ```
 
 ---
@@ -176,14 +181,47 @@ It helps administrators view and manage things such as:
 
 ---
 
-# Session Manager vs Run Command vs Patch Manager vs Fleet Manager
+# OpsCenter
 
-| Service                                 | Main purpose              | Signal                               |
-| --------------------------------------- | ------------------------- | ------------------------------------ |
-| **AWS Systems Manager Session Manager** | Interactive secure access | Access private EC2 without SSH       |
-| **AWS Systems Manager Run Command**     | Execute commands/scripts  | Same command on many instances       |
-| **AWS Systems Manager Patch Manager**   | Automate OS patching      | Patch many instances                 |
-| **AWS Systems Manager Fleet Manager**   | Manage / inspect EC2      | Files, processes, services, Registry |
+**AWS Systems Manager OpsCenter = centrally track, investigate, and manage operational issues.**
+
+It gives operations teams a central place to work on **operational problems and incidents**.
+
+Typical pattern:
+
+```text
+Operational issue
+      ↓
+AWS Systems Manager OpsCenter
+      ↓
+Track / investigate / manage
+```
+
+### Signal
+
+> **Centrally track and investigate operational issues → AWS Systems Manager OpsCenter**
+
+### Example
+
+> "The operations team needs one place to track and investigate operational issues across AWS resources."
+
+→ **AWS Systems Manager OpsCenter**
+
+### Memory
+
+> **OpsCenter = TRACK / INVESTIGATE operational issues**
+
+---
+
+# Session Manager vs Run Command vs Patch Manager vs Fleet Manager vs OpsCenter
+
+| Service                                 | Main purpose                           | Signal                               |
+| --------------------------------------- | -------------------------------------- | ------------------------------------ |
+| **AWS Systems Manager Session Manager** | Interactive secure access              | Access private EC2 without SSH       |
+| **AWS Systems Manager Run Command**     | Execute commands/scripts               | Same command on many instances       |
+| **AWS Systems Manager Patch Manager**   | Automate OS patching                   | Patch many instances                 |
+| **AWS Systems Manager Fleet Manager**   | Manage / inspect EC2                   | Files, processes, services, Registry |
+| **AWS Systems Manager OpsCenter**       | Track / investigate operational issues | Central operational issue management |
 
 ```text
 ACCESS an instance
@@ -197,6 +235,9 @@ PATCH the OS
 
 MANAGE / INSPECT an EC2 fleet
 → AWS Systems Manager Fleet Manager
+
+TRACK / INVESTIGATE operational issues
+→ AWS Systems Manager OpsCenter
 ```
 
 ---
@@ -413,16 +454,17 @@ Amazon Managed Grafana
 
 # Operations Service Comparison
 
-| Service                                                                          | What it does                     | Signal keyword                         |
-| -------------------------------------------------------------------------------- | -------------------------------- | -------------------------------------- |
-| **AWS Systems Manager Session Manager**                                          | Secure interactive EC2 access    | Private EC2 without SSH                |
-| **AWS Systems Manager Run Command**                                              | Run commands/scripts             | Same command on many instances         |
-| **AWS Systems Manager Patch Manager**                                            | Automate OS patching             | Patch many instances                   |
-| **AWS Systems Manager Fleet Manager**                                            | Manage / inspect EC2             | Files, processes, services, Registry   |
-| **AWS Health Dashboard – Your account health / Personal Health Dashboard (PHD)** | Account-specific Health events   | Event specific to my account/resources |
-| **AWS Health Dashboard – Service health**                                        | Public AWS service events        | General service / Regional status      |
-| **Amazon EventBridge**                                                           | Detect / route AWS Health events | Automatically react to an event        |
-| **Amazon Managed Service for Prometheus (AMP)**                                  | Managed Prometheus monitoring    | Prometheus / PromQL / Kubernetes       |
+| Service                                                                          | What it does                           | Signal keyword                         |
+| -------------------------------------------------------------------------------- | -------------------------------------- | -------------------------------------- |
+| **AWS Systems Manager Session Manager**                                          | Secure interactive EC2 access          | Private EC2 without SSH                |
+| **AWS Systems Manager Run Command**                                              | Run commands/scripts                   | Same command on many instances         |
+| **AWS Systems Manager Patch Manager**                                            | Automate OS patching                   | Patch many instances                   |
+| **AWS Systems Manager Fleet Manager**                                            | Manage / inspect EC2                   | Files, processes, services, Registry   |
+| **AWS Systems Manager OpsCenter**                                                | Track / investigate operational issues | Central operational issue management   |
+| **AWS Health Dashboard – Your account health / Personal Health Dashboard (PHD)** | Account-specific Health events         | Event specific to my account/resources |
+| **AWS Health Dashboard – Service health**                                        | Public AWS service events              | General service / Regional status      |
+| **Amazon EventBridge**                                                           | Detect / route AWS Health events       | Automatically react to an event        |
+| **Amazon Managed Service for Prometheus (AMP)**                                  | Managed Prometheus monitoring          | Prometheus / PromQL / Kubernetes       |
 
 ---
 
@@ -443,9 +485,13 @@ What does the administrator need to do?
           │       ↓
           │   AWS Systems Manager Patch Manager
           │
-          └── Inspect / manage an EC2 fleet?
+          ├── Inspect / manage an EC2 fleet?
+          │       ↓
+          │   AWS Systems Manager Fleet Manager
+          │
+          └── Track / investigate operational issues?
                   ↓
-          AWS Systems Manager Fleet Manager
+              AWS Systems Manager OpsCenter
 ```
 
 ---
@@ -515,6 +561,27 @@ Interactive shell access
 
 Manage / inspect instance details
 → Fleet Manager
+```
+
+---
+
+## OpsCenter vs the other Systems Manager tools
+
+```text
+Need to access EC2
+→ Session Manager
+
+Need to run commands
+→ Run Command
+
+Need to patch OS
+→ Patch Manager
+
+Need to inspect/manage instances
+→ Fleet Manager
+
+Need to track/investigate operational issues
+→ OpsCenter
 ```
 
 ---
@@ -596,9 +663,9 @@ The on-premises server requires the required agent and connectivity configuratio
 | Automated OS patching                     | **AWS Systems Manager Patch Manager**                                            |
 | Patch many instances                      | **AWS Systems Manager Patch Manager**                                            |
 | Manage / inspect EC2 instances            | **AWS Systems Manager Fleet Manager**                                            |
+| Track / investigate operational issues    | **AWS Systems Manager OpsCenter**                                                |
 | Event specific to my account/resources    | **AWS Health Dashboard – Your account health / Personal Health Dashboard (PHD)** |
 | General AWS service status                | **AWS Health Dashboard – Service health**                                        |
 | Automatically react to AWS Health event   | **Amazon EventBridge**                                                           |
 | Prometheus / PromQL                       | **Amazon Managed Service for Prometheus (AMP)**                                  |
 | Kubernetes / container Prometheus metrics | **Amazon Managed Service for Prometheus (AMP)**                                  |
-
