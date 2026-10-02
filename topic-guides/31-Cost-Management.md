@@ -265,27 +265,3 @@ It is much less common than the other tools in typical SAA questions.
 | Savings Plan / RI purchase recommendation | **Cost Explorer**          |
 | Customized internal billing views         | **Billing Conductor**      |
 
-## Pocket Card
-
-| Keyword                                      | Answer                 |
-| -------------------------------------------- | ---------------------- |
-| **Analyze / visualize / forecast**           | Cost Explorer          |
-| **Programmatically access cost/usage data**  | **Cost Explorer API**  |
-| **Automated custom cost reports**            | **Cost Explorer API**  |
-| **Alert / threshold / 80%**                  | AWS Budgets            |
-| **Detailed / line items / SQL / S3**         | CUR + Athena           |
-| **Unexpected / unusual / spike**             | Cost Anomaly Detection |
-| **Rightsize / overprovisioned**              | Compute Optimizer      |
-| **Department / team / project / chargeback** | Cost Allocation Tags   |
-| **Savings Plan / RI recommendation**         | Cost Explorer          |
-| **Custom billing views**                     | Billing Conductor      |
-
-## The decision rule
-
-**Analyze** → Cost Explorer
-**Programmatically retrieve/analyze cost data** → Cost Explorer API
-**Alert** → AWS Budgets
-**Detailed billing data** → CUR
-**Unusual spending** → Cost Anomaly Detection
-**Rightsize** → Compute Optimizer
-**Attribute costs to teams/departments** → Cost Allocation Tags
