@@ -315,7 +315,7 @@ Karpenter / Cluster Autoscaler
 | **HPA**                       | Adds/removes Pods                                 | **Number of Pods**                 | "Scale Pods based on CPU/request load"                 |
 | **VPA**                       | Adjusts Pod resource requests                     | **CPU/memory per Pod**             | "Give Pods more/less CPU or memory"                    |
 | **Cluster Autoscaler**        | Adjusts existing node groups                      | **Number of worker nodes**         | "Pods cannot be scheduled because nodes lack capacity" |
-| **Karpenter**                 | Dynamically provisions/consolidates node capacity | **Node capacity / instance types** | "Automatically provision flexible/right-sized nodes"   |
+| **Karpenter**                 | Dynamically provisions/consolidates node capacity | **Number + size/type of nodes** | "Automatically provision flexible/right-sized nodes"   |
 
 ### Easy memory
 
@@ -333,7 +333,7 @@ Cluster Autoscaler
 → more/fewer Nodes
 
 Karpenter
-→ provision/consolidate Nodes
+→ node count + node type/size
 ```
 
 ---
