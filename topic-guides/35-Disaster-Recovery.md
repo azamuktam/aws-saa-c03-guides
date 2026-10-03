@@ -330,95 +330,6 @@ Everything already running
 
 ---
 
-# How to choose the strategy on the exam
-
-Use this process:
-
-### Step 1 — Find the RPO
-
-Ask:
-
-> **How much data can we lose?**
-
-Examples:
-
-* Hours of data loss → Backup may be enough
-* Minutes/seconds → replication is usually needed
-* Near-zero → active replication / multi-site architecture
-
-### Step 2 — Find the RTO
-
-Ask:
-
-> **How quickly must the application recover?**
-
-Examples:
-
-* Hours → Backup & Restore
-* Tens of minutes → Pilot Light
-* Minutes → Warm Standby
-* Very low / near-zero → Active-Active
-
-### Step 3 — Eliminate strategies that cannot meet the requirement
-
-### Step 4 — Choose the cheapest remaining option
-
-This is a very common exam pattern.
-
-> **Do not automatically choose the most advanced architecture.**
->
-> Choose the **cheapest strategy that satisfies the requirements**.
-
----
-
-# Common exam patterns
-
-### "RTO of several hours, lowest possible cost"
-
-→ **Backup & Restore**
-
-There is no reason to pay for a continuously running DR environment.
-
----
-
-### "Database is continuously replicated, application servers are started only during a disaster"
-
-→ **Pilot Light**
-
-The critical data layer is already ready, but compute is not fully running.
-
----
-
-### "A smaller version of the entire environment is always running"
-
-→ **Warm Standby**
-
-The complete stack exists and works, but at reduced capacity.
-
----
-
-### "Both regions are serving production traffic"
-
-→ **Multi-Site Active-Active**
-
-Both sites are already active.
-
----
-
-### "Application must recover within minutes and the DR environment must already be operational"
-
-→ **Warm Standby**
-
-Pilot Light may require additional startup/recovery steps.
-
----
-
-### "Application must have extremely low downtime and both regions must remain available"
-
-→ **Multi-Site Active-Active**
-
----
-
 # AWS services commonly used for DR
 
 The DR **strategy** tells you the architecture.
@@ -530,6 +441,15 @@ Examples include:
 It is especially useful when the requirement says:
 
 > "Centrally manage backups across multiple AWS services/accounts."
+
+### Where are AWS Backup backups stored?
+
+AWS Backup stores backups as **recovery points inside Backup Vaults**.
+
+* Backup Vaults are **regional**
+* Backups can be **copied across Regions and accounts**
+* The destination copy is stored in a **Backup Vault in the destination Region/account**
+* Think: **AWS Backup → Backup Vault → Recovery Point**
 
 ### Vault Lock
 
@@ -686,6 +606,47 @@ They are independent requirements.
 
 ---
 
+# How to choose the strategy on the exam
+
+Use this process:
+
+### Step 1 — Find the RPO
+
+Ask:
+
+> **How much data can we lose?**
+
+Examples:
+
+* Hours of data loss → Backup may be enough
+* Minutes/seconds → replication is usually needed
+* Near-zero → active replication / multi-site architecture
+
+### Step 2 — Find the RTO
+
+Ask:
+
+> **How quickly must the application recover?**
+
+Examples:
+
+* Hours → Backup & Restore
+* Tens of minutes → Pilot Light
+* Minutes → Warm Standby
+* Very low / near-zero → Active-Active
+
+### Step 3 — Eliminate strategies that cannot meet the requirement
+
+### Step 4 — Choose the cheapest remaining option
+
+This is a very common exam pattern.
+
+> **Do not automatically choose the most advanced architecture.**
+>
+> Choose the **cheapest strategy that satisfies the requirements**.
+
+---
+
 # Pocket card
 
 | Question / keyword                              | Think                         |
@@ -704,7 +665,6 @@ They are independent requirements.
 | **Replicate servers for DR**                    | **AWS DRS**                   |
 | **DNS failover to another region**              | **Route 53 Failover Routing** |
 | **Continuous database migration/replication**   | **AWS DMS**                   |
-
 
 And for the exam:
 
