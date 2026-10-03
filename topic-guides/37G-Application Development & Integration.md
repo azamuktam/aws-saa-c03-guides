@@ -651,44 +651,6 @@ Notifications / pub-sub
 > **"Application needs to send receipts and notification emails."**
 
 → **Amazon SES**
-
----
-
-# Application Development Decision Tree
-
-```text
-What is the requirement?
-          │
-          ├── Long-running batch jobs?
-          │       ↓
-          │    AWS Batch
-          │
-          ├── GraphQL?
-          │       ↓
-          │    AWS AppSync
-          │
-          ├── GraphQL + real-time subscriptions?
-          │       ↓
-          │    AppSync
-          │
-          ├── GraphQL + offline synchronization?
-          │       ↓
-          │    AppSync
-          │
-          ├── Multiple data sources / multiple DynamoDB tables
-          │   in one GraphQL operation?
-          │       ↓
-          │    AppSync Pipeline Resolver
-          │
-          ├── Quickly build/deploy web or mobile app?
-          │       ↓
-          │    Amplify
-          │
-          └── Application email?
-                  ↓
-                 SES
-```
-
 ---
 
 # Pocket Card
