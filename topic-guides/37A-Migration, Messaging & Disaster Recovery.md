@@ -219,6 +219,18 @@ Business continuity / disaster recovery
 
 It is used to migrate data between databases and can also support ongoing replication during migration.
 
+### CDC — Change Data Capture
+
+**CDC = continuously capture changes made to the source database and replicate them to the target.**
+
+```text
+Full Load
+= copy existing data
+
+CDC
+= copy ongoing changes
+```
+
 ### Memory
 
 > **DMS = move data**
@@ -609,10 +621,8 @@ SCT + DMS
 | Disaster recovery for servers                  | **AWS Elastic Disaster Recovery (DRS)**                                     |
 | Move database data                             | **AWS Database Migration Service (DMS)**                                    |
 | Database replication / migration               | **AWS Database Migration Service (DMS)**                                    |
+| Full load + ongoing database changes           | **DMS Full Load + CDC**                                                     |
+| CDC                                            | **Capture and replicate ongoing database changes**                          |
 | Different database engines                     | **AWS Schema Conversion Tool (SCT) + DMS**                                  |
 | Convert database schema                        | **AWS Schema Conversion Tool (SCT)**                                        |
 | Oracle → Aurora PostgreSQL                     | **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)** |
-
----
-
-
