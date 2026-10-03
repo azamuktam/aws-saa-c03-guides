@@ -60,7 +60,7 @@ Cannot be used for:
 ```text
 example.com
 ```
-
+CNAME record cannot exist AT the apex zone (example.com), but it CAN forward to an apex zone.
 ### Alias
 
 Points to supported AWS resources such as:
