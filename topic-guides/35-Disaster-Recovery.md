@@ -705,39 +705,6 @@ They are independent requirements.
 | **DNS failover to another region**              | **Route 53 Failover Routing** |
 | **Continuous database migration/replication**   | **AWS DMS**                   |
 
-# Final mental model
-
-When you see a DR question, think:
-
-```text
-                    DISASTER RECOVERY
-                           │
-             ┌─────────────┴─────────────┐
-             │                           │
-            RPO                         RTO
-      "How much data              "How much downtime
-       can we lose?"                can we tolerate?"
-             │                           │
-             └─────────────┬─────────────┘
-                           ↓
-                 Choose a DR strategy
-                           │
-        ┌──────────────────┼──────────────────┐
-        ↓                  ↓                  ↓
-   Backup & Restore   Pilot Light       Warm Standby
-        │                  │                  │
-     cheapest          core ready        full copy,
-     rebuild          compute starts     smaller size
-        │                  │                  │
-        └──────────────────┴──────────────────┘
-                           ↓
-                  Active-Active
-                  both regions live
-```
-
-### One sentence to remember
-
-> **The tighter the RPO/RTO requirement, the more infrastructure you usually need running before the disaster.**
 
 And for the exam:
 
