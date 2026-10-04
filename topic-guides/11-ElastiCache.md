@@ -67,7 +67,7 @@ Choose Redis when the question requires features such as:
 * Persistence
 * Sorted sets
 * Pub/Sub
-* Shared sessions
+* Shared sessions when Redis features/HA are required
 * **Global Datastore** → cross-Region replication for Redis data
 
 ### Memcached
@@ -79,6 +79,7 @@ Choose Memcached when the requirement is essentially:
 * Multi-threaded performance
 * Data loss is acceptable
 * No persistence or replication required
+* **Auto Discovery** of cache nodes
 
 ### SAA shortcut
 
@@ -239,6 +240,12 @@ Entry expires
 
 TTL is useful when some staleness is acceptable and you want old values to expire automatically.
 
+### Exam signal
+
+> "Cached data should expire automatically after a certain period."
+
+→ **TTL**
+
 ---
 
 # Lazy loading vs write-through
@@ -272,10 +279,10 @@ EC2 Auto Scaling Group
   ├── EC2
   └── EC2
   ↓
-ElastiCache Redis
+ElastiCache
 ```
 
-The application stores session information in Redis instead of in an individual EC2 instance.
+The application stores session information in a shared cache instead of in an individual EC2 instance.
 
 This makes the application servers **stateless**.
 
@@ -293,7 +300,7 @@ EC2-A terminated
 Session lost
 ```
 
-With Redis:
+With a shared cache:
 
 ```text
 User
@@ -302,7 +309,7 @@ ALB
  ↓
 Any EC2 instance
  ↓
-Redis
+ElastiCache
  ↓
 Shared session
 ```
@@ -313,7 +320,7 @@ Any healthy application server can retrieve the user's session.
 
 > "Users are logged out when EC2 instances are terminated or scaled in."
 
-→ **Store sessions in ElastiCache Redis** or another shared session store such as DynamoDB.
+→ **Use a shared session store**, such as **ElastiCache Redis** or DynamoDB.
 
 ---
 
@@ -345,12 +352,12 @@ Instead of repeatedly querying the database, the application can reuse the cache
 
 Both can reduce database pressure, but they solve different problems.
 
-| Requirement                        | Best choice           |
-| ---------------------------------- | --------------------- |
-| Same data requested repeatedly     | **ElastiCache**       |
-| Many different read queries        | **Read Replica**      |
-| Analytical/reporting workload      | **Read Replica**      |
-| Need to cache application sessions | **ElastiCache Redis** |
+| Requirement                        | Best choice      |
+| ---------------------------------- | ---------------- |
+| Same data requested repeatedly     | **ElastiCache**  |
+| Many different read queries        | **Read Replica** |
+| Analytical/reporting workload      | **Read Replica** |
+| Need to cache application sessions | **ElastiCache**  |
 
 ### Why?
 
@@ -424,8 +431,6 @@ This makes Redis useful for:
 
 → **Redis sorted sets**
 
-This is a strong Redis-specific clue.
-
 ---
 
 # Redis Pub/Sub
@@ -478,11 +483,76 @@ Memcached does not provide the same replication/failover model or Redis Global D
 
 ---
 
+# Memcached Auto Discovery
+
+**Auto Discovery** is an important Memcached-specific exam clue.
+
+It allows a Memcached client to **automatically discover the nodes in the cache cluster** rather than requiring the application to manually maintain the list of cache nodes.
+
+Typical pattern:
+
+```text
+Application
+     ↓
+Memcached client
+     ↓
+Auto Discovery
+     ↓
+┌─────────┬─────────┬─────────┐
+│ Node 1  │ Node 2  │ Node 3  │
+└─────────┴─────────┴─────────┘
+```
+
+When the cluster topology changes, the client can discover the updated set of nodes.
+
+### Important distinction
+
+**Auto Discovery ≠ Auto Scaling**
+
+* **Auto Discovery** → client automatically discovers cache nodes.
+* **Auto Scaling** → capacity is automatically increased/decreased.
+
+### Exam signal
+
+> "Distributed cache with multithreaded performance and Auto Discovery."
+
+→ **ElastiCache for Memcached with Auto Discovery**
+
+### Very important trap
+
+A question may mention:
+
+> "Users are located in multiple AWS Regions."
+
+That **does not automatically mean Redis Global Datastore**.
+
+Look at the actual requirement.
+
+If the question emphasizes:
+
+* **Memcached**
+* **Auto Discovery**
+* **Multithreaded performance**
+* Simple distributed cache
+* Sub-millisecond latency
+
+→ **Memcached with Auto Discovery**
+
+If it emphasizes:
+
+* **Redis**
+* Cross-Region **replication of Redis data**
+* Redis data must be available in multiple AWS Regions
+
+→ **Redis Global Datastore**
+
+---
+
 # Redis Global Datastore
 
 **Redis Global Datastore** is used when Redis data needs to be replicated across **multiple AWS Regions**.
 
-This is especially relevant for globally distributed applications where users in different Regions need access to shared cached/session data.
+This is especially relevant for globally distributed applications where users in different Regions need access to Redis data with low latency.
 
 Typical pattern:
 
@@ -496,23 +566,43 @@ AWS Region B
 EC2 → ElastiCache Redis
 ```
 
-Use it when the question emphasizes:
+Use it when the question explicitly requires:
 
 * Multiple AWS Regions
-* Cross-Region Redis replication
+* **Cross-Region Redis replication**
 * Globally distributed users
-* Shared session data across Regions
+* Redis data available in different Regions
 * Low-latency access to Redis data in different Regions
 
+### Critical exam distinction
+
+> **Multiple AWS Regions ≠ automatically Redis Global Datastore.**
+
+The fact that users are distributed across Regions is not enough.
+
+The question must require **cross-Region replication of Redis data** or otherwise clearly point to Global Datastore.
+
+For example:
+
+> "Users are distributed across multiple AWS Regions and Redis session data must be replicated across Regions."
+
+→ **Redis Global Datastore**
+
+But:
+
+> "A fleet of EC2 instances needs a shared distributed cache with multithreaded performance and Auto Discovery."
+
+→ **Memcached with Auto Discovery**
+
 ### Exam pattern
-
-> "Users are distributed across multiple AWS Regions and sessions must be shared across Regions."
-
-→ **ElastiCache for Redis Global Datastore**
 
 > "Need cross-Region replication for Redis session data."
 
 → **Redis Global Datastore**
+
+> "Need a simple distributed cache with Auto Discovery and multithreaded performance."
+
+→ **Memcached with Auto Discovery**
 
 ---
 
@@ -538,10 +628,13 @@ If cached data can simply be reconstructed:
 > → **ElastiCache**
 
 > **"Users are logged out when EC2 instances are terminated."**
-> → **ElastiCache Redis for shared sessions** (or another shared session store)
+> → **Shared session store such as ElastiCache Redis or DynamoDB**
 
-> **"Users are distributed across multiple AWS Regions and sessions must be shared across Regions."**
+> **"Users are distributed across multiple AWS Regions and Redis session data must be replicated across Regions."**
 > → **ElastiCache for Redis Global Datastore**
+
+> **"Users are distributed across multiple AWS Regions and a simple cache must provide shared session storage, multithreaded performance, and Auto Discovery."**
+> → **ElastiCache for Memcached with Auto Discovery**
 
 > **"Need cross-Region replication for Redis session data."**
 > → **Redis Global Datastore**
@@ -559,6 +652,12 @@ If cached data can simply be reconstructed:
 > → **Memcached**
 
 > **"Need a distributed cache with the fewest features possible."**
+> → **Memcached**
+
+> **"Distributed cache requires Auto Discovery."**
+> → **Memcached with Auto Discovery**
+
+> **"Need multithreaded cache performance."**
 > → **Memcached**
 
 > **"Cached values must stay synchronized with database writes."**
@@ -586,27 +685,56 @@ If cached data can simply be reconstructed:
 
 # Pocket card
 
-| Keyword                               | Answer                     |
-| ------------------------------------- | -------------------------- |
-| Repeated identical reads              | **ElastiCache**            |
-| Shared application sessions           | **Redis**                  |
-| Cross-Region Redis replication        | **Redis Global Datastore** |
-| Gaming leaderboard                    | **Redis sorted sets**      |
-| Pub/Sub                               | **Redis**                  |
-| Persistence                           | **Redis**                  |
-| Replication / failover                | **Redis**                  |
-| Simple cache, loss acceptable         | **Memcached**              |
-| Multi-threaded simple cache           | **Memcached**              |
-| Cache only after a read miss          | **Lazy loading**           |
-| Keep cache updated on database writes | **Write-through**          |
-| Automatically expire cached data      | **TTL**                    |
-| Analytical/diverse reads              | **Read Replica**           |
-| DynamoDB + no application changes     | **DAX**                    |
-| Redis password authentication         | **AUTH token**             |
-| Encrypt Redis network traffic         | **In-transit encryption**  |
-| Encrypt Redis stored data             | **At-rest encryption**     |
-| Microsecond-level cache access        | **In-memory cache**        |
+| Keyword                               | Answer                                    |
+| ------------------------------------- | ----------------------------------------- |
+| Repeated identical reads              | **ElastiCache**                           |
+| Shared application sessions           | **ElastiCache**                           |
+| Cross-Region **Redis replication**    | **Redis Global Datastore**                |
+| Multiple Regions alone                | **Not enough to choose Global Datastore** |
+| Gaming leaderboard                    | **Redis sorted sets**                     |
+| Pub/Sub                               | **Redis**                                 |
+| Persistence                           | **Redis**                                 |
+| Replication / failover                | **Redis**                                 |
+| Simple cache, loss acceptable         | **Memcached**                             |
+| Multi-threaded simple cache           | **Memcached**                             |
+| Auto Discovery                        | **Memcached**                             |
+| Auto Discovery + multithreaded cache  | **Memcached**                             |
+| Cache only after a read miss          | **Lazy loading**                          |
+| Keep cache updated on database writes | **Write-through**                         |
+| Automatically expire cached data      | **TTL**                                   |
+| Analytical/diverse reads              | **Read Replica**                          |
+| DynamoDB + no application changes     | **DAX**                                   |
+| Redis password authentication         | **AUTH token**                            |
+| Encrypt Redis network traffic         | **In-transit encryption**                 |
+| Encrypt Redis stored data             | **At-rest encryption**                    |
+| Sub-millisecond cache access          | **In-memory cache**                       |
 
-**Memcached = simple distributed cache.**
+### Final mental model
 
-**DAX = DynamoDB-specific caching with minimal application changes.**
+```text
+                    ElastiCache
+                        │
+             ┌──────────┴──────────┐
+             │                     │
+          Redis                 Memcached
+             │                     │
+     Advanced features       Simple cache
+     Replication             Multithreaded
+     Failover                Auto Discovery
+     Persistence             Loss acceptable
+     Sorted sets
+     Pub/Sub
+             │
+      Global Datastore
+             │
+      Cross-Region Redis
+       replication
+```
+
+**Redis = feature-rich / HA / persistence / replication**
+
+**Memcached = simple / multithreaded / Auto Discovery**
+
+**Global Datastore = specifically cross-Region Redis replication**
+
+**DAX = DynamoDB-specific cache with minimal application changes**
