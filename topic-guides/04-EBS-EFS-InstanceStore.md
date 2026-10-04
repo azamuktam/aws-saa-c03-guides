@@ -836,7 +836,7 @@ Attach new volume
 # EFS — Elastic File System
 
 Amazon EFS is a managed **file system** designed primarily for Linux-based workloads.
-POSIX-compliant storage → EFS is a POSIX-compliant file system (NFSv4).
+**POSIX-compliant storage → EFS** is a POSIX-compliant file system (NFSv4).
 
 Scalable for HPC → EFS scales automatically with workload.
 It uses the **NFS protocol** and allows multiple clients to access the same files at the same time. 
