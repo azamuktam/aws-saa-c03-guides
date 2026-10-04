@@ -91,7 +91,7 @@ Need TCP/UDP + very high performance
 
 ---
 
-## The four load balancers
+# The four load balancers
 
 |          | Layer | Protocols           | Main feature                                          | Exam keyword                     |
 | -------- | ----- | ------------------- | ----------------------------------------------------- | -------------------------------- |
@@ -100,7 +100,7 @@ Need TCP/UDP + very high performance
 | **GWLB** | 3     | IP packets / GENEVE | Sends traffic through security appliances             | Firewall, IDS, IPS               |
 | **CLB**  | 4/7   | Legacy              | Older load balancer                                   | Usually wrong answer             |
 
-> **Important current AWS update:** NLB gained **Weighted Target Groups on November 19, 2025**. Therefore, do not memorize “weighted target groups = ALB only.” Both **ALB and NLB** can now distribute traffic between weighted target groups.
+> **Important:** Both **ALB and NLB** support **Weighted Target Groups**.
 
 ---
 
@@ -173,8 +173,6 @@ AWS version    → weight 90
 New version    → weight 10
 ```
 
-The weights determine the relative proportion of traffic sent to the target groups. AWS supports weights from **0 to 999**.
-
 For example:
 
 ```text
@@ -189,7 +187,7 @@ approximately produces:
 20% → B
 ```
 
-This is useful for:
+Useful for:
 
 * blue/green deployments
 * canary deployments
@@ -197,36 +195,11 @@ This is useful for:
 * gradual application migration
 * hybrid/on-premises-to-AWS migration
 
-AWS specifically documents weighted ALB target groups as a way to perform zero-downtime migration between **on-premises and cloud** environments.
-
-### Gradual migration example
-
-```text
-On-premises   AWS
-    90%        10%
-
-     ↓
-
-    70%        30%
-
-     ↓
-
-    50%        50%
-
-     ↓
-
-    10%        90%
-
-     ↓
-
-     0%       100%
-```
-
 ### Important exam distinction
 
-**Weighted target groups** split traffic **inside the load balancer**.
+**Weighted Target Groups** split traffic **inside the load balancer**.
 
-This is different from **Route 53 Weighted Routing**, which splits traffic at the **DNS level**.
+**Route 53 Weighted Routing** splits traffic at the **DNS level**.
 
 ---
 
@@ -262,14 +235,18 @@ ALB
 EC2-A
 ```
 
-The ALB can continue sending that user's requests to EC2-A.
-
 Use this when the application keeps session state locally on the instance.
 
 A better architecture is often to store session state externally, for example in:
 
 * ElastiCache
 * DynamoDB
+
+### Important distinction
+
+> **Sticky session** → user stays with the **same target**
+
+> **Shared session store** → any healthy server can retrieve the **same session**
 
 ---
 
@@ -353,9 +330,7 @@ for normal application routing.
 
 # NLB Weighted Target Groups
 
-**Since November 19, 2025, NLB supports Weighted Target Groups.**
-
-You can assign each target group a weight from **0 to 999**.
+NLB supports **Weighted Target Groups**.
 
 Example:
 
@@ -369,55 +344,30 @@ Example:
     AWS app           On-prem app
 ```
 
-or:
+Useful for:
 
-```text
-Old application → 90
-New application → 10
-```
-
-Then gradually:
-
-```text
-90 / 10
-→ 70 / 30
-→ 50 / 50
-→ 20 / 80
-→ 0 / 100
-```
-
-AWS specifically identifies **application migration, blue/green deployments, and canary deployments** as use cases for NLB weighted target groups.
+* application migration
+* blue/green deployments
+* canary deployments
 
 ### Important behavior
 
 When weights change:
 
-* **new connections** are routed according to the new weights
+* **new connections** use the new weights
 * **existing connections** are not immediately moved
-* a target group with weight `0` receives no new connections
+* weight `0` means no new connections to that target group
 
 ### ALB vs NLB weighted target groups
 
-|                        | ALB                   | NLB |
-| ---------------------- | --------------------- | --- |
-| Weighted target groups | ✅                     | ✅   |
-| Main layer             | L7                    | L4  |
-| HTTP path routing      | ✅                     | ❌   |
-| TCP/UDP                | ❌/limited by protocol | ✅   |
-| Static IP              | ❌                     | ✅   |
-| Application migration  | ✅                     | ✅   |
-
-So the question should first be interpreted as:
-
-> **Can this application use Layer 7 HTTP routing or does it require Layer 4 networking?**
-
-If HTTP/HTTPS application-level routing is appropriate:
-
-→ **ALB**
-
-If TCP/UDP/static-IP requirements are important:
-
-→ **NLB**
+|                        |                   ALB | NLB |
+| ---------------------- | --------------------: | --: |
+| Weighted target groups |                     ✅ |   ✅ |
+| Main layer             |                    L7 |  L4 |
+| HTTP path routing      |                     ✅ |   ❌ |
+| TCP/UDP                | ❌/limited by protocol |   ✅ |
+| Static IP              |                     ❌ |   ✅ |
+| Application migration  |                     ✅ |   ✅ |
 
 ---
 
@@ -468,17 +418,15 @@ If CLB appears as a distractor in a modern architecture question, it is usually 
 
 # Traffic splitting and migration
 
-A very common exam scenario is:
+A common exam scenario is:
 
 > An application currently runs on-premises. A new version is running in AWS. The company wants to move traffic gradually without downtime.
 
-The important concept is:
+Possible mechanisms:
 
-> **Traffic splitting**
+### ALB Weighted Target Groups
 
-Possible AWS mechanisms include:
-
-### 1. ALB Weighted Target Groups
+For HTTP/HTTPS:
 
 ```text
                     ALB
@@ -490,15 +438,9 @@ Possible AWS mechanisms include:
        AWS app              On-prem app
 ```
 
-This is especially appropriate for an HTTP/HTTPS application.
+### NLB Weighted Target Groups
 
-ALB weighted target groups support application migration between on-premises and AWS.
-
----
-
-### 2. NLB Weighted Target Groups
-
-For an application appropriate for Layer 4 load balancing:
+For Layer 4 applications:
 
 ```text
                     NLB
@@ -510,15 +452,9 @@ For an application appropriate for Layer 4 load balancing:
        AWS app              On-prem app
 ```
 
-This capability is available because NLB supports weighted target groups since November 2025.
+### Route 53 Weighted Routing
 
----
-
-### 3. Route 53 Weighted Routing
-
-Route 53 can also distribute traffic between resources using different weights.
-
-Example:
+DNS-level traffic splitting:
 
 ```text
 example.com
@@ -528,45 +464,23 @@ example.com
      +---- Weight 50 → On-prem
 ```
 
-You can gradually change the weights:
+### Key distinction
 
 ```text
-50 / 50
-→ 80 / 20
-→ 100 / 0
-```
+ALB/NLB Weighted Target Groups
+→ load-balancer-level traffic splitting
 
-Route 53 Weighted Routing is explicitly designed to route traffic to multiple resources in proportions you specify.
-
-### Important difference
-
-Route 53 works at the **DNS level**.
-
-Therefore, it is not the same as a load balancer making a decision for every HTTP request.
-
-DNS caching and TTL behavior mean the actual distribution seen by users can be approximate rather than an exact per-request 50/50 split.
-
-So:
-
-```text
-ALB/NLB weighted target groups
-→ Load-balancer traffic splitting
-
-Route 53 weighted routing
+Route 53 Weighted Routing
 → DNS-level traffic splitting
 ```
 
 ---
 
-## Weighted vs Failover routing
-
-This is a major exam trap.
+# Weighted vs Failover routing
 
 ### Weighted routing
 
-Use when you want traffic to go to **multiple resources simultaneously**.
-
-Example:
+Use when multiple resources should receive traffic simultaneously.
 
 ```text
 AWS       → 50%
@@ -575,27 +489,21 @@ On-prem   → 50%
 
 → **Weighted**
 
-AWS defines Weighted Routing as routing traffic to multiple resources in specified proportions.
-
 ### Failover routing
 
-Use for **active-passive** architecture.
-
-Example:
+Use for active-passive architecture.
 
 ```text
 Primary AWS
     ↓
-takes traffic
+receives traffic
 
 If unhealthy
     ↓
-Secondary on-prem
+Secondary
 ```
 
 → **Failover**
-
-Route 53 documents Failover Routing as an active-passive mechanism.
 
 ### Memory trick
 
@@ -609,7 +517,7 @@ Primary + Backup
 
 ---
 
-## Direct Connect + on-premises application
+# Direct Connect + on-premises application
 
 If an application is running on-premises and needs private connectivity to AWS:
 
@@ -622,8 +530,6 @@ On-premises network
 ```
 
 Direct Connect provides a dedicated network connection between the on-premises environment and AWS.
-
-This allows AWS resources to communicate with private on-premises resources.
 
 ### Exam pattern
 
@@ -641,7 +547,7 @@ depending on the requirement.
 
 ---
 
-## Cross-zone load balancing
+# Cross-zone load balancing
 
 Without cross-zone load balancing, a load balancer node normally sends traffic to targets in its own AZ.
 
@@ -668,15 +574,13 @@ With cross-zone balancing, traffic can be distributed across targets in other AZ
 
 > **"Traffic is unevenly distributed between Availability Zones."**
 
-→ Check **cross-zone load balancing**.
+→ Check **cross-zone load balancing**
 
 ---
 
-## Deregistration delay / connection draining
+# Deregistration delay / connection draining
 
-When an instance is being removed, the load balancer should not immediately kill existing connections.
-
-Instead:
+When a target is being removed, the load balancer should not immediately kill existing connections.
 
 ```text
 New requests
@@ -691,7 +595,7 @@ This is called:
 * **deregistration delay**
 * **connection draining**
 
-Use it when:
+### Exam clue
 
 > **"Users receive errors when instances are removed during scale-in."**
 
@@ -699,7 +603,7 @@ Use it when:
 
 ---
 
-## SNI
+# SNI
 
 **SNI (Server Name Indication)** allows one HTTPS listener to use multiple certificates.
 
@@ -713,7 +617,7 @@ admin.example.com
 
 One ALB can serve different certificates based on the requested hostname.
 
-### Exam pattern
+### Exam clue
 
 > **"Host multiple HTTPS domains with different certificates on one ALB."**
 
@@ -721,7 +625,7 @@ One ALB can serve different certificates based on the requested hostname.
 
 ---
 
-## TLS termination
+# TLS termination
 
 The load balancer can terminate HTTPS.
 
@@ -760,7 +664,7 @@ EC2 EC2 EC2 EC2
 
 ### Launch Template
 
-A Launch Template contains the configuration for new instances, such as:
+A Launch Template contains configuration for new instances, such as:
 
 * AMI
 * instance type
@@ -811,9 +715,143 @@ This is one of the main purposes of an ASG.
 
 ---
 
+# ECS Service vs Cluster Auto Scaling
+
+With **ECS using the EC2 launch type**, scaling can happen at two levels.
+
+| Scaling                      | Scales                      | Purpose                     |
+| ---------------------------- | --------------------------- | --------------------------- |
+| **ECS Service Auto Scaling** | **ECS tasks**               | Handle application workload |
+| **ECS Cluster Auto Scaling** | **EC2 container instances** | Provide capacity for tasks  |
+
+### Service scaling
+
+```text
+High CPU / memory / ALB requests
+            ↓
+ECS Service Auto Scaling
+            ↓
+       More ECS tasks
+```
+
+Common service scaling metrics:
+
+* CPU utilization
+* Memory utilization
+* `ALBRequestCountPerTarget`
+
+### Cluster scaling
+
+```text
+More task capacity needed
+          ↓
+ECS Capacity Provider
+          ↓
+   More EC2 instances
+```
+
+> **Service → tasks**
+> **Cluster → EC2 instances**
+> **Capacity Provider → manages EC2 capacity for ECS**
+
+### Current AWS nuance
+
+With ECS Capacity Provider managed scaling, the underlying EC2 capacity is managed using **`CapacityProviderReservation`** rather than directly using the ECS service CPU metric.
+
+---
+
+# ASG Scaling Policies
+
+## Target Tracking
+
+Keep a metric around a target value.
+
+Example:
+
+```text
+Target CPU = 40%
+
+CPU > 40%
+→ scale out
+
+CPU < 40%
+→ scale in
+```
+
+### Exam clue
+
+> **"Maintain average CPU utilization around 40%."**
+
+→ **Target Tracking**
+
+---
+
+## Step Scaling
+
+Different scaling actions occur at different thresholds.
+
+Example:
+
+```text
+CPU < 40%       → remove 1
+CPU 40–70%      → no change
+CPU 70–90%      → add 1
+CPU > 90%       → add 3
+```
+
+### Exam clue
+
+> **"Take different scaling actions depending on how far the metric exceeds the threshold."**
+
+→ **Step Scaling**
+
+---
+
+## Scheduled Scaling
+
+Used when traffic patterns are predictable.
+
+Example:
+
+```text
+Every weekday at 09:00
+→ scale out
+
+Every weekday at 18:00
+→ scale in
+```
+
+### Exam clue
+
+> **"Traffic increases every day at a predictable time."**
+
+→ **Scheduled Scaling**
+
+---
+
+## Predictive Scaling
+
+Predictive Scaling uses historical patterns to forecast future demand and scale ahead of it.
+
+```text
+Historical traffic
+        ↓
+Forecast
+        ↓
+Scale before demand arrives
+```
+
+### Exam clue
+
+> **"Predict future demand and scale before the traffic spike."**
+
+→ **Predictive Scaling**
+
+---
+
 # ASG Lifecycle Hooks
 
-**Lifecycle hooks let you pause an EC2 instance during an Auto Scaling lifecycle transition and perform custom actions before the instance continues.** AWS provides lifecycle hooks for both launching and terminating instances. ([docs.aws.amazon.com](https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks-overview.html?utm_source=chatgpt.com))
+**Lifecycle hooks let you pause an EC2 instance during an Auto Scaling lifecycle transition and perform custom actions before the instance continues.**
 
 The two important wait states are:
 
@@ -841,15 +879,9 @@ Terminating:Proceed
 Terminated
 ```
 
-The instance remains in the wait state until you complete the lifecycle action or the timeout expires. ([docs.aws.amazon.com](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-lifecycle.html?utm_source=chatgpt.com))
-
----
-
-## Pending:Wait
+### Pending:Wait
 
 Used during **instance launch**.
-
-Example:
 
 ```text
 New EC2 instance
@@ -867,13 +899,6 @@ Pending:Proceed
 InService
 ```
 
-Typical use:
-
-* bootstrap the instance
-* install software
-* configure the application
-* perform initialization before allowing normal traffic
-
 ### Exam clue
 
 > **"Perform custom setup before the new instance enters service."**
@@ -886,8 +911,6 @@ Typical use:
 
 Used during **instance termination**.
 
-This is the important state for preserving logs or other local data before an EC2 instance disappears.
-
 ```text
 EC2 instance
      ↓
@@ -897,7 +920,7 @@ Terminating
      ↓
 Terminating:Wait  ← PAUSE HERE
      ↓
-Collect logs / cleanup / other actions
+Collect logs / cleanup
      ↓
 Complete lifecycle action
      ↓
@@ -905,8 +928,6 @@ Terminating:Proceed
      ↓
 Terminated
 ```
-
-AWS specifically describes using a termination lifecycle hook to pause an instance before termination and download **logs or other data** while the instance is still available. ([docs.aws.amazon.com](https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks.html?utm_source=chatgpt.com))
 
 ### Exam clue
 
@@ -917,23 +938,6 @@ AWS specifically describes using a termination lifecycle hook to pause an instan
 ---
 
 ## Lifecycle Hook + EventBridge
-
-When a lifecycle hook puts an instance into a wait state, EC2 Auto Scaling sends an event to **Amazon EventBridge**.
-
-The termination event type is:
-
-```text
-EC2 Instance-terminate Lifecycle Action
-```
-
-EventBridge can then invoke services such as:
-
-* AWS Lambda
-* Amazon SNS
-* Amazon SQS
-* other supported targets
-
-([docs.aws.amazon.com](https://docs.aws.amazon.com/eventbridge/latest/ref/events-ref-autoscaling.html?utm_source=chatgpt.com))
 
 Typical pattern:
 
@@ -953,25 +957,17 @@ Complete lifecycle action
 Terminate
 ```
 
-The EventBridge lifecycle event contains information such as the **EC2 instance ID**, Auto Scaling group name, lifecycle hook name, and lifecycle action token. ([docs.aws.amazon.com](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-event-reference.html?utm_source=chatgpt.com))
+EventBridge can invoke services such as:
+
+* AWS Lambda
+* Amazon SNS
+* Amazon SQS
 
 ---
 
 ## Log collection before termination
 
 Suppose local application logs exist only on the EC2 instance.
-
-If ASG terminates the instance immediately:
-
-```text
-EC2
- ↓
-Terminate
- ↓
-Local logs lost ❌
-```
-
-Instead:
 
 ```text
 EC2
@@ -982,52 +978,32 @@ EventBridge
  ↓
 Lambda
  ↓
-CloudWatch Agent / log collection
+Collect logs
  ↓
-CloudWatch Logs
+CloudWatch Logs / S3
  ↓
 CompleteLifecycleAction
  ↓
 Terminate
 ```
 
-This gives the system time to collect the logs before the instance disappears.
+### Exam clue
 
-### Example
+> **"Collect logs before the instance is terminated."**
 
-> "Instances are automatically terminated after failing ALB health checks, but application logs are stored locally. The company needs the logs for root cause analysis."
-
-Think:
-
-**Termination lifecycle hook + `Terminating:Wait` + EventBridge/Lambda + CloudWatch Logs**
+→ **Termination lifecycle hook + `Terminating:Wait`**
 
 ### Important trap
 
-Do **not** wait for:
+Do not wait for an event that occurs **after termination** if the data exists only on the instance.
 
-```text
-EC2 Instance Terminate Successful
-```
-
-That event happens after termination has completed.
-
-By then, local logs may already be gone.
-
-Instead, use:
-
-```text
-EC2 Instance-terminate Lifecycle Action
-```
-
-while the instance is in the lifecycle-hook wait state. ([docs.aws.amazon.com](https://docs.aws.amazon.com/eventbridge/latest/ref/events-ref-autoscaling.html?utm_source=chatgpt.com))
+The lifecycle hook must pause termination while the instance still exists.
 
 ---
 
 ## Complete lifecycle action
 
-After the custom action has finished, the workflow must tell Auto Scaling to continue.
-
-Conceptually:
+After the custom action finishes:
 
 ```text
 Collect logs
@@ -1041,9 +1017,7 @@ Terminating:Proceed
 Terminated
 ```
 
-If more time is needed, the lifecycle action can be extended using a heartbeat.
-
-AWS documents `CompleteLifecycleAction` for completing the lifecycle action and `RecordLifecycleActionHeartbeat` for extending the wait period. ([docs.aws.amazon.com](https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_CompleteLifecycleAction.html?utm_source=chatgpt.com))
+If more time is needed, use a lifecycle heartbeat.
 
 ### Memory
 
@@ -1057,13 +1031,11 @@ Terminating:Wait
 
 ---
 
-# THE health-check trap
+# The health-check trap
 
 By default, an ASG uses **EC2 health checks**.
 
-That means it checks whether the EC2 instance itself is healthy.
-
-But this can happen:
+This can happen:
 
 ```text
 EC2 = running ✅
@@ -1110,8 +1082,6 @@ ASG workers
 
 If the queue grows, you need more workers.
 
-So the ASG can scale based on the queue.
-
 A useful metric is:
 
 > **Backlog per instance**
@@ -1126,25 +1096,15 @@ This is better than simply looking at CPU when the real problem is the number of
 
 ---
 
-# Termination policy — who is terminated first?
+# Termination policy
 
-When an ASG needs to scale in, it has to decide **which instance to remove**.
+When an ASG scales in, it has to decide which instance to remove.
 
-With the default termination policy, the ASG first tries to keep the Availability Zones balanced.
-
-It then prefers instances using **older launch configurations or older launch template versions/configurations**.
-
-The important exam idea is:
-
-> **Default scale-in prefers removing older configurations while maintaining AZ balance.**
-
-This is useful when you have recently updated the Launch Template and want old instances to disappear gradually.
-
-### Important trap
+### Important distinction
 
 Do not confuse:
 
-> **Oldest configuration**
+> **Older configuration**
 
 with:
 
@@ -1152,11 +1112,9 @@ with:
 
 The **`OldestInstance` termination policy** specifically prefers the instance that has been running the longest.
 
-So:
-
 ```text
-Default policy
-→ keep AZs balanced + prefer older configuration
+Default behavior
+→ maintain AZ balance + consider older configuration
 
 OldestInstance policy
 → terminate the oldest running instance
@@ -1164,7 +1122,7 @@ OldestInstance policy
 
 ---
 
-# The layered HA picture
+# Route 53 + Load Balancer + ASG
 
 Different AWS services solve different failure levels.
 
@@ -1184,7 +1142,7 @@ Replace failed instance
 
 ### Route 53
 
-Route 53 can direct users between resources using DNS-based routing policies such as:
+Route 53 can use:
 
 * Weighted
 * Failover
@@ -1194,11 +1152,11 @@ Route 53 can direct users between resources using DNS-based routing policies suc
 
 ### Load Balancer
 
-The load balancer quickly stops sending traffic to unhealthy targets.
+Stops sending traffic to unhealthy targets.
 
 ### Auto Scaling Group
 
-The ASG replaces failed instances.
+Replaces failed instances.
 
 So:
 
@@ -1210,134 +1168,294 @@ ASG
 = replace bad instance
 ```
 
-These are different jobs.
+---
+
+# Route 53 Latency-Based Routing
+
+**Latency-based routing** chooses the configured endpoint with the lowest network latency for the requester.
+
+Example:
+
+```text
+                    Route 53
+               Latency-based routing
+                  /      |      \
+                 ↓       ↓       ↓
+              ALB Ohio  ALB Cali  ALB Ireland
+                 ↓       ↓       ↓
+               EC2s    EC2s     EC2s
+```
+
+### Exam clue
+
+> **"Route users to the Region with the lowest latency."**
+
+→ **Route 53 Latency-Based Routing**
+
+### One Region only
+
+If all EC2 instances are in one Region:
+
+```text
+Users
+  ↓
+ALB/NLB
+  ↓
+EC2 EC2 EC2
+```
+
+Use:
+
+→ **ALB** for HTTP/HTTPS application routing
+
+→ **NLB** for TCP/UDP/static-IP/high-performance Layer 4 requirements
+
+**ALB does not provide Route 53-style cross-Region latency-based routing.**
+
+---
+
+# Route 53 Weighted vs Failover vs Latency
+
+| Requirement                                       | Route 53 policy           |
+| ------------------------------------------------- | ------------------------- |
+| Send traffic to multiple resources in proportions | **Weighted**              |
+| Primary + standby                                 | **Failover**              |
+| Lowest-latency Region                             | **Latency-Based Routing** |
+| Route based on user location                      | **Geolocation**           |
+| Route based on geographic distance + bias         | **Geoproximity**          |
+
+### Memory
+
+```text
+50% + 50%
+→ Weighted
+
+Primary + Backup
+→ Failover
+
+Lowest network latency
+→ Latency
+```
+
+---
+
+# Cross-zone load balancing
+
+Without cross-zone load balancing, a load balancer node normally sends traffic to targets in its own AZ.
+
+Example:
+
+```text
+AZ-A
+2 instances
+
+AZ-B
+8 instances
+```
+
+Without cross-zone balancing, traffic can be uneven.
+
+With cross-zone balancing, traffic can be distributed across targets in other AZs.
+
+### Important defaults
+
+* **ALB:** cross-zone load balancing is enabled by default.
+* **NLB:** cross-zone load balancing is disabled by default at the load balancer level.
+
+### Exam pattern
+
+> **"Traffic is unevenly distributed between Availability Zones."**
+
+→ Check **cross-zone load balancing**
 
 ---
 
 # Question patterns
 
-> *"Route `/api/*` to one target group and `/images/*` to another"* → **ALB path-based routing**
+> *"Route `/api/*` to one target group and `/images/*` to another"*
+> → **ALB path-based routing**
 
-> *"Route traffic based on hostname"* → **ALB host-based routing**
+> *"Route traffic based on hostname"*
+> → **ALB host-based routing**
 
-> *"UDP-based game needs low latency and a static IP"* → **NLB**
+> *"UDP-based game needs low latency and a static IP"*
+> → **NLB**
 
-> *"Millions of TCP connections with very low latency"* → **NLB**
+> *"Millions of TCP connections with very low latency"*
+> → **NLB**
 
-> *"Third-party firewall/IDS/IPS appliances"* → **Gateway Load Balancer**
+> *"Third-party firewall/IDS/IPS appliances"*
+> → **Gateway Load Balancer**
 
-> *"Split traffic 50/50 between two application versions"* → **Weighted Target Groups** or **Route 53 Weighted Routing**, depending on where the traffic split should occur
+> *"Split traffic 50/50 between two application versions"*
+> → **Weighted Target Groups** or **Route 53 Weighted Routing**, depending on where the split occurs
 
-> *"Gradually migrate an HTTP application from on-premises to AWS"* → **ALB Weighted Target Groups** or **Route 53 Weighted Routing**
+> *"Route users to the Region with the lowest latency"*
+> → **Route 53 Latency-Based Routing**
 
-> *"Gradually migrate a TCP/UDP application from on-premises to AWS"* → **NLB Weighted Target Groups** or **Route 53 Weighted Routing**
+> *"Gradually migrate an HTTP application from on-premises to AWS"*
+> → **ALB Weighted Target Groups** or **Route 53 Weighted Routing**
 
-> *"Primary application receives traffic; secondary receives traffic only if primary fails"* → **Failover routing**
+> *"Gradually migrate a TCP/UDP application from on-premises to AWS"*
+> → **NLB Weighted Target Groups** or **Route 53 Weighted Routing**
 
-> *"The load balancer marks an instance unhealthy but the ASG doesn't replace it"* → **Enable ELB health checks on the ASG**
+> *"Primary application receives traffic; secondary receives traffic only if primary fails"*
+> → **Failover routing**
 
-> *"Traffic increases every month-end at a predictable time"* → **Scheduled Scaling**
+> *"The load balancer marks instances unhealthy, but the ASG doesn't replace them"*
+> → **Enable ELB health checks on the ASG**
 
-> *"Keep average CPU at 40%"* → **Target Tracking**
+> *"Traffic increases at a predictable time"*
+> → **Scheduled Scaling**
 
-> *"Different scaling actions for different metric thresholds"* → **Step Scaling**
+> *"Keep average CPU at 40%"*
+> → **Target Tracking**
 
-> *"Predict future traffic and scale before it arrives"* → **Predictive Scaling**
+> *"Different scaling actions for different metric thresholds"*
+> → **Step Scaling**
 
-> *"Many HTTPS domains use different certificates on one ALB"* → **SNI**
+> *"Predict future traffic and scale before it arrives"*
+> → **Predictive Scaling**
 
-> *"Users receive errors when instances are removed during scale-in"* → **Deregistration delay / connection draining**
+> *"Multiple HTTPS domains use different certificates on one ALB"*
+> → **SNI**
 
-> *"Application behind ALB needs the original client IP"* → **X-Forwarded-For**
+> *"Users receive errors when instances are removed during scale-in"*
+> → **Deregistration delay / connection draining**
 
-> *"Clients must whitelist fixed load-balancer IP addresses"* → **NLB with Elastic IPs**
+> *"Application behind ALB needs the original client IP"*
+> → **X-Forwarded-For**
 
-> *"Scale workers based on pending SQS jobs"* → **ASG scaling based on SQS queue metrics**
+> *"Clients must whitelist fixed load-balancer IP addresses"*
+> → **NLB with Elastic IPs**
 
-> *"Need to preserve AZ balance during scale-in"* → **Default ASG termination policy**
+> *"Scale workers based on pending SQS jobs"*
+> → **ASG scaling using SQS metrics**
 
-> *"Terminate the instance that has been running the longest"* → **OldestInstance policy**
+> *"Terminate the instance that has been running the longest"*
+> → **OldestInstance policy**
 
-> *"Need to collect logs before ASG terminates an unhealthy instance"* → **Termination lifecycle hook → `Terminating:Wait`**
+> *"Need to collect logs before ASG terminates an instance"*
+> → **Termination lifecycle hook → `Terminating:Wait`**
 
-> *"Perform custom actions before an EC2 instance enters service"* → **Launch lifecycle hook → `Pending:Wait`**
+> *"Perform custom actions before an EC2 instance enters service"*
+> → **Launch lifecycle hook → `Pending:Wait`**
 
-> *"React when an instance enters a termination lifecycle hook"* → **EventBridge `EC2 Instance-terminate Lifecycle Action`**
+> *"React to lifecycle events"*
+> → **EventBridge**
 
-> *"Automatically collect logs before termination"* → **Lifecycle hook + EventBridge/Lambda + CloudWatch Logs**
+> *"ECS service has high CPU or memory"*
+> → **ECS Service Auto Scaling → more tasks**
 
-> *"Primary application receives traffic; secondary receives traffic only if primary fails"* → **Failover routing**
-
-> *"AWS VPC needs private connectivity to an on-premises data center"* → **Direct Connect or Site-to-Site VPN**, depending on the requirement
+> *"ECS cluster lacks EC2 capacity"*
+> → **ECS Capacity Provider / Cluster Auto Scaling → more EC2 instances**
 
 ---
 
 # Pocket card
 
-| Keyword                                     | Answer                                                    |
-| ------------------------------------------- | --------------------------------------------------------- |
-| Path / host / header routing                | **ALB**                                                   |
-| HTTP / HTTPS / gRPC                         | **ALB**                                                   |
-| WAF on load balancer                        | **ALB**                                                   |
-| Weighted target groups                      | **ALB or NLB**                                            |
-| Blue/green migration                        | **Weighted Target Groups**                                |
-| Canary deployment                           | **Weighted Target Groups**                                |
-| Gradual on-prem → AWS migration             | **Weighted Target Groups / Route 53 Weighted**            |
-| UDP                                         | **NLB**                                                   |
-| Very high performance / many connections    | **NLB**                                                   |
-| Static IP / Elastic IP                      | **NLB**                                                   |
-| Preserve client source IP                   | **NLB**                                                   |
-| PrivateLink endpoint service                | **NLB**                                                   |
-| Third-party firewall / IDS / IPS            | **GWLB**                                                  |
-| GENEVE 6081                                 | **GWLB**                                                  |
-| Classic Load Balancer                       | **Legacy / usually wrong**                                |
-| Multiple HTTPS certificates                 | **SNI**                                                   |
-| Errors during scale-in                      | **Deregistration delay**                                  |
-| Uneven traffic across AZs                   | **Cross-zone load balancing**                             |
-| Client IP behind ALB                        | **X-Forwarded-For**                                       |
-| Keep CPU at X%                              | **Target Tracking**                                       |
-| Different scaling steps                     | **Step Scaling**                                          |
-| Known traffic schedule                      | **Scheduled Scaling**                                     |
-| Predict future demand                       | **Predictive Scaling**                                    |
-| ASG ignores application failure             | **Enable ELB health checks**                              |
-| Scale workers on jobs                       | **SQS queue metric**                                      |
-| Need to preserve AZ balance during scale-in | **Default ASG termination policy**                        |
-| Oldest running instance                     | **OldestInstance policy**                                 |
-| Need action before launch                   | **`Pending:Wait` lifecycle hook**                         |
-| Need action before termination              | **`Terminating:Wait` lifecycle hook**                     |
-| React to termination lifecycle event        | **EventBridge**                                           |
-| Collect logs before termination             | **Lifecycle Hook + EventBridge/Lambda + CloudWatch Logs** |
-| Termination event                           | **`EC2 Instance-terminate Lifecycle Action`**             |
-| 50/50 traffic split                         | **Weighted routing**                                      |
-| Primary + backup                            | **Failover routing**                                      |
-| DNS-level traffic split                     | **Route 53 Weighted Routing**                             |
-| Load-balancer-level traffic split           | **Weighted Target Groups**                                |
-| Private AWS ↔ on-prem connectivity          | **Direct Connect / VPN**                                  |
-| Traffic failover within a Region            | **Load Balancer**                                         |
-| Replace failed EC2                          | **Auto Scaling Group**                                    |
+| Keyword                                  | Answer                                                            |
+| ---------------------------------------- | ----------------------------------------------------------------- |
+| Path / host / header routing             | **ALB**                                                           |
+| HTTP / HTTPS / gRPC                      | **ALB**                                                           |
+| WAF on load balancer                     | **ALB**                                                           |
+| Weighted target groups                   | **ALB or NLB**                                                    |
+| Blue/green migration                     | **Weighted Target Groups**                                        |
+| Canary deployment                        | **Weighted Target Groups**                                        |
+| Gradual on-prem → AWS migration          | **Weighted Target Groups / Route 53 Weighted**                    |
+| Lowest-latency Region                    | **Route 53 Latency-Based Routing**                                |
+| UDP                                      | **NLB**                                                           |
+| Very high performance / many connections | **NLB**                                                           |
+| Static IP / Elastic IP                   | **NLB**                                                           |
+| Preserve client source IP                | **NLB**                                                           |
+| PrivateLink endpoint service             | **NLB**                                                           |
+| Third-party firewall / IDS / IPS         | **GWLB**                                                          |
+| GENEVE 6081                              | **GWLB**                                                          |
+| Classic Load Balancer                    | **Legacy / usually wrong**                                        |
+| Multiple HTTPS certificates              | **SNI**                                                           |
+| Errors during scale-in                   | **Deregistration delay**                                          |
+| Uneven traffic across AZs                | **Cross-zone load balancing**                                     |
+| Client IP behind ALB                     | **X-Forwarded-For**                                               |
+| Keep CPU at X%                           | **Target Tracking**                                               |
+| Different scaling steps                  | **Step Scaling**                                                  |
+| Known traffic schedule                   | **Scheduled Scaling**                                             |
+| Predict future demand                    | **Predictive Scaling**                                            |
+| ASG ignores application failure          | **Enable ELB health checks**                                      |
+| Scale workers on jobs                    | **SQS queue metric**                                              |
+| Oldest running instance                  | **OldestInstance policy**                                         |
+| Need action before launch                | **`Pending:Wait` lifecycle hook**                                 |
+| Need action before termination           | **`Terminating:Wait` lifecycle hook**                             |
+| React to lifecycle events                | **EventBridge**                                                   |
+| Collect logs before termination          | **Lifecycle Hook + EventBridge/Lambda + CloudWatch Logs**         |
+| 50/50 traffic split                      | **Weighted routing**                                              |
+| Primary + backup                         | **Failover routing**                                              |
+| DNS-level traffic split                  | **Route 53 Weighted Routing**                                     |
+| Load-balancer-level traffic split        | **Weighted Target Groups**                                        |
+| Private AWS ↔ on-prem connectivity       | **Direct Connect / VPN**                                          |
+| Replace failed EC2                       | **Auto Scaling Group**                                            |
+| ECS service overloaded                   | **ECS Service Auto Scaling → more tasks**                         |
+| ECS cluster lacks capacity               | **Capacity Provider / Cluster Auto Scaling → more EC2 instances** |
+| Capacity Provider                        | **Manages EC2 capacity for ECS**                                  |
 
 ---
 
-# Lifecycle hook decision rule
+# Core mental model
 
 ```text
-Need to do something BEFORE a new instance enters service?
-→ Launch lifecycle hook
-→ Pending:Wait
+                         Route 53
+                    DNS-level routing
+                         │
+             ┌───────────┼───────────┐
+             ↓           ↓           ↓
+          ALB/NLB     ALB/NLB     ALB/NLB
+             │           │           │
+            EC2         EC2         EC2
+             │
+            ASG
+             │
+       Self-healing + scaling
+```
 
-Need to do something BEFORE an instance is terminated?
-→ Termination lifecycle hook
-→ Terminating:Wait
+For ECS on EC2:
 
-Need to react to lifecycle events externally?
-→ EventBridge
+```text
+ECS Service
+    ↓
+Service Auto Scaling
+    ↓
+More ECS tasks
 
-Need custom code / automation?
-→ Lambda
+ECS Capacity Provider
+    ↓
+Cluster Auto Scaling
+    ↓
+More EC2 container instances
+```
 
-Need to preserve local logs before termination?
-→ Terminating:Wait
-→ EventBridge / Lambda
-→ CloudWatch Logs
-→ CompleteLifecycleAction
+### Final shortcuts
+
+```text
+ALB
+→ Layer 7 / HTTP / path / host
+
+NLB
+→ Layer 4 / TCP / UDP / static IP
+
+GWLB
+→ security appliances / firewall / IPS
+
+Route 53 Latency
+→ choose lowest-latency Region
+
+ASG
+→ manage EC2 instances
+
+ECS Service Auto Scaling
+→ manage ECS tasks
+
+ECS Cluster Auto Scaling
+→ manage EC2 container capacity
+
+Capacity Provider
+→ connect ECS task demand to EC2 capacity
 ```
