@@ -27,7 +27,7 @@ AWS manages:
 
 You manage:
 
-* the function code
+* function code
 * configuration
 * permissions
 * triggers
@@ -167,8 +167,7 @@ Common examples:
 
 * API Gateway → Lambda
 * Application directly invoking Lambda
-
-If Lambda fails, the error can be returned to the caller.
+* Lambda Function URL
 
 ### Remember
 
@@ -202,8 +201,6 @@ Lambda handles the event asynchronously.
 
 Lambda automatically retries the event.
 
-For asynchronous invocation:
-
 ```text
 Initial attempt
       ↓
@@ -229,14 +226,12 @@ Use:
 * **Dead-letter queue (DLQ)**
 * **On-failure destination**
 
-So:
-
 ```text
 Async Lambda failure
         ↓
 DLQ / failure destination
         ↓
-Handle the failed event
+Handle failed event
 ```
 
 ### Important exam trap
@@ -293,26 +288,6 @@ Lambda
 
 Lambda reads records in **batches**.
 
-### What happens when processing fails?
-
-For SQS:
-
-```text
-SQS
- ↓
-Lambda
- ↓
-Processing fails
- ↓
-Message becomes available again
- ↓
-Retry
- ↓
-Eventually → SQS DLQ
-```
-
-For stream-based sources, failed records/batches are retried according to the stream/event-source behavior and configuration.
-
 ### Important distinction
 
 ```text
@@ -328,6 +303,45 @@ SQS / Kinesis / DynamoDB Streams
 > **S3/SNS/EventBridge = push**
 
 > **SQS/Kinesis/DynamoDB Streams = pull**
+
+---
+
+# Lambda Function URL
+
+A **Lambda Function URL** is a direct **HTTP(S) endpoint for a Lambda function**.
+
+It is useful when an external service simply needs to call Lambda through HTTP, such as a **webhook**.
+
+```text
+Third-party service
+       ↓ HTTP POST
+Lambda Function URL
+       ↓
+    Lambda
+```
+
+### Function URL vs API Gateway
+
+| Requirement                                 | Better choice           |
+| ------------------------------------------- | ----------------------- |
+| Simple HTTP endpoint/webhook for one Lambda | **Lambda Function URL** |
+| Full API management/features                | **API Gateway**         |
+
+### Exam signal
+
+> **"Third-party service sends an HTTP POST webhook directly to Lambda."**
+
+→ **Lambda Function URL**
+
+> **"Need API management, throttling, transformations, advanced authorization, or a larger API."**
+
+→ **API Gateway**
+
+### Simple rule
+
+> **Simple webhook → Function URL**
+
+> **Full API → API Gateway**
 
 ---
 
@@ -372,18 +386,6 @@ Provisioned Concurrency
 = PRE-WARMED
 ```
 
-Example:
-
-```text
-API
- ↓
-Lambda
- ↓
-Provisioned Concurrency
- ↓
-Already-initialized environments
-```
-
 ### Exam signal
 
 > **Cold-start latency → Provisioned Concurrency**
@@ -425,7 +427,7 @@ Reserved Concurrency
 
 ### Exam signal
 
-> **Protect a downstream system / cap Lambda concurrency → Reserved Concurrency**
+> **Protect downstream system / cap Lambda concurrency → Reserved Concurrency**
 
 ---
 
@@ -447,8 +449,6 @@ Reserved Concurrency
 
 By default, Lambda functions run outside your VPC networking environment.
 
-They can access the public Internet.
-
 They cannot directly access resources that are private inside your VPC.
 
 For example:
@@ -459,9 +459,7 @@ Lambda
 Private RDS
 ```
 
-If you configure Lambda to run in your VPC, Lambda creates **Elastic Network Interfaces (ENIs)** in your selected subnets.
-
-Then Lambda can access private VPC resources:
+If you configure Lambda to run in your VPC, Lambda can access private VPC resources:
 
 ```text
 Lambda
@@ -541,8 +539,6 @@ RDS
 
 > **Lambda + RDS + too many database connections → RDS Proxy**
 
-Lambda + RDS in the same question is a strong signal to consider **RDS Proxy**, especially when the problem involves connection management or database overload.
-
 ---
 
 # Lambda permissions and configuration
@@ -565,12 +561,6 @@ dynamodb:PutItem
 secretsmanager:GetSecretValue
 ```
 
-So:
-
-> **"Lambda cannot write to DynamoDB."**
-
-Check the **Lambda execution role** and its IAM permissions.
-
 ### Memory
 
 > **Lambda permissions → Execution role**
@@ -582,8 +572,6 @@ Check the **Lambda execution role** and its IAM permissions.
 **Lambda Layers = package shared dependencies/libraries separately from the function code.**
 
 Useful when multiple Lambda functions use the same libraries.
-
-Example:
 
 ```text
 Layer
@@ -608,8 +596,6 @@ Lambda functions can also be deployed using container images.
 Maximum container image size:
 
 > **10 GB**
-
-This is useful when dependencies or packaging requirements are too large for a normal ZIP deployment.
 
 Normal Lambda deployment package limits:
 
@@ -644,23 +630,9 @@ ENVIRONMENT
 TABLE_NAME
 ```
 
-This makes it easier to use the same function code in different environments.
-
-For example:
-
-```text
-Development
-→ API_URL=dev.example.com
-
-Production
-→ API_URL=api.example.com
-```
-
-For sensitive values, use appropriate encryption/secrets management. Lambda environment variables can be encrypted with **AWS KMS**.
-
 ### Signal
 
-> **Configuration outside the code → Environment variables**
+> **Configuration outside code → Environment variables**
 
 ---
 
@@ -700,7 +672,6 @@ Both allow code to run at **CloudFront edge locations**, but they have different
 | Execution time | Up to seconds                         | **Sub-millisecond**                         |
 | Network calls  | **Yes**                               | **No**                                      |
 | Hooks          | Viewer + origin request/response      | Viewer request/response                     |
-| Cost           | Higher                                | Lower; approximately **1/6 the price**      |
 | Best for       | More complex edge logic               | Very lightweight edge logic                 |
 | Examples       | JWT/auth validation, origin selection | Header manipulation, URL rewrites/redirects |
 
@@ -731,8 +702,6 @@ Examples:
 Important:
 
 > **CloudFront Functions cannot make network calls.**
-
-They are designed for extremely fast execution.
 
 ### Simple rule
 
@@ -779,7 +748,7 @@ Simple header / URL manipulation
 > **"Validate JWT tokens or call an external authentication service at the edge."**
 > → **Lambda@Edge**
 
-> **"Rewrite URLs or add security headers on millions of requests as cheaply as possible."**
+> **"Rewrite URLs or add security headers at the edge."**
 > → **CloudFront Functions**
 
 > **"Asynchronously invoked Lambda fails and events eventually disappear."**
@@ -800,6 +769,15 @@ Simple header / URL manipulation
 > **"Lambda needs to run code every night at a specific time."**
 > → **EventBridge schedule**
 
+> **"Third-party service sends an HTTP POST webhook to trigger Lambda."**
+> → **Lambda Function URL**
+
+> **"Third-party service needs a simple HTTP endpoint for one Lambda."**
+> → **Lambda Function URL**
+
+> **"Need a full-featured HTTP API with API management."**
+> → **API Gateway**
+
 ---
 
 # Pocket card
@@ -814,18 +792,19 @@ Simple header / URL manipulation
 | Lambda + RDS connection pressure           | **RDS Proxy**                              |
 | Lambda in VPC needs Internet               | **NAT Gateway / appropriate VPC endpoint** |
 | Async failures / prevent event loss        | **DLQ / on-failure destination**           |
-| SQS / Kinesis / DDB Streams                | **Event Source Mapping → pull / batches**  |
-| S3 / SNS / EventBridge                     | **Async push → retries**                   |
+| SQS / Kinesis / DDB Streams                | **Event Source Mapping**                   |
+| S3 / SNS / EventBridge                     | **Async push**                             |
+| Simple HTTP webhook to Lambda              | **Lambda Function URL**                    |
+| Full-featured HTTP API                     | **API Gateway**                            |
 | Serverless cron                            | **EventBridge schedule → Lambda**          |
 | Shared dependencies                        | **Lambda Layers**                          |
 | ZIP package > 250 MB unzipped              | **Container image → 10 GB**                |
 | Function permissions                       | **Execution role**                         |
 | Configuration outside code                 | **Environment variables**                  |
-| Edge + network calls / JWT                 | **Lambda@Edge**                            |
+| Edge + network calls / complex logic       | **Lambda@Edge**                            |
 | Edge header/URL manipulation               | **CloudFront Functions**                   |
 | Maximum Lambda runtime                     | **15 minutes**                             |
 | Memory                                     | **128 MB – 10 GB**                         |
-| Default regional concurrency               | **1,000**                                  |
 | `/tmp` storage                             | **Up to 10 GB**                            |
 | ZIP deployment package                     | **50 MB zipped / 250 MB unzipped**         |
 | Container image                            | **10 GB**                                  |
@@ -877,7 +856,7 @@ PROVISIONED CONCURRENCY
 
 RESERVED CONCURRENCY
 = CAP
-= PROTECT DOWNSTREAM SYSTEMS
+= LIMIT CONCURRENT EXECUTIONS
 ```
 
 ```text
@@ -908,9 +887,18 @@ EVENTBRIDGE SCHEDULE
 ```
 
 ```text
+LAMBDA FUNCTION URL
+= SIMPLE HTTP(S) ENDPOINT
+= WEBHOOK → LAMBDA
+
+API GATEWAY
+= FULL API MANAGEMENT
+```
+
+```text
 LAMBDA@EDGE
-= MORE COMPLEX EDGE LOGIC
-= NETWORK CALLS ALLOWED
+= COMPLEX EDGE LOGIC
+= NETWORK CALLS
 
 CLOUDFRONT FUNCTIONS
 = LIGHTWEIGHT EDGE LOGIC
@@ -918,7 +906,7 @@ CLOUDFRONT FUNCTIONS
 = SUB-MILLISECOND
 ```
 
-## The key exam distinctions
+## Key exam distinctions
 
 ```text
 Lambda
@@ -947,6 +935,12 @@ Event Source Mapping
 
 DLQ / Failure Destination
 = Handle failed async events
+
+Lambda Function URL
+= Simple webhook / direct HTTP endpoint
+
+API Gateway
+= Full-featured API
 
 Lambda@Edge
 = Complex edge logic
