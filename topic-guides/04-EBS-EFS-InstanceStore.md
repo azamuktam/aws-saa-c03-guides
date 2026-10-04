@@ -125,10 +125,10 @@ It is **not** a normal shared filesystem.
      EC2     EC2     EC2
 ```
 
-Do not confuse this with EFS:
+Do not confuse this with :
 
 * **EBS Multi-Attach** → shared **block device**
-* **EFS** → shared **file system**
+* **** → shared **file system**
 
 ### Important Multi-Attach traps
 
@@ -836,8 +836,10 @@ Attach new volume
 # EFS — Elastic File System
 
 Amazon EFS is a managed **file system** designed primarily for Linux-based workloads.
+POSIX-compliant storage → EFS is a POSIX-compliant file system (NFSv4).
 
-It uses the **NFS protocol** and allows multiple clients to access the same files at the same time.
+Scalable for HPC → EFS scales automatically with workload.
+It uses the **NFS protocol** and allows multiple clients to access the same files at the same time. 
 
 This makes it fundamentally different from EBS.
 
@@ -1321,6 +1323,9 @@ SR-IOV is not an EBS volume type.
 → **EFS lifecycle management → IA / Archive**
 
 ---
+> **"A company needs a POSIX-compliant, multi-AZ shared file system for thousands of EC2 instances."**
+
+→ **EFS**
 
 > **"Data can be recreated and the application needs the highest local storage performance."**
 
