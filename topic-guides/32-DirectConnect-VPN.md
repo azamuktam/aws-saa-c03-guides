@@ -169,6 +169,9 @@ This is useful when the company has:
 
 → **Site-to-Site VPN → Transit Gateway**
 
+> Cross-Region VPCs connect with each other**.
+→ **Transit Gateway peering**
+
 ### Important
 
 Do **not** think:
