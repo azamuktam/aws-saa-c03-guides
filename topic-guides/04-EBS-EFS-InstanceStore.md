@@ -125,10 +125,10 @@ It is **not** a normal shared filesystem.
      EC2     EC2     EC2
 ```
 
-Do not confuse this with :
+Do not confuse this with:
 
 * **EBS Multi-Attach** → shared **block device**
-* **** → shared **file system**
+* **EFS** → shared **file system**
 
 ### Important Multi-Attach traps
 
@@ -786,6 +786,8 @@ For broader centralized backup management across many AWS services, consider **A
 
 # EBS encryption (KMS)
 
+Enable EBS encryption when creating the volume.
+
 Encrypted EBS volumes create encrypted snapshots, and encrypted snapshots can be used to create encrypted volumes.
 
 Encryption protects:
@@ -806,6 +808,26 @@ Encryption protects:
 | "Only data in the volume is encrypted"          | ❌                         |
 | "Snapshot is not automatically encrypted"       | ❌                         |
 | "Volume from encrypted snapshot is unencrypted" | ❌                         |
+
+## EBS Encryption by Default
+
+**EBS Encryption by Default** is a **Region-level account setting** that automatically encrypts new EBS volumes created in that Region.
+
+It also causes a new EBS volume restored from an **unencrypted snapshot** to be encrypted automatically.
+
+```text
+EBS Encryption by Default
+        ↓
+      Region
+        ↓
+New EBS volumes
+        ↓
+Automatically encrypted
+```
+
+> **Encryption by Default = Region-level setting**
+
+It applies to **new** resources; existing unencrypted EBS volumes and snapshots are not automatically encrypted.
 
 ## Existing unencrypted volume
 
@@ -836,10 +858,12 @@ Attach new volume
 # EFS — Elastic File System
 
 Amazon EFS is a managed **file system** designed primarily for Linux-based workloads.
+
 **POSIX-compliant storage → EFS** is a POSIX-compliant file system (NFSv4).
 
 Scalable for HPC → EFS scales automatically with workload.
-It uses the **NFS protocol** and allows multiple clients to access the same files at the same time. 
+
+It uses the **NFS protocol** and allows multiple clients to access the same files at the same time.
 
 This makes it fundamentally different from EBS.
 
@@ -1258,6 +1282,12 @@ SR-IOV is not an EBS volume type.
 
 ---
 
+> **"All new EBS volumes, including volumes restored from unencrypted snapshots, must automatically be encrypted."**
+
+→ **Enable EBS Encryption by Default for the AWS Region**
+
+---
+
 > **"Automatically create EBS snapshots on a schedule and delete old ones."**
 
 → **Amazon Data Lifecycle Manager (DLM)**
@@ -1323,6 +1353,7 @@ SR-IOV is not an EBS volume type.
 → **EFS lifecycle management → IA / Archive**
 
 ---
+
 > **"A company needs a POSIX-compliant, multi-AZ shared file system for thousands of EC2 instances."**
 
 → **EFS**
@@ -1335,55 +1366,59 @@ SR-IOV is not an EBS volume type.
 
 # Pocket card
 
-| Keyword                                           | Answer                                     |
-| ------------------------------------------------- | ------------------------------------------ |
-| persistent block storage                          | **EBS**                                    |
-| shared file system                                | **EFS**                                    |
-| temporary local storage                           | **Instance Store**                         |
-| random I/O / database                             | **SSD**                                    |
-| large sequential workload / throughput            | **HDD**                                    |
-| general-purpose SSD                               | **gp3**                                    |
-| gp3 independent IOPS/throughput                   | **Yes**                                    |
-| gp3 baseline IOPS                                 | **3,000**                                  |
-| gp3 baseline throughput                           | **125 MB/s**                               |
-| gp3 maximum IOPS                                  | **80,000**                                 |
-| provisioned / predictable IOPS                    | **io1/io2**                                |
-| 256,000 IOPS / extremely high performance         | **io2 Block Express**                      |
-| frequent sequential access                        | **st1**                                    |
-| infrequent / cheapest current HDD storage         | **sc1**                                    |
-| legacy / previous-generation infrequent storage   | **Magnetic (`standard`)**                  |
-| gp2 → better performance flexibility              | **gp3**                                    |
-| same block volume attached to multiple instances  | **io1/io2 Multi-Attach**                   |
-| Multi-Attach limit                                | **up to 16 instances, same AZ**            |
-| gp3 Multi-Attach                                  | **No**                                     |
-| Multi-Attach multi-AZ                             | **No — same AZ only**                      |
-| root volume survives termination                  | **DeleteOnTermination = false**            |
-| new EBS data volume                               | **format + mount**                         |
-| EBS volume usable during snapshot                 | **Yes — read/write continues**             |
-| EBS snapshot does not lock volume                 | **Volume remains available**               |
-| move EBS to another AZ                            | **snapshot → restore**                     |
-| cross-Region EBS DR                               | **snapshot → copy to Region → restore**    |
-| cheaper rarely restored snapshots                 | **Snapshot Archive**                       |
-| recover accidentally deleted snapshots            | **Recycle Bin**                            |
-| immediate full performance after snapshot restore | **Fast Snapshot Restore**                  |
-| automate EBS snapshot lifecycle                   | **DLM**                                    |
-| encrypt existing unencrypted EBS                  | **snapshot → encrypted copy → new volume** |
-| EBS data in transit                               | **encrypted**                              |
-| encrypted EBS snapshot                            | **automatically encrypted**                |
-| volume from encrypted snapshot                    | **automatically encrypted**                |
-| shared files across Linux instances               | **EFS**                                    |
-| shared files across AZs                           | **EFS**                                    |
-| Linux NFS file system                             | **EFS**                                    |
-| Windows + SMB + AD                                | **FSx for Windows File Server**            |
-| HPC parallel file system                          | **FSx for Lustre**                         |
-| EFS maximum concurrency                           | **Max I/O**                                |
-| automatic EFS throughput scaling                  | **Elastic throughput**                     |
-| cold EFS files                                    | **IA / Archive lifecycle**                 |
-| fastest temporary EC2 storage                     | **Instance Store**                         |
-| instance store + reboot                           | **data survives**                          |
-| instance store + stop                             | **data lost**                              |
-| instance store + terminate                        | **data lost**                              |
-| instance store + hibernate                        | **data lost**                              |
-| high IOPS + persistence required                  | **EBS, typically io2 for extreme IOPS**    |
-| fake EBS type: Spot                               | **Not an EBS volume type**                 |
-| fake EBS type: SR-IOV                             | **Not an EBS volume type**                 |
+| Keyword                                                           | Answer                                     |
+| ----------------------------------------------------------------- | ------------------------------------------ |
+| persistent block storage                                          | **EBS**                                    |
+| shared file system                                                | **EFS**                                    |
+| temporary local storage                                           | **Instance Store**                         |
+| random I/O / database                                             | **SSD**                                    |
+| large sequential workload / throughput                            | **HDD**                                    |
+| general-purpose SSD                                               | **gp3**                                    |
+| gp3 independent IOPS/throughput                                   | **Yes**                                    |
+| gp3 baseline IOPS                                                 | **3,000**                                  |
+| gp3 baseline throughput                                           | **125 MB/s**                               |
+| gp3 maximum IOPS                                                  | **80,000**                                 |
+| provisioned / predictable IOPS                                    | **io1/io2**                                |
+| 256,000 IOPS / extremely high performance                         | **io2 Block Express**                      |
+| frequent sequential access                                        | **st1**                                    |
+| infrequent / cheapest current HDD storage                         | **sc1**                                    |
+| legacy / previous-generation infrequent storage                   | **Magnetic (`standard`)**                  |
+| gp2 → better performance flexibility                              | **gp3**                                    |
+| same block volume attached to multiple instances                  | **io1/io2 Multi-Attach**                   |
+| Multi-Attach limit                                                | **up to 16 instances, same AZ**            |
+| gp3 Multi-Attach                                                  | **No**                                     |
+| Multi-Attach multi-AZ                                             | **No — same AZ only**                      |
+| root volume survives termination                                  | **DeleteOnTermination = false**            |
+| new EBS data volume                                               | **format + mount**                         |
+| EBS volume usable during snapshot                                 | **Yes — read/write continues**             |
+| EBS snapshot does not lock volume                                 | **Volume remains available**               |
+| move EBS to another AZ                                            | **snapshot → restore**                     |
+| cross-Region EBS DR                                               | **snapshot → copy to Region → restore**    |
+| cheaper rarely restored snapshots                                 | **Snapshot Archive**                       |
+| recover accidentally deleted snapshots                            | **Recycle Bin**                            |
+| immediate full performance after snapshot restore                 | **Fast Snapshot Restore**                  |
+| automate EBS snapshot lifecycle                                   | **DLM**                                    |
+| EBS Encryption by Default                                         | **Automatically encrypts new EBS volumes** |
+| EBS Encryption by Default scope                                   | **Region-level**                           |
+| unencrypted snapshot → new volume with default encryption enabled | **Automatically encrypted**                |
+| existing unencrypted EBS resources                                | **Not automatically encrypted**            |
+| encrypt existing unencrypted EBS                                  | **snapshot → encrypted copy → new volume** |
+| EBS data in transit                                               | **encrypted**                              |
+| encrypted EBS snapshot                                            | **automatically encrypted**                |
+| volume from encrypted snapshot                                    | **automatically encrypted**                |
+| shared files across Linux instances                               | **EFS**                                    |
+| shared files across AZs                                           | **EFS**                                    |
+| Linux NFS file system                                             | **EFS**                                    |
+| Windows + SMB + AD                                                | **FSx for Windows File Server**            |
+| HPC parallel file system                                          | **FSx for Lustre**                         |
+| EFS maximum concurrency                                           | **Max I/O**                                |
+| automatic EFS throughput scaling                                  | **Elastic throughput**                     |
+| cold EFS files                                                    | **IA / Archive lifecycle**                 |
+| fastest temporary EC2 storage                                     | **Instance Store**                         |
+| instance store + reboot                                           | **data survives**                          |
+| instance store + stop                                             | **data lost**                              |
+| instance store + terminate                                        | **data lost**                              |
+| instance store + hibernate                                        | **data lost**                              |
+| high IOPS + persistence required                                  | **EBS, typically io2 for extreme IOPS**    |
+| fake EBS type: Spot                                               | **Not an EBS volume type**                 |
+| fake EBS type: SR-IOV                                             | **Not an EBS volume type**                 |
