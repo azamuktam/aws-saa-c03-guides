@@ -23,6 +23,9 @@ Migrate database data
 
 Different database engines
 → AWS Schema Conversion Tool (SCT) + DMS
+
+Customer engagement / marketing SMS
+→ Amazon Pinpoint
 ```
 
 ---
@@ -66,6 +69,52 @@ New AWS-native application
 ### Memory
 
 > **Existing message broker → Amazon MQ**
+
+---
+
+# Amazon Pinpoint
+
+**Amazon Pinpoint = customer engagement and targeted messaging service.**
+
+Use it for:
+
+* SMS campaigns
+* Email campaigns
+* Push notifications
+* Customer journeys
+* Targeted marketing
+* Engagement/event tracking
+
+### Common keywords
+
+```text
+Marketing campaign
++ targeted customers
++ SMS / email / push
+→ Amazon Pinpoint
+```
+
+Pinpoint can send engagement events to services such as **Amazon Kinesis** for near-real-time processing and analysis.
+
+### Important distinction
+
+```text
+Customer engagement / marketing
+→ Amazon Pinpoint
+
+General pub/sub notifications
+→ Amazon SNS
+
+Queues
+→ Amazon SQS
+
+Event routing
+→ Amazon EventBridge
+```
+
+### Memory
+
+> **Marketing campaign + customer engagement → Amazon Pinpoint**
 
 ---
 
@@ -501,6 +550,14 @@ Amazon MQ
 ```
 
 ```text
+Customer engagement / marketing?
+        ↓
+SMS / email / push / journeys
+        ↓
+Amazon Pinpoint
+```
+
+```text
 Existing server migration?
         ↓
 Rehost / lift-and-shift
@@ -531,6 +588,18 @@ DMS            SCT + DMS
 > **"Existing on-premises application uses RabbitMQ and must migrate with minimal code changes."**
 
 → **Amazon MQ**
+
+---
+
+> **"A company needs a targeted multi-engagement marketing campaign that sends SMS messages to subscribers and tracks customer responses."**
+
+→ **Amazon Pinpoint**
+
+---
+
+> **"A marketing application needs to send SMS campaign events to a streaming service for near-real-time analysis."**
+
+→ **Amazon Pinpoint + Amazon Kinesis Data Streams**
 
 ---
 
@@ -571,6 +640,20 @@ New AWS-native application
 ```
 
 The key question is whether the application **already depends on a traditional message broker**.
+
+---
+
+## Pinpoint vs SNS
+
+```text
+Customer engagement / marketing
+→ Amazon Pinpoint
+
+General notifications / pub-sub
+→ Amazon SNS
+```
+
+> **Marketing campaign + targeted customers + SMS/email/push → Pinpoint**
 
 ---
 
@@ -616,6 +699,9 @@ SCT + DMS
 | ---------------------------------------------- | --------------------------------------------------------------------------- |
 | Existing RabbitMQ / ActiveMQ application       | **Amazon MQ**                                                               |
 | Existing message broker / minimal code changes | **Amazon MQ**                                                               |
+| Customer engagement / marketing campaign       | **Amazon Pinpoint**                                                         |
+| Targeted SMS / email / push campaign           | **Amazon Pinpoint**                                                         |
+| Pinpoint event streaming                       | **Amazon Pinpoint + Kinesis Data Streams**                                  |
 | Minimal-change server migration / rehost       | **AWS Application Migration Service (MGN)**                                 |
 | Lift-and-shift servers                         | **AWS Application Migration Service (MGN)**                                 |
 | Disaster recovery for servers                  | **AWS Elastic Disaster Recovery (DRS)**                                     |
