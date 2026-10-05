@@ -6,19 +6,20 @@ This section covers AWS certificate management and TLS/HTTPS patterns that commo
 
 > **Requirement → keyword → answer**
 
-| Requirement / keyword                                | Answer                                |
-| ---------------------------------------------------- | ------------------------------------- |
-| Need a new public TLS / HTTPS certificate            | **ACM**                               |
-| TLS / HTTPS certificates                             | **ACM**                               |
-| Third-party certificate that must be imported        | **ACM**                               |
-| Third-party certificate import alternative           | **IAM certificate store**             |
-| CloudFront TLS certificate                           | **ACM in us-east-1**                  |
-| ALB TLS certificate                                  | **ACM in the same Region as the ALB** |
-| Regional API Gateway TLS certificate                 | **ACM in the same Region as the API** |
-| Edge-optimized API Gateway certificate               | **ACM in us-east-1**                  |
-| Multiple unrelated domains on one ALB HTTPS listener | **Multiple ACM certificates + SNI**   |
-| Multiple subdomains of one domain                    | **Wildcard certificate**              |
-| Multiple names in one certificate                    | **SAN certificate**                   |
+| Requirement / keyword                                | Answer                                   |
+| ---------------------------------------------------- | ---------------------------------------- |
+| Need a new public TLS / HTTPS certificate            | **ACM**                                  |
+| TLS / HTTPS certificates                             | **ACM**                                  |
+| Third-party certificate that must be imported        | **ACM**                                  |
+| Third-party certificate import alternative           | **IAM certificate store**                |
+| CloudFront TLS certificate                           | **ACM in us-east-1**                     |
+| ALB TLS certificate                                  | **ACM in the same Region as the ALB**    |
+| Regional API Gateway TLS certificate                 | **ACM in the same Region as the API**    |
+| Edge-optimized API Gateway certificate               | **ACM in us-east-1**                     |
+| Multiple unrelated domains on one ALB HTTPS listener | **Multiple ACM certificates + SNI**      |
+| Multiple subdomains of one domain                    | **Wildcard certificate**                 |
+| Multiple names in one certificate                    | **SAN certificate**                      |
+| Certificate expiring soon                            | **ACM expiration events / DaysToExpiry** |
 
 ---
 
@@ -332,6 +333,102 @@ Important:
 
 ---
 
+# Certificate expiration monitoring
+
+When the requirement is:
+
+> **"Notify me before an ACM certificate expires."**
+
+Think of two important AWS patterns.
+
+### 1. ACM expiration events → EventBridge
+
+ACM provides certificate expiration events through **Amazon EventBridge**.
+
+Typical pattern:
+
+```text
+ACM certificate
+      ↓
+Approaching-expiration event
+      ↓
+Amazon EventBridge
+      ↓
+SNS / Lambda / other target
+```
+
+The event includes information such as **`DaysToExpiry`**.
+
+This is the most direct **event-driven** approach.
+
+---
+
+### 2. `DaysToExpiry` metric → scheduled checking
+
+ACM also publishes the **`DaysToExpiry`** CloudWatch metric.
+
+It indicates how many days remain before a certificate expires.
+
+Possible pattern:
+
+```text
+ACM
+ ↓
+DaysToExpiry
+ ↓
+Scheduled daily checking
+ ↓
+Find certificates reaching 30 days
+ ↓
+SNS notification
+```
+
+### Important distinction
+
+Do not think:
+
+> **EventBridge itself is a CloudWatch metric alarm.**
+
+A scheduled EventBridge rule provides the **trigger** for a process that checks the metric and then sends the notification.
+
+For SAA questions, the intended concept is:
+
+> **ACM expiration events → EventBridge**
+
+or
+
+> **DaysToExpiry metric → periodic monitoring/checking**
+
+---
+
+### AWS Health
+
+AWS Health can also provide ACM-related renewal/expiration events, particularly around **renewal status and situations requiring customer action**.
+
+Useful exam distinction:
+
+```text
+ACM EventBridge expiration event
+→ approaching certificate expiration
+
+AWS Health
+→ renewal / renewal-status / action-required events
+```
+
+---
+
+### Exam memory
+
+```text
+Need notification before ACM certificate expires
+        ↓
+ACM expiration events → EventBridge → SNS
+        OR
+DaysToExpiry metric → scheduled checking → SNS
+```
+
+---
+
 # ALB HTTPS Certificates & SNI
 
 **SNI (Server Name Indication)** allows an ALB HTTPS listener to use **multiple certificates on the same listener**.
@@ -466,6 +563,14 @@ Use the ACM certificate in the **same Region as the ALB**.
 
 → **SAN certificate**
 
+> **"Security team wants an alert 30 days before ACM certificates expire."**
+
+→ **ACM expiration events → EventBridge → SNS**
+
+or
+
+→ **`DaysToExpiry` metric → scheduled checking → SNS**
+
 ---
 
 # Important SAA Traps
@@ -511,6 +616,24 @@ Third-party certificate
 
 ---
 
+## Certificate expiration trap
+
+```text
+Approaching ACM expiration
+→ EventBridge expiration events
+
+Days remaining as a metric
+→ CloudWatch DaysToExpiry
+
+Need notification
+→ SNS
+
+Need a daily metric-based check
+→ scheduled process / EventBridge schedule
+```
+
+---
+
 ## ALB certificate trap
 
 ```text
@@ -537,19 +660,147 @@ Multiple unrelated domains on one ALB
 
 # Certificate Pocket Card
 
-| Keyword                                   | Answer                           |
-| ----------------------------------------- | -------------------------------- |
-| Need a new public TLS certificate         | **ACM**                          |
-| TLS / SSL certificate                     | **ACM**                          |
-| HTTPS                                     | **ACM**                          |
-| Third-party certificate import            | **ACM**                          |
-| Third-party certificate store alternative | **IAM certificate store**        |
-| Imported certificate renewal              | **Manual / re-import**           |
-| ALB certificate                           | **ACM in same Region as ALB**    |
-| Regional API Gateway certificate          | **ACM in same Region as API**    |
-| CloudFront certificate                    | **ACM in us-east-1**             |
-| Edge-optimized API Gateway certificate    | **ACM in us-east-1**             |
-| Multiple unrelated domains on one ALB     | **SNI + multiple certificates**  |
-| Multiple subdomains of one domain         | **Wildcard certificate**         |
-| Multiple names in one certificate         | **SAN certificate**              |
-| S3 certificate storage                    | **Not an ALB certificate store** |
+| Keyword                                   | Answer                             |
+| ----------------------------------------- | ---------------------------------- |
+| Need a new public TLS certificate         | **ACM**                            |
+| TLS / SSL certificate                     | **ACM**                            |
+| HTTPS                                     | **ACM**                            |
+| Third-party certificate import            | **ACM**                            |
+| Third-party certificate store alternative | **IAM certificate store**          |
+| Imported certificate renewal              | **Manual / re-import**             |
+| ALB certificate                           | **ACM in same Region as ALB**      |
+| Regional API Gateway certificate          | **ACM in same Region as API**      |
+| CloudFront certificate                    | **ACM in us-east-1**               |
+| Edge-optimized API Gateway certificate    | **ACM in us-east-1**               |
+| Certificate expiring soon                 | **ACM EventBridge / DaysToExpiry** |
+| Alert before certificate expiry           | **EventBridge → SNS**              |
+| Metric showing days remaining             | **`DaysToExpiry`**                 |
+| Multiple unrelated domains on one ALB     | **SNI + multiple certificates**    |
+| Multiple subdomains of one domain         | **Wildcard certificate**           |
+| Multiple names in one certificate         | **SAN certificate**                |
+| S3 certificate storage                    | **Not an ALB certificate store**   |
+
+---
+
+# Questions
+
+### Q1 — Certificate expiration notification
+
+**Scenario:**
+A company uses ACM certificates on ALBs and wants to notify the security team **30 days before expiration**. Which approaches can satisfy the requirement?
+
+**Correct concepts:**
+
+**1. ACM certificate expiration events → EventBridge → SNS**
+
+```text
+ACM
+ ↓
+Approaching-expiration event
+ ↓
+EventBridge
+ ↓
+SNS
+```
+
+**2. `DaysToExpiry` → scheduled checking → SNS**
+
+```text
+ACM
+ ↓
+DaysToExpiry metric
+ ↓
+Scheduled daily check
+ ↓
+SNS
+```
+
+### Exam trap
+
+Do not automatically choose:
+
+```text
+AWS Config
+Trusted Advisor
+Private CA
+```
+
+when the question is simply asking for **ACM expiration notification**.
+
+---
+
+### Q2 — Which certificate location?
+
+**Scenario:**
+An ALB is deployed in `eu-west-1` and needs an ACM certificate.
+
+**Answer:**
+
+```text
+ALB: eu-west-1
+→ ACM certificate: eu-west-1
+```
+
+---
+
+### Q3 — CloudFront certificate
+
+**Scenario:**
+A CloudFront distribution needs an ACM certificate.
+
+**Answer:**
+
+```text
+CloudFront
+→ ACM in us-east-1
+```
+
+---
+
+### Q4 — Multiple domains on one ALB
+
+**Scenario:**
+One ALB must serve several unrelated domain names over HTTPS.
+
+**Answer:**
+
+```text
+One ALB HTTPS listener
++
+Multiple ACM certificates
++
+SNI
+```
+
+---
+
+### Q5 — Several subdomains
+
+**Scenario:**
+A company needs HTTPS for:
+
+```text
+api.example.com
+www.example.com
+shop.example.com
+```
+
+**Answer:**
+
+```text
+Wildcard certificate
+→ *.example.com
+```
+
+---
+
+### Q6 — One certificate, many names
+
+**Scenario:**
+A single certificate must contain several different domain names.
+
+**Answer:**
+
+```text
+SAN certificate
+```
