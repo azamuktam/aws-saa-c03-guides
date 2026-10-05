@@ -169,6 +169,76 @@ You cannot simply enable encryption on an existing unencrypted RDS DB instance.
 
 ---
 
+# Encryption in transit — RDS SQL Server
+
+**Encryption in transit** protects data while it moves between the application and the RDS database.
+
+For **RDS for Microsoft SQL Server**, use **SSL/TLS** to encrypt the connection between the client application and RDS. AWS supports two main approaches: force SSL for all connections or configure individual clients/connections to use SSL.
+
+## 1. Force all connections to use SSL
+
+Set:
+
+```text
+rds.force_ssl = 1
+```
+
+Then reboot the DB instance because the parameter is **static**.
+
+```text
+EC2 / application
+       ↓
+     SSL/TLS
+       ↓
+RDS SQL Server
+
+rds.force_ssl = 1
+→ unencrypted connections are not allowed
+```
+
+> **All in-flight data between EC2 and RDS must be encrypted → `rds.force_ssl = 1`**
+
+## 2. Configure the client application to use SSL
+
+For client-specific encryption:
+
+```text
+RDS SQL Server certificate / CA
+          ↓
+Download certificate
+          ↓
+Import into client/server trust store
+          ↓
+Configure application / connection to use SSL
+```
+
+The application can then establish an encrypted SSL/TLS connection to RDS. AWS documents importing the appropriate RDS certificate into the client and enabling encrypted connections.
+
+### Exam pattern
+
+> **All EC2 → RDS SQL Server connections must use encryption in transit**
+
+→ **`rds.force_ssl = 1`**
+
+and, when the choices ask for client-side SSL configuration:
+
+→ **Download/import the RDS CA certificate + configure the application to use SSL**
+
+### Do not confuse these
+
+| Requirement                                  | Solution                                                               |
+| -------------------------------------------- | ---------------------------------------------------------------------- |
+| Encrypt data **in transit**                  | **SSL/TLS**                                                            |
+| Force all SQL Server connections to use SSL  | **`rds.force_ssl = 1`**                                                |
+| Client needs to verify/trust RDS certificate | **Import RDS CA certificate into client trust store**                  |
+| Encrypt data **at rest**                     | **RDS encryption / TDE where supported**                               |
+| Control network access                       | **Security Groups**                                                    |
+| Database authentication                      | **Password / IAM DB authentication / supported authentication method** |
+
+**TDE** does not encrypt network traffic; it is an encryption-at-rest feature. Security Groups also do not encrypt traffic.
+
+---
+
 # Database Authentication
 
 RDS supports several database authentication methods depending on the engine:
@@ -407,7 +477,9 @@ Aurora supports:
 **1 primary + up to 15 Aurora Replicas**
 
 ---
+
 ## Aurora vs RDS Multi-AZ
+
 | Requirement                   | RDS MySQL                     | Aurora                                                   |
 | ----------------------------- | ----------------------------- | -------------------------------------------------------- |
 | Automatic AZ failover         | **Multi-AZ**                  | **Aurora reader + automatic failover**                   |
@@ -415,6 +487,7 @@ Aurora supports:
 | Read scaling                  | Read Replicas                 | **Aurora Replicas**                                      |
 | Cross-Region DR               | Cross-Region Read Replica     | Aurora Global Database                                   |
 
+---
 
 # Aurora PostgreSQL — Babelfish
 
@@ -840,6 +913,21 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > A company wants to securely store database credentials and automatically rotate the database password.
 > → **AWS Secrets Manager**
 
+> A company wants to encrypt all in-flight connections between EC2 web servers and an RDS for SQL Server database.
+> → **Enable SSL/TLS; for all connections set `rds.force_ssl = 1`**
+
+> A company wants all RDS for SQL Server connections to use SSL/TLS and the application/client must trust the RDS certificate.
+> → **Set `rds.force_ssl = 1` + configure the client/application with the RDS CA certificate**
+
+> A company wants encryption in transit, not encryption at rest.
+> → **SSL/TLS**
+
+> A company configures TDE but the requirement is to encrypt traffic between EC2 and RDS.
+> → **Wrong**; TDE protects data at rest.
+
+> A company configures a Security Group to allow the database port and assumes the traffic is encrypted.
+> → **Wrong**; Security Groups control network access but do not encrypt traffic.
+
 > A company wants to migrate an Oracle database to Amazon RDS for Oracle while keeping Oracle as the database engine.
 > → **AWS DMS**
 
@@ -858,7 +946,7 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > A database workload requires OS-level access and custom server configuration that standard managed RDS does not allow.
 > → **EC2 / RDS Custom**
 
-> A company wants to migrate a SQL Server application to Aurora PostgreSQL while minimizing changes to the existing application.
+> A company wants to migrate a SQL Server application to Aurora PostgreSQL while minimizing application code modifications.
 > → **Babelfish**
 
 > A company needs to convert SQL Server database schemas and database objects before moving them to PostgreSQL.
@@ -920,6 +1008,7 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 
 > An **Aurora** cluster needs highly available storage across Availability Zones.
 > → **Aurora automatically replicates storage across 3 Availability Zones**
+
 ---
 
 # Pocket card
@@ -936,6 +1025,9 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 | Point-in-time restore                     | **Automated backup / PITR**                                                 |
 | Long-term backup                          | **Manual snapshot**                                                         |
 | Existing unencrypted RDS → encrypted      | **Snapshot → encrypted copy → restore**                                     |
+| Encrypt RDS SQL Server in transit         | **SSL/TLS**                                                                 |
+| Force SQL Server connections to SSL       | **`rds.force_ssl = 1`**                                                     |
+| Client trusts RDS certificate             | **Import RDS CA certificate + enable SSL/TLS**                              |
 | Temporary DB auth token                   | **IAM Database Authentication**                                             |
 | IAM DB token lifetime                     | **15 minutes**                                                              |
 | MySQL IAM authentication                  | **`AWSAuthenticationPlugin`**                                               |
@@ -962,3 +1054,4 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 | Rewind Aurora MySQL                       | **Aurora Backtrack**                                                        |
 | Multi-Region NoSQL                        | **DynamoDB Global Tables**                                                  |
 | Time-series database                      | **Amazon Timestream**                                                       |
+| Aurora distributed storage                | **Replicated across 3 AZs**                                                 |
