@@ -32,10 +32,23 @@ IAM mainly handles authorization, while authentication can come from IAM itself 
 An IAM user can have:
 
 * Console password
-* Access keys
+* **Access keys**
 * Permissions through identity-based policies
 
+**Access keys** are long-lived programmatic credentials used by tools such as the **AWS CLI** and SDKs.
+
+```text
+IAM User
+├── Access keys
+│   → authenticate programmatic API requests
+│
+└── IAM policies
+    → authorize what the user can do
+```
+
 Access keys are **long-lived credentials**, so they should not be used when a role can be used instead.
+
+> **Access keys = credentials, not permissions.**
 
 ### IAM group
 
@@ -1086,7 +1099,26 @@ They are completely different.
 > **"Credentials are hard-coded in an application on EC2."**
 > → Replace them with an **IAM role**.
 
-> **"A role has the correct permissions but cannot be assumed."**
+> **"A new IAM user will use the AWS CLI, but has no programmatic credentials yet."**
+> → **Create Access Keys** and attach the necessary permissions.
+
+> **"A brand-new IAM user is intended to make API calls to S3, DynamoDB, Lambda, and other AWS resources."**
+> → **Create Access Keys + attach the necessary permissions.**
+
+> **"An IAM user already has valid Access Keys/programmatic credentials, but API calls return `AccessDenied`."**
+> → **Attach an appropriate IAM policy.**
+
+The distinction is:
+
+```text
+Access Keys
+→ authentication / programmatic credentials
+
+IAM Policy
+→ authorization / permissions
+```
+
+> **"The role has the required permissions, but the principal cannot assume it."**
 > → Check the **trust policy**.
 
 > **"Users in Account A need temporary access to Account B."**
@@ -1138,36 +1170,41 @@ They are completely different.
 
 # Pocket card
 
-| Keyword                                    | Think                                 |
-| ------------------------------------------ | ------------------------------------- |
-| EC2 needs AWS access                       | IAM role                              |
-| Lambda needs AWS access                    | Execution role                        |
-| ECS task needs AWS access                  | Task role                             |
-| Temporary credentials                      | STS                                   |
-| `sts:AssumeRole`                           | Assume a role                         |
-| Role has permissions but cannot be assumed | Trust policy                          |
-| What can the role do?                      | Permissions policy                    |
-| Who can assume the role?                   | Trust policy                          |
-| Cross-account access                       | Role + trust policy + STS             |
-| Third-party role assumption                | ExternalId                            |
-| Maximum permissions for one identity       | Permissions boundary                  |
-| Maximum permissions for an AWS account/OU  | SCP                                   |
-| External corporate users                   | Federation                            |
-| Corporate AD/LDAP → AWS                    | Federation / IdP                      |
-| LDAP not SAML-compatible                   | Custom identity broker + STS          |
-| Federation → temporary AWS credentials     | STS                                   |
-| One login → multiple AWS accounts          | IAM Identity Center                   |
-| Enterprise SSO with SAML                   | IAM Identity Center / SAML federation |
-| Application customer login                 | Cognito                               |
-| Per-user S3 folder                         | S3 prefix + IAM policy                |
-| Policy attached to S3 bucket               | Bucket policy                         |
-| Legacy S3 permissions                      | S3 ACL                                |
-| Resource access based on tags              | **ABAC / IAM Condition**              |
-| EC2 access by tag                          | **`ec2:ResourceTag/...`**             |
-| UAT vs Production isolation                | **Resource tags + IAM Condition**     |
-| Explicit Deny                              | Always wins                           |
-| MFA requirement                            | `aws:MultiFactorAuthPresent`          |
-| New AWS account                            | Secure root + MFA                     |
-| External resource sharing analysis         | IAM Access Analyzer                   |
-| Stale IAM credentials                      | Credentials report                    |
-| Unused permissions                         | Access advisor                        |
+| Keyword                                             | Think                                 |
+| --------------------------------------------------- | ------------------------------------- |
+| IAM user + AWS CLI/API, no programmatic credentials | **Access Keys**                       |
+| Access Keys                                         | **Programmatic credentials**          |
+| Access Keys                                         | **Authentication**                    |
+| IAM Policy                                          | **Authorization / permissions**       |
+| Access Keys + permissions                           | **API/CLI access**                    |
+| EC2 needs AWS access                                | IAM role                              |
+| Lambda needs AWS access                             | Execution role                        |
+| ECS task needs AWS access                           | Task role                             |
+| Temporary credentials                               | STS                                   |
+| `sts:AssumeRole`                                    | Assume a role                         |
+| Role has permissions but cannot be assumed          | Trust policy                          |
+| What can the role do?                               | Permissions policy                    |
+| Who can assume the role?                            | Trust policy                          |
+| Cross-account access                                | Role + trust policy + STS             |
+| Third-party role assumption                         | ExternalId                            |
+| Maximum permissions for one identity                | Permissions boundary                  |
+| Maximum permissions for an AWS account/OU           | SCP                                   |
+| External corporate users                            | Federation                            |
+| Corporate AD/LDAP → AWS                             | Federation / IdP                      |
+| LDAP not SAML-compatible                            | Custom identity broker + STS          |
+| Federation → temporary AWS credentials              | STS                                   |
+| One login → multiple AWS accounts                   | IAM Identity Center                   |
+| Enterprise SSO with SAML                            | IAM Identity Center / SAML federation |
+| Application customer login                          | Cognito                               |
+| Per-user S3 folder                                  | S3 prefix + IAM policy                |
+| Policy attached to S3 bucket                        | Bucket policy                         |
+| Legacy S3 permissions                               | S3 ACL                                |
+| Resource access based on tags                       | **ABAC / IAM Condition**              |
+| EC2 access by tag                                   | **`ec2:ResourceTag/...`**             |
+| UAT vs Production isolation                         | **Resource tags + IAM Condition**     |
+| Explicit Deny                                       | Always wins                           |
+| MFA requirement                                     | `aws:MultiFactorAuthPresent`          |
+| New AWS account                                     | Secure root + MFA                     |
+| External resource sharing analysis                  | IAM Access Analyzer                   |
+| Stale IAM credentials                               | Credentials report                    |
+| Unused permissions                                  | Access advisor                        |
