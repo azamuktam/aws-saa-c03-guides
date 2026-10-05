@@ -2,7 +2,7 @@
 
 ## The idea
 
-These are AWS services that commonly appear in SAA questions involving **data lakes, ETL, metadata, schema discovery, data integration, incremental processing, and bulk operations on S3 objects**.
+These are AWS services that commonly appear in SAA questions involving **data lakes, ETL, metadata, schema discovery, incremental processing, and bulk operations on S3 objects**.
 
 You generally don't need deep knowledge of each one.
 
@@ -24,6 +24,9 @@ Store table/schema metadata
 
 Transform CSV → Parquet
 → Glue ETL
+
+Athena query performance on large S3 data
+→ Parquet / ORC
 
 Prevent Glue from reprocessing previously processed data
 → Glue Job Bookmark
@@ -66,22 +69,6 @@ Glue can:
 It is especially useful when the requirement is **serverless ETL with low operational overhead**, especially for larger data-processing workloads.
 
 ### Main Glue components
-
-```text
-Glue Crawler
-= discovers schema
-
-Glue Data Catalog
-= stores metadata
-
-Glue ETL
-= performs data transformation
-
-Glue Job Bookmark
-= tracks previously processed data
-```
-
-### Mental model
 
 ```text
              AWS Glue
@@ -227,6 +214,62 @@ Glue Data Catalog
 
 Glue ETL
 = transforms data
+```
+
+---
+
+# Parquet for Athena
+
+**Apache Parquet = columnar file format optimized for analytics.**
+
+When Athena queries a large dataset in S3, Parquet can significantly reduce the amount of data that needs to be read because Athena can read only the required columns.
+
+Typical pattern:
+
+```text
+Large JSON dataset in S3
+        ↓
+Convert to Parquet
+        ↓
+Amazon Athena
+        ↓
+Less data scanned
+        ↓
+Faster queries
+```
+
+### Common exam signal
+
+> **Athena queries are slow because a large amount of JSON data is stored in S3.**
+
+→ **Convert the data to Parquet or another columnar format such as ORC.**
+
+### Security connection
+
+If the S3 data is governed by **Lake Formation**, the performance improvement does not require removing the Lake Formation controls.
+
+For data access through Lake Formation, the relevant IAM permission can include:
+
+**`lakeformation:GetDataAccess`**
+
+So the common exam combination is:
+
+```text
+Athena + large JSON dataset
+→ Parquet
+
+Lake Formation-controlled data access
+→ lakeformation:GetDataAccess
+```
+
+### Important distinction
+
+```text
+Parquet / ORC
+→ query-performance optimization
+
+Lake Formation
+→ data lake access control
 ```
 
 ---
@@ -867,6 +910,16 @@ Lake Formation
 
 ---
 
+> **"Athena queries are slow because hundreds of JSON files are loaded into S3 every hour."**
+
+→ **Transform the JSON data into Apache Parquet (or another columnar format such as ORC)**
+
+If Lake Formation controls access to the underlying data:
+
+→ **Ensure the required Lake Formation data-access permission such as `lakeformation:GetDataAccess` is configured**
+
+---
+
 > **"A Glue ETL job keeps processing old S3 data from previous runs."**
 
 → **Enable Glue Job Bookmarks**
@@ -985,11 +1038,33 @@ Exam trigger:
 
 ```text
 Data is hard to query efficiently
-→ Think partitioning
+→ Think partitioning / columnar formats such as Parquet
 
 Glue keeps reprocessing old data
 → Think Job Bookmark
 ```
+
+---
+
+## Parquet vs GZIP
+
+Do not treat compression and columnar storage as the same thing.
+
+```text
+Parquet
+= columnar format
+= analytics/query optimization
+
+GZIP
+= compression
+= reduces file size
+```
+
+For Athena performance questions involving large JSON datasets:
+
+> **Convert to Parquet/ORC**
+
+rather than simply compressing the JSON with GZIP.
 
 ---
 
@@ -1094,6 +1169,10 @@ What does the question want?
           │      ↓
           │   Glue ETL
           │
+          ├── Improve Athena query performance
+          │      ↓
+          │   Parquet / ORC
+          │
           ├── Prevent reprocessing
           │   of previously processed data
           │      ↓
@@ -1122,24 +1201,27 @@ What does the question want?
 
 # Pocket Card
 
-| Keyword                                | Answer                  |
-| -------------------------------------- | ----------------------- |
-| Serverless ETL / data catalog          | **AWS Glue**            |
-| Discover schema                        | **Glue Crawler**        |
-| Automatically discover S3 file schema  | **Glue Crawler**        |
-| Store metadata                         | **Glue Data Catalog**   |
-| Store table/schema definitions         | **Glue Data Catalog**   |
-| Transform data                         | **Glue ETL**            |
-| CSV → Parquet                          | **Glue ETL**            |
-| Glue keeps reprocessing old data       | **Glue Job Bookmark**   |
-| Incremental Glue ETL processing        | **Glue Job Bookmark**   |
-| Data lake + fine-grained permissions   | **Lake Formation**      |
-| Table/row/column permissions           | **Lake Formation**      |
-| SaaS → S3                              | **AppFlow**             |
-| SaaS → Redshift                        | **AppFlow**             |
-| Find/subscribe to third-party datasets | **AWS Data Exchange**   |
-| Bulk operation on existing S3 objects  | **S3 Batch Operations** |
-| Millions/billions of existing objects  | **S3 Batch Operations** |
+| Keyword                                | Answer                            |
+| -------------------------------------- | --------------------------------- |
+| Serverless ETL / data catalog          | **AWS Glue**                      |
+| Discover schema                        | **Glue Crawler**                  |
+| Automatically discover S3 file schema  | **Glue Crawler**                  |
+| Store metadata                         | **Glue Data Catalog**             |
+| Store table/schema definitions         | **Glue Data Catalog**             |
+| Transform data                         | **Glue ETL**                      |
+| CSV → Parquet                          | **Glue ETL**                      |
+| Athena + large JSON dataset            | **Parquet / ORC**                 |
+| Reduce Athena data scanned             | **Parquet / ORC**                 |
+| Glue reprocesses old data              | **Glue Job Bookmark**             |
+| Incremental Glue ETL processing        | **Glue Job Bookmark**             |
+| Data lake + fine-grained permissions   | **Lake Formation**                |
+| Lake Formation data access             | **`lakeformation:GetDataAccess`** |
+| Table/row/column permissions           | **Lake Formation**                |
+| SaaS → S3                              | **AppFlow**                       |
+| SaaS → Redshift                        | **AppFlow**                       |
+| Find/subscribe to third-party datasets | **AWS Data Exchange**             |
+| Bulk operation on existing S3 objects  | **S3 Batch Operations**           |
+| Millions/billions of existing objects  | **S3 Batch Operations**           |
 
 ---
 
@@ -1158,6 +1240,10 @@ Glue Data Catalog
 Glue ETL
 = TRANSFORM DATA
 
+Parquet / ORC
+= COLUMNAR ANALYTICS FORMAT
+= FASTER / LESS DATA SCANNED BY ATHENA
+
 Glue Job Bookmark
 = TRACK PREVIOUSLY PROCESSED DATA
 
@@ -1174,51 +1260,3 @@ S3 Batch Operations
 = BULK OPERATIONS ON EXISTING S3 OBJECTS
 ```
 
-# The Golden Rule
-
-```text
-Serverless ETL
-→ Glue
-
-Discover schema
-→ Glue Crawler
-
-Store metadata
-→ Glue Data Catalog
-
-Transform data
-→ Glue ETL
-
-Glue keeps reprocessing old data
-→ Glue Job Bookmark
-
-Data lake + fine-grained permissions
-→ Lake Formation
-
-Salesforce / SaaS → S3 or Redshift
-→ AppFlow
-
-Find or subscribe to third-party datasets
-→ AWS Data Exchange
-
-Millions of existing S3 objects
-→ S3 Batch Operations
-```
-
-> **Don't memorize the implementation.**
->
-> **Memorize the unique signal.**
-
-For example:
-
-```text
-ETL                    → Glue
-Discover schema        → Crawler
-Store metadata         → Catalog
-CSV → Parquet          → Glue ETL
-Reprocessing old data  → Job Bookmark
-Data lake access       → Lake Formation
-Salesforce → S3        → AppFlow
-Third-party datasets   → Data Exchange
-Bulk S3 operation      → S3 Batch Operations
-```
