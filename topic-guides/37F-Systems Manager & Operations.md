@@ -2,7 +2,7 @@
 
 ## The idea
 
-These AWS services commonly appear in SAA questions involving **instance management, secure access, command execution, patching, operational issues, AWS operational events, and Prometheus-compatible monitoring**.
+These AWS services commonly appear in SAA questions involving **instance management, secure access, command execution, patching, operational issues, right-sizing, AWS operational events, and Prometheus-compatible monitoring**.
 
 Best strategy:
 
@@ -23,6 +23,9 @@ Manage / inspect EC2 instances
 
 Centrally track and investigate operational issues
 → AWS Systems Manager OpsCenter
+
+Recommend optimal size for EC2 / ASG / EBS / Lambda
+→ AWS Compute Optimizer
 
 AWS event specifically associated with your account/resources
 → AWS Health Dashboard – Your account health
@@ -213,7 +216,51 @@ Track / investigate / manage
 
 ---
 
-# Session Manager vs Run Command vs Patch Manager vs Fleet Manager vs OpsCenter
+# AWS Compute Optimizer
+
+**AWS Compute Optimizer = analyzes historical CloudWatch utilization and recommends right-sized AWS resources.**
+
+It can recommend changes for:
+
+* EC2 instances
+* EC2 Auto Scaling groups
+* EBS volumes
+* Lambda functions
+
+### Signal
+
+> **Optimal sizing / over-provisioned / under-provisioned → AWS Compute Optimizer**
+
+### Memory
+
+```text
+CloudWatch
+→ metrics
+
+Compute Optimizer
+→ analyzes utilization
+→ recommends right-sizing
+```
+
+### Important
+
+```text
+Monitor metrics / alarms / dashboards
+→ CloudWatch
+
+Recommend optimal resource size
+→ Compute Optimizer
+```
+
+### Example
+
+> "Users report slow performance and the company wants recommendations for which compute resources should be resized."
+
+→ **AWS Compute Optimizer**
+
+---
+
+# Session Manager vs Run Command vs Patch Manager vs Fleet Manager vs OpsCenter vs Compute Optimizer
 
 | Service                                 | Main purpose                           | Signal                               |
 | --------------------------------------- | -------------------------------------- | ------------------------------------ |
@@ -222,6 +269,7 @@ Track / investigate / manage
 | **AWS Systems Manager Patch Manager**   | Automate OS patching                   | Patch many instances                 |
 | **AWS Systems Manager Fleet Manager**   | Manage / inspect EC2                   | Files, processes, services, Registry |
 | **AWS Systems Manager OpsCenter**       | Track / investigate operational issues | Central operational issue management |
+| **AWS Compute Optimizer**               | Right-sizing recommendations           | Over/under-provisioned resources     |
 
 ```text
 ACCESS an instance
@@ -238,6 +286,9 @@ MANAGE / INSPECT an EC2 fleet
 
 TRACK / INVESTIGATE operational issues
 → AWS Systems Manager OpsCenter
+
+RIGHT-SIZE resources
+→ AWS Compute Optimizer
 ```
 
 ---
@@ -423,7 +474,10 @@ Uses the **Prometheus data model and PromQL**.
 → **Amazon Managed Service for Prometheus (AMP)**
 
 ---
-Examples of **Prometheus metrics** are simple numerical measurements collected over time:
+
+## Prometheus Metrics
+
+Examples of Prometheus metrics are simple numerical measurements collected over time:
 
 ```text
 cpu_usage_percent = 72
@@ -448,7 +502,9 @@ Think:
 > **Prometheus metrics = numbers about how your application/infrastructure is behaving over time.**
 
 **Prometheus then stores and queries these metrics using PromQL.**
- 
+
+---
+
 # Typical AMP Architecture
 
 ```text
@@ -486,12 +542,61 @@ Amazon Managed Grafana
 | **AWS Systems Manager Patch Manager**                                            | Automate OS patching                   | Patch many instances                   |
 | **AWS Systems Manager Fleet Manager**                                            | Manage / inspect EC2                   | Files, processes, services, Registry   |
 | **AWS Systems Manager OpsCenter**                                                | Track / investigate operational issues | Central operational issue management   |
+| **AWS Compute Optimizer**                                                        | Right-sizing recommendations           | Optimal / over / under-provisioned     |
 | **AWS Health Dashboard – Your account health / Personal Health Dashboard (PHD)** | Account-specific Health events         | Event specific to my account/resources |
 | **AWS Health Dashboard – Service health**                                        | Public AWS service events              | General service / Regional status      |
 | **Amazon EventBridge**                                                           | Detect / route AWS Health events       | Automatically react to an event        |
 | **Amazon Managed Service for Prometheus (AMP)**                                  | Managed Prometheus monitoring          | Prometheus / PromQL / Kubernetes       |
 
 ---
+
+# Systems Manager Decision Tree
+
+```text
+What does the administrator need to do?
+          │
+          ├── Access an instance interactively?
+          │       ↓
+          │   AWS Systems Manager Session Manager
+          │
+          ├── Run a command/script?
+          │       ↓
+          │   AWS Systems Manager Run Command
+          │
+          ├── Patch the operating system?
+          │       ↓
+          │   AWS Systems Manager Patch Manager
+          │
+          ├── Inspect / manage an EC2 fleet?
+          │       ↓
+          │   AWS Systems Manager Fleet Manager
+          │
+          └── Track / investigate operational issues?
+                  ↓
+              AWS Systems Manager OpsCenter
+```
+
+---
+
+# AWS Health Decision Tree
+
+```text
+What kind of Health information is needed?
+          │
+          ├── General AWS service / Regional status?
+          │       ↓
+          │   AWS Health Dashboard – Service health
+          │
+          └── Event specific to my account/resources?
+                  ↓
+          AWS Health Dashboard – Your account health
+          (older term: Personal Health Dashboard)
+                  ↓
+              Amazon EventBridge
+```
+
+---
+
 # Important SAA Traps
 
 ## Session Manager vs Run Command
@@ -559,6 +664,18 @@ Need to inspect/manage instances
 
 Need to track/investigate operational issues
 → OpsCenter
+```
+
+---
+
+## Compute Optimizer vs CloudWatch
+
+```text
+Monitor metrics / alarms / dashboards
+→ CloudWatch
+
+Recommend optimal resource size
+→ Compute Optimizer
 ```
 
 ---
@@ -641,6 +758,8 @@ The on-premises server requires the required agent and connectivity configuratio
 | Patch many instances                      | **AWS Systems Manager Patch Manager**                                            |
 | Manage / inspect EC2 instances            | **AWS Systems Manager Fleet Manager**                                            |
 | Track / investigate operational issues    | **AWS Systems Manager OpsCenter**                                                |
+| Optimal resource sizing                   | **AWS Compute Optimizer**                                                        |
+| Over/under-provisioned EC2/ASG/EBS/Lambda | **AWS Compute Optimizer**                                                        |
 | Event specific to my account/resources    | **AWS Health Dashboard – Your account health / Personal Health Dashboard (PHD)** |
 | General AWS service status                | **AWS Health Dashboard – Service health**                                        |
 | Automatically react to AWS Health event   | **Amazon EventBridge**                                                           |
