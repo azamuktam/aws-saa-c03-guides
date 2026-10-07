@@ -14,9 +14,8 @@ Windows / SMB / AD
 → FSx for Windows
 
 HPC / ML / S3 high-performance
-→ FSx for Lustre
-→ Lustre protocol
-→ Linux-based workloads, NOT Windows file sharing
+→ FSx for Lustre, Lustre protocol
+→ primarily Linux-based workloads, not Windows file sharing
 
 NetApp / SnapMirror / NFS + SMB + iSCSI
 → FSx for NetApp ONTAP
@@ -40,12 +39,12 @@ ZFS
 
 # The four specialists
 
-| FSx type                        | Main keywords                                  | Main use                        |
-| ------------------------------- | ---------------------------------------------- | ------------------------------- |
-| **FSx for Windows File Server** | Windows, SMB, NTFS, AD, .NET                   | Windows file shares             |
-| **FSx for Lustre**              | HPC, ML, rendering, Lustre, S3                 | High-performance workloads      |
-| **FSx for NetApp ONTAP**        | NetApp, SnapMirror, snapshots, NFS, SMB, iSCSI | NetApp / multi-protocol storage |
-| **FSx for OpenZFS**             | ZFS, NFS, snapshots, Linux                     | ZFS/Linux workloads             |
+| FSx type                        | Main keywords                                    | Main use                        |
+| ------------------------------- | ------------------------------------------------ | ------------------------------- |
+| **FSx for Windows File Server** | Windows, SMB, NTFS, AD, .NET                     | Windows file shares             |
+| **FSx for Lustre**              | HPC, ML, rendering, high throughput, S3          | High-performance workloads      |
+| **FSx for NetApp ONTAP**        | NetApp, SnapMirror, snapshots, NFS, SMB, iSCSI   | NetApp / multi-protocol storage |
+| **FSx for OpenZFS**             | ZFS, NFS, snapshots, Linux file-server migration | ZFS/Linux workloads             |
 
 ---
 
@@ -105,7 +104,7 @@ Designed for **very high-performance workloads**:
 
 **FSx for Lustre uses the Lustre protocol.**
 
-It is **not an SMB-based Windows file server** and is intended primarily for **Linux-based workloads**.
+It is intended for **Linux-based high-performance workloads**, not Windows SMB file sharing.
 
 ```text
 Linux / HPC client
@@ -115,7 +114,7 @@ FSx for Lustre
 
 > **Lustre protocol → FSx for Lustre**
 
-> **Windows + SMB → NOT FSx for Lustre**
+> **Windows + SMB → FSx for Windows**
 
 ### S3 integration
 
@@ -136,7 +135,7 @@ HPC / ML
 | Type           | Use                             | Data protection           |
 | -------------- | ------------------------------- | ------------------------- |
 | **Scratch**    | Temporary/short-term processing | No replication            |
-| **Persistent** | Longer-term workloads           | More durable / persistent |
+| **Persistent** | Longer-term workloads           | Data replicated within AZ |
 
 ### Scratch
 
@@ -147,12 +146,14 @@ Use for:
 * Maximum performance
 * Lower cost
 
+Data can be lost if the scratch file system fails.
+
 ### Persistent
 
 Use for:
 
 * Longer-running workloads
-* More persistent data
+* More data protection
 * Non-temporary processing
 
 > **Temporary → Scratch**
@@ -214,15 +215,17 @@ FSx for NetApp ONTAP
 
 ### Snapshots
 
-ONTAP supports **point-in-time snapshots**.
+ONTAP also supports **point-in-time snapshots**.
 
 Useful for:
 
 * Fast recovery
 * Recovering files/data
-* Creating point-in-time copies
+* Restoring earlier file versions
 
-> **ONTAP + Snapshots → point-in-time recovery**
+> **ONTAP + SnapMirror → replication**
+
+> **ONTAP + snapshots → point-in-time recovery**
 
 ### Multi-protocol example
 
@@ -258,7 +261,9 @@ OpenZFS supports NFS versions 3, 4.0, 4.1, and 4.2.
 
 ### Snapshots
 
-OpenZFS provides **point-in-time snapshots** of the file system.
+FSx for OpenZFS supports **point-in-time snapshots** of volumes.
+
+Snapshots can also be used to create clone volumes.
 
 > **ZFS + snapshots/clones → FSx for OpenZFS**
 
@@ -281,7 +286,7 @@ OpenZFS provides **point-in-time snapshots** of the file system.
 
 > **ZFS → OpenZFS**
 
-> **Snapshots + NetApp replication → ONTAP**
+> **Snapshot alone → can be either ONTAP or OpenZFS**
 
 ---
 
@@ -310,9 +315,6 @@ S3 data + high-performance processing
 
 Lustre protocol
 → FSx for Lustre
-
-Windows file sharing
-→ FSx for Windows
 
 NetApp / SnapMirror
 → FSx for NetApp ONTAP
@@ -350,11 +352,11 @@ Normal Linux shared storage
 
 → **FSx for Lustre**
 
-> **"Clients use the Lustre protocol to access the file system."**
+> **"The workload uses the Lustre protocol."**
 
 → **FSx for Lustre**
 
-> **"The workload runs on Windows servers and requires SMB file sharing."**
+> **"Windows-based applications require SMB file sharing."**
 
 → **FSx for Windows File Server**
 
@@ -364,7 +366,7 @@ Normal Linux shared storage
 
 → **FSx for Lustre Scratch**
 
-> **"Long-running Lustre workload needs more persistent storage."**
+> **"Long-running Lustre workload needs more data protection."**
 
 → **FSx for Lustre Persistent**
 
@@ -376,27 +378,19 @@ Normal Linux shared storage
 
 → **FSx for NetApp ONTAP**
 
-> **"The company needs NetApp SnapMirror replication for migration or DR."**
+> **"The storage solution needs NetApp SnapMirror replication."**
 
 → **FSx for NetApp ONTAP**
 
-> **"The company needs point-in-time snapshots on a NetApp file system."**
+> **"The file system needs point-in-time snapshots."**
 
-→ **FSx for NetApp ONTAP**
+→ **ONTAP or OpenZFS, depending on the other requirements**
 
 > **"Linux and Windows clients need the same file system using NFS and SMB."**
 
 → **FSx for NetApp ONTAP**
 
-> **"Applications require NFS, SMB, and iSCSI access to the same storage system."**
-
-→ **FSx for NetApp ONTAP**
-
 > **"Migrate an on-premises ZFS file server to AWS."**
-
-→ **FSx for OpenZFS**
-
-> **"A ZFS workload needs snapshots and clones."**
 
 → **FSx for OpenZFS**
 
@@ -413,7 +407,7 @@ Normal Linux shared storage
 | Windows / SMB / NTFS / AD / .NET            | **FSx for Windows File Server**            |
 | HPC / ML / rendering / very high throughput | **FSx for Lustre**                         |
 | Lustre protocol                             | **FSx for Lustre**                         |
-| Windows file sharing                        | **FSx for Windows**                        |
+| Windows + SMB                               | **FSx for Windows**                        |
 | S3 + high-performance processing            | **FSx for Lustre**                         |
 | Temporary Lustre workload                   | **Lustre Scratch**                         |
 | Longer-term Lustre workload                 | **Lustre Persistent**                      |
@@ -422,7 +416,7 @@ Normal Linux shared storage
 | NFS + SMB + iSCSI                           | **FSx for NetApp ONTAP**                   |
 | ZFS                                         | **FSx for OpenZFS**                        |
 | OpenZFS snapshots / clones                  | **FSx for OpenZFS**                        |
+| Snapshot alone                              | **ONTAP or OpenZFS**                       |
 | Normal Linux shared storage                 | **EFS**                                    |
 | Linux + NFS                                 | **EFS / OpenZFS depending on requirement** |
 | Windows + SMB                               | **FSx for Windows**                        |
-| Windows + Lustre protocol                   | **Not the intended FSx choice**            |
