@@ -1,4 +1,4 @@
-****# Section 37F: Systems Manager & Operations
+# Section 37F: Systems Manager & Operations
 
 ## The idea
 
