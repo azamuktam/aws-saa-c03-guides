@@ -10,8 +10,6 @@ The best strategy is:
 
 > **Read the requirement → identify the unique keyword → choose the service.**
 
-For example:
-
 ```text
 Serverless ETL + data catalog
 → AWS Glue
@@ -43,6 +41,79 @@ Find/subscribe to third-party datasets
 Bulk operation on millions of existing S3 objects
 → S3 Batch Operations
 ```
+
+---
+
+# Data Lake
+
+A **data lake = a central place to store large amounts of raw data in different formats.**
+
+In AWS, **Amazon S3 is commonly used as the data lake storage**.
+
+Example:
+
+```text
+                    DATA LAKE
+                       ↓
+                      S3
+        ┌──────────────┼──────────────┐
+        ↓              ↓              ↓
+     CSV files      JSON files      Images
+     Logs           Parquet         IoT data
+     Database data  Video           etc.
+```
+
+### Simple idea
+
+```text
+S3
+= stores the actual data
+
+Data Lake
+= the overall collection of data stored for later processing/analytics
+```
+
+Then other services work with the data:
+
+```text
+S3
+ ↓
+Glue / Athena / EMR
+ ↓
+Process / query / analyze
+```
+
+### Where Lake Formation fits
+
+```text
+S3
+= actual data
+
+Lake Formation
+= controls who can access the data
+```
+
+For example:
+
+```text
+Sales team
+→ sales table
+
+Finance team
+→ financial table
+
+Regional manager
+→ only rows for their region
+
+Analyst
+→ only selected columns
+```
+
+So:
+
+> **Data lake = the data**
+
+> **Lake Formation = governance and access control for the data lake**
 
 ---
 
@@ -171,7 +242,7 @@ Information ABOUT the data
 
 ### Important
 
-> **Data Catalog stores metadata. It does not transform the actual data.**
+> **Data Catalog stores metadata. It does not transform or store the actual data.**
 
 ---
 
@@ -222,7 +293,7 @@ Glue ETL
 
 **Apache Parquet = columnar file format optimized for analytics.**
 
-When Athena queries a large dataset in S3, Parquet can significantly reduce the amount of data that needs to be read because Athena can read only the required columns.
+When Athena queries a large dataset in S3, Parquet can reduce the amount of data that needs to be read because Athena can read only the required columns.
 
 Typical pattern:
 
@@ -235,7 +306,7 @@ Amazon Athena
         ↓
 Less data scanned
         ↓
-Faster queries
+Faster / cheaper queries
 ```
 
 ### Common exam signal
@@ -489,6 +560,16 @@ Glue is useful when the requirement is:
 * preparing data for analytics
 * incremental processing without custom tracking
 
+### Glue vs Lambda
+
+```text
+Lambda
+→ lightweight event-driven processing
+
+Glue
+→ larger/serverless ETL and data preparation
+```
+
 ---
 
 # Glue vs EC2 + Spark vs EMR vs Lambda
@@ -571,70 +652,96 @@ Remember previous processing
 
 # AWS Lake Formation
 
-**AWS Lake Formation = build and manage a data lake with centralized, fine-grained permissions.**
+**AWS Lake Formation = governance and fine-grained access control for a data lake.**
 
-It helps organize and secure data lakes and can provide fine-grained access control.
+First remember:
 
-It can control access to specific:
+```text
+Data lake
+= large collection of data for analytics
 
-* tables
-* columns
-* rows
+S3
+= common place where the actual data is stored
+```
+
+Example:
+
+```text
+S3 data lake
+├── sales/
+├── customers/
+├── employees/
+├── logs/
+└── IoT data/
+```
+
+Lake Formation does **not** store these files.
+
+It controls **who can access what**.
+
+For example:
+
+```text
+S3
+ ↓
+Actual data
+ ↓
+Lake Formation
+ ↓
+Access rules
+```
+
+You can give different users access to:
+
+```text
+User A
+→ entire sales table
+
+User B
+→ only selected columns
+
+User C
+→ only rows for their region
+```
 
 ### Signal
 
 > **Data lake + fine-grained permissions → Lake Formation**
 
----
-
-## Example
-
-Suppose a company has a large data lake in S3.
-
-Different users need different access:
+### Simple distinction
 
 ```text
-Finance team
-→ full access to financial tables
+S3
+= store the data
 
-Sales team
-→ selected columns
-
-Regional managers
-→ only rows for their region
-```
-
-The requirement is not simply "store data in S3."
-
-It is:
-
-> **Build/manage a data lake with fine-grained permissions.**
-
-→ **AWS Lake Formation**
-
----
-
-## Lake Formation vs Glue
-
-These two services can appear together.
-
-```text
 Glue
-= discover / catalog / transform data
+= discover / catalog / transform the data
 
 Lake Formation
-= govern and control access to the data lake
+= govern / control access to the data lake
 ```
 
-### Mental model
+### Common pattern
 
 ```text
-AWS Glue
-→ Understand and prepare the data
-
-Lake Formation
-→ Govern and secure the data lake
+S3
+ ↓
+Glue Crawler
+ ↓
+Glue Data Catalog
+ ↓
+Lake Formation permissions
+ ↓
+Athena / EMR / other analytics
 ```
+
+### Memory
+
+> **Data lake = data**
+
+> **S3 = common data lake storage**
+
+> **Lake Formation = who can access what**
 
 ---
 
@@ -672,7 +779,7 @@ Amazon Redshift
 
 ## Example
 
-> "A company wants to move Salesforce data into Amazon S3 without developing custom integration code."
+> "A company wants to move Salesforce data into Amazon S3 without custom integration code."
 
 → **Amazon AppFlow**
 
@@ -910,13 +1017,9 @@ Lake Formation
 
 ---
 
-> **"Athena queries are slow because hundreds of JSON files are loaded into S3 every hour."**
+> **"Athena queries are slow because a large amount of JSON data is stored in S3."**
 
-→ **Transform the JSON data into Apache Parquet (or another columnar format such as ORC)**
-
-If Lake Formation controls access to the underlying data:
-
-→ **Ensure the required Lake Formation data-access permission such as `lakeformation:GetDataAccess` is configured**
+→ **Transform the data into Apache Parquet (or another columnar format such as ORC)**
 
 ---
 
@@ -933,6 +1036,12 @@ If Lake Formation controls access to the underlying data:
 ---
 
 > **"A company wants to build a data lake with fine-grained access control over tables, rows, and columns."**
+
+→ **Lake Formation**
+
+---
+
+> **"A company stores its raw analytics data in S3 and wants to control which users can access specific tables, rows, or columns."**
 
 → **Lake Formation**
 
@@ -1215,6 +1324,8 @@ What does the question want?
 | Glue reprocesses old data              | **Glue Job Bookmark**             |
 | Incremental Glue ETL processing        | **Glue Job Bookmark**             |
 | Data lake + fine-grained permissions   | **Lake Formation**                |
+| S3 = actual data in the data lake      | **Amazon S3**                     |
+| Lake Formation = data lake access      | **AWS Lake Formation**            |
 | Lake Formation data access             | **`lakeformation:GetDataAccess`** |
 | Table/row/column permissions           | **Lake Formation**                |
 | SaaS → S3                              | **AppFlow**                       |
@@ -1228,6 +1339,12 @@ What does the question want?
 # Final Memory
 
 ```text
+Data lake
+= central place for large amounts of raw data
+
+S3
+= common AWS storage for the actual data lake data
+
 AWS Glue
 = SERVERLESS ETL + DATA CATALOG
 
@@ -1248,7 +1365,7 @@ Glue Job Bookmark
 = TRACK PREVIOUSLY PROCESSED DATA
 
 Lake Formation
-= DATA LAKE PERMISSIONS
+= GOVERN + CONTROL ACCESS TO THE DATA LAKE
 
 AppFlow
 = SAAS → AWS
@@ -1259,4 +1376,3 @@ AWS Data Exchange
 S3 Batch Operations
 = BULK OPERATIONS ON EXISTING S3 OBJECTS
 ```
-
