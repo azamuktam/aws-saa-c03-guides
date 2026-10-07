@@ -423,7 +423,32 @@ Uses the **Prometheus data model and PromQL**.
 → **Amazon Managed Service for Prometheus (AMP)**
 
 ---
+Examples of **Prometheus metrics** are simple numerical measurements collected over time:
 
+```text
+cpu_usage_percent = 72
+memory_usage_bytes = 4294967296
+http_requests_total = 154320
+http_request_duration_seconds = 0.42
+http_errors_total = 37
+active_connections = 128
+```
+
+For Kubernetes:
+
+```text
+pod_cpu_usage
+pod_memory_usage
+container_restarts_total
+container_network_receive_bytes
+```
+
+Think:
+
+> **Prometheus metrics = numbers about how your application/infrastructure is behaving over time.**
+
+**Prometheus then stores and queries these metrics using PromQL.**
+ 
 # Typical AMP Architecture
 
 ```text
