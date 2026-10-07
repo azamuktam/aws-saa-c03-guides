@@ -8,6 +8,8 @@ The key idea:
 
 **AWS Service Catalog** = let organizations create and offer a **catalog of approved AWS products/resources** that users can deploy themselves.
 
+**AWS Proton** = standardize how **container and serverless applications are deployed** using predefined templates.
+
 **AWS Trusted Advisor** = analyze your AWS environment and give **recommendations** for improving cost, performance, security, fault tolerance, service limits, and operational excellence.
 
 > **Important:** Trusted Advisor helps identify problems and recommends actions. It does not automatically fix the problem.
@@ -60,6 +62,83 @@ Portfolio
 Think:
 
 > **"AWS App Store for company-approved infrastructure."**
+
+---
+
+# AWS Proton
+
+**AWS Proton = standardize how container and serverless applications are deployed.**
+
+The platform team creates standard templates, and developers use those templates to deploy applications consistently.
+
+```text
+Platform team
+     ↓
+Proton templates
+     ↓
+Developer application
+     ↓
+Standard infrastructure + deployment
+```
+
+## Environment and service templates
+
+Proton uses templates to define the standard infrastructure and deployment configuration for applications.
+
+```text
+Environment Template
+        ↓
+ Standard environment
+
+Service Template
+        ↓
+ Standard application/service
+```
+
+## Components
+
+**Proton Components = extra, application-specific resources that developers can add beyond the standard templates.**
+
+Example:
+
+```text
+Standard Proton service
+        +
+   Developer component
+        ↓
+     SQS queue
+     DynamoDB table
+     S3 bucket
+```
+
+### Easy memory
+
+> **Proton = company-standard way to deploy applications**
+
+### Service Catalog vs Proton
+
+```text
+Service Catalog
+→ "What approved infrastructure can users deploy?"
+
+Proton
+→ "How should our applications be deployed?"
+
+Proton Component
+→ "What extra resources does this application need?"
+```
+
+### Exam clue
+
+> **Standard infrastructure/templates + developers need to add supplemental application-specific resources**
+
+→ **AWS Proton Components**
+
+> **Approved products + self-service infrastructure deployment**
+
+→ **AWS Service Catalog**
+
+> **Note:** AWS Proton support ends on **October 7, 2026**. It can still appear in existing SAA practice questions, so know the concept and especially **Proton Components**.
 
 ---
 
@@ -346,15 +425,13 @@ Requests = 10,000/min
 
 ---
 
-# Trusted Advisor vs Service Quotas Automatic Management
-
-AWS now provides a newer feature called:
-
 # Service Quotas Automatic Management
 
-This is important for **modern AWS questions**.
+AWS also provides **Service Quotas Automatic Management** for supported quotas.
 
-**Service Quotas Automatic Management** monitors supported service-quota utilization and can notify you before quotas are exhausted. AWS currently provides thresholds at:
+**Service Quotas Automatic Management** monitors supported service-quota utilization and can notify you before quotas are exhausted.
+
+Current thresholds include:
 
 ```text
 80%
@@ -384,7 +461,7 @@ Notification
 Notification
 ```
 
-Notifications appear through AWS Health, with optional notification channels such as email/chat/app notifications. EventBridge integration is also available for automation.
+Notifications can be surfaced through AWS Health, with notification channels and EventBridge integration available for automation.
 
 ---
 
@@ -410,11 +487,11 @@ It only automates the quota increase request for supported quotas.
 
 # Service Quotas Automatic Management thresholds
 
-| Utilization | Automatic Management                                                   |
-| ----------- | ---------------------------------------------------------------------- |
-| **80%**     | Notify                                                                 |
-| **95%**     | Notify                                                                 |
-| **95%+**    | Notify and, in Auto-Adjust mode, request increase for supported quotas |
+| Utilization | Automatic Management                                   |
+| ----------- | ------------------------------------------------------ |
+| **80%**     | Notify                                                 |
+| **95%**     | Notify                                                 |
+| **95%+**    | Auto-request increase in Auto-Adjust mode if supported |
 
 There is an important mode difference:
 
@@ -524,6 +601,26 @@ Trusted Advisor
 
 ---
 
+# Service Catalog vs Proton
+
+This is one of the most useful distinctions in this section.
+
+```text
+Service Catalog
+→ Approved infrastructure products
+→ "What can users deploy?"
+
+Proton
+→ Standardized application deployment
+→ "How should applications be deployed?"
+
+Proton Components
+→ Supplemental application resources
+→ "What extra resources does this application need?"
+```
+
+---
+
 # Question Patterns
 
 > *"Non-technical teams must deploy infrastructure, but only pre-approved configurations, without granting them broad IAM permissions."*
@@ -537,6 +634,12 @@ vending machine
 → approved products
 → self-service deployment
 ```
+
+---
+
+> *"Standardized application infrastructure is defined, but developers need to add extra application-specific resources."*
+
+→ **AWS Proton Components**
 
 ---
 
@@ -599,6 +702,8 @@ Products live in portfolios and can be shared with users/accounts.
 | Self-service approved stacks, minimal IAM   | **Service Catalog**                                              |
 | Product / portfolio                         | **Service Catalog terms**                                        |
 | Product based on CloudFormation             | **Service Catalog**                                              |
+| Standardized application deployment         | **AWS Proton**                                                   |
+| Supplemental app-specific resources         | **Proton Components**                                            |
 | Idle / unused / unattached resources        | **Trusted Advisor — Cost**                                       |
 | Approaching quota warning                   | **Trusted Advisor — Service Limits**                             |
 | Full Trusted Advisor checks                 | **Higher support plan**                                          |
@@ -609,4 +714,3 @@ Products live in portfolios and can be shared with users/accounts.
 | 80% / 95% quota notifications               | **Service Quotas Automatic Management**                          |
 | Automatic quota increase requests           | **Service Quotas Automatic Management**                          |
 | Manually request quota increase             | **Service Quotas**                                               |
-
