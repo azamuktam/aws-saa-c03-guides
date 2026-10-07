@@ -154,6 +154,49 @@ Launch Template / AMI / User Data / Systems Manager
 
 ---
 
+# CloudWatch Container Insights
+
+**CloudWatch Container Insights = container-focused monitoring for EKS, ECS, and other container workloads.**
+
+It automatically collects useful **container, pod, node, and application metrics/logs** and sends them to CloudWatch for monitoring and dashboards.
+
+```text
+EKS / ECS
+   ↓
+CloudWatch Container Insights
+   ↓
+Metrics + Logs
+   ↓
+CloudWatch dashboards / alarms
+```
+
+### Exam pattern
+
+> **"EKS/ECS + application/container logs and metrics + centralized monitoring + least operational overhead."**
+
+→ **CloudWatch Container Insights**
+
+### Container Insights vs CloudWatch Agent
+
+```text
+CloudWatch Agent
+→ general-purpose agent
+→ EC2 / on-prem / host-level metrics and logs
+
+Container Insights
+→ container-focused monitoring
+→ EKS / ECS
+→ container / pod / node metrics + logs
+```
+
+### Exam shortcut
+
+> **Containerized workload → think Container Insights**
+
+> **EC2/on-prem OS metrics such as memory, swap, filesystem → think CloudWatch Agent**
+
+---
+
 # CloudWatch Enhanced Monitoring vs normal CloudWatch
 
 For **RDS**, distinguish normal CloudWatch monitoring from Enhanced Monitoring.
@@ -1583,6 +1626,7 @@ They can be used together when the question requires both.
 | EC2 filesystem disk usage           | **CloudWatch Agent**               |
 | EC2 process metrics                 | **CloudWatch Agent / procstat**    |
 | EC2 metrics every 1 minute          | **Detailed Monitoring**            |
+| EKS/ECS container monitoring        | **CloudWatch Container Insights**  |
 | RDS process-level CPU/memory        | **Enhanced Monitoring**            |
 | RDS query/database load             | **Performance Insights**           |
 | Detailed HTTP requests through ALB  | **ALB Access Logs**                |
@@ -1608,5 +1652,3 @@ They can be used together when the question requires both.
 | Automatically fix Config violations | **Config + remediation**           |
 | Prevent an action                   | **IAM / SCP**                      |
 | Trace request across services       | **X-Ray**                          |
-
----
