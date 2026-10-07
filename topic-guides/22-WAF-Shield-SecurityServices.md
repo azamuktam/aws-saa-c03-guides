@@ -4,7 +4,7 @@
 
 This section is mainly a **service-matching game**. Identify the service from the scenario:
 
-* **WAF** → Layer 7 HTTP filtering
+* **WAF(Web Application Firewall)** → Layer 7 HTTP filtering
 * **Shield** → DDoS protection
 * **Firewall Manager** → centralized security policies across AWS Organizations
 * **Network Firewall** → VPC-wide traffic inspection
