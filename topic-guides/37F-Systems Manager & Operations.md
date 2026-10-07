@@ -492,54 +492,6 @@ Amazon Managed Grafana
 | **Amazon Managed Service for Prometheus (AMP)**                                  | Managed Prometheus monitoring          | Prometheus / PromQL / Kubernetes       |
 
 ---
-
-# Systems Manager Decision Tree
-
-```text
-What does the administrator need to do?
-          │
-          ├── Access an instance interactively?
-          │       ↓
-          │   AWS Systems Manager Session Manager
-          │
-          ├── Run a command/script?
-          │       ↓
-          │   AWS Systems Manager Run Command
-          │
-          ├── Patch the operating system?
-          │       ↓
-          │   AWS Systems Manager Patch Manager
-          │
-          ├── Inspect / manage an EC2 fleet?
-          │       ↓
-          │   AWS Systems Manager Fleet Manager
-          │
-          └── Track / investigate operational issues?
-                  ↓
-              AWS Systems Manager OpsCenter
-```
-
----
-
-# AWS Health Decision Tree
-
-```text
-What kind of Health information is needed?
-          │
-          ├── General AWS service / Regional status?
-          │       ↓
-          │   AWS Health Dashboard – Service health
-          │
-          └── Event specific to my account/resources?
-                  ↓
-          AWS Health Dashboard – Your account health
-          (older term: Personal Health Dashboard)
-                  ↓
-              Amazon EventBridge
-```
-
----
-
 # Important SAA Traps
 
 ## Session Manager vs Run Command
