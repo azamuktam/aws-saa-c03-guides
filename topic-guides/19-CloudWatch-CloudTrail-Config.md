@@ -816,7 +816,7 @@ Store logs in S3 for long-term retention.
 
 → **CloudTrail Trail → S3**
 
-### Event History vs CloudTrail Lake
+### Event History vs 
 
 ```text
 CloudTrail Event History
@@ -886,25 +886,6 @@ Athena
 → requires the S3/log/table setup
 ```
 
-### CloudTrail Lake vs Security Hub
-
-```text
-CloudTrail Lake
-→ query CloudTrail events
-
-Security Hub
-→ aggregate and manage security findings
-```
-
-### CloudTrail Lake vs QuickSight
-
-```text
-CloudTrail Lake
-→ investigate/query events
-
-QuickSight
-→ dashboards / BI / visualization
-```
 
 ### Exam shortcut
 
@@ -915,14 +896,6 @@ QuickSight
 > **"CloudTrail logs are in S3 and need SQL analysis"**
 
 → **Athena**
-
-> **"Aggregate security findings"**
-
-→ **Security Hub**
-
-> **"Create a BI dashboard"**
-
-→ **QuickSight**
 
 **Important:** CloudTrail Lake uses **event data stores**. It is different from the 90-day CloudTrail Event history and different from a traditional CloudTrail trail that delivers logs to S3.
 
