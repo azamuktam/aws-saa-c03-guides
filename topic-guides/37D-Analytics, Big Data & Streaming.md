@@ -16,6 +16,7 @@ Match the requirement to the unique service keyword.
 | **RabbitMQ**                                       | **Amazon MQ**                                       |
 | **BI dashboards**                                  | **Amazon QuickSight**                               |
 | **Search / logs / OpenSearch dashboards**          | **Amazon OpenSearch Service**                       |
+| **Prometheus metrics dashboards**                  | **Amazon Managed Service for Prometheus + Grafana** |
 | **File-based video transcoding**                   | **AWS Elemental MediaConvert**                      |
 | **Legacy video transcoding**                       | **Amazon Elastic Transcoder**                       |
 
@@ -483,6 +484,7 @@ Use it when data is **loaded/indexed into OpenSearch** and you want to search it
 **Kibana = visualization UI for Elasticsearch**
 
 **OpenSearch Dashboards = visualization UI for OpenSearch**
+
 ```text
 Records / logs
       ↓
@@ -490,7 +492,15 @@ Amazon OpenSearch Service
       ↓
 Search / queries
       ↓
-Kibana / OpenSearch Dashboards
+OpenSearch Dashboards
+```
+
+For older Elasticsearch questions:
+
+```text
+Elasticsearch
+      ↓
+Kibana
 ```
 
 ### Signal
@@ -506,21 +516,54 @@ Athena
 OpenSearch
 → data is indexed/loaded into OpenSearch
 → search/query there
-→ visualize with Kibana / OpenSearch Dashboards
+→ visualize with OpenSearch Dashboards
 ```
 
-### OpenSearch vs QuickSight
+### OpenSearch vs Grafana vs QuickSight
 
-| Requirement                                             | Service                                         |
-| ------------------------------------------------------- | ----------------------------------------------- |
-| **Search logs / indexed data / operational dashboards** | **OpenSearch + Kibana / OpenSearch Dashboards** |
-| **Business BI / reports / dashboards**                  | **QuickSight**                                  |
+| Requirement                                             | Service                                |
+| ------------------------------------------------------- | -------------------------------------- |
+| **Search logs / indexed data / operational dashboards** | **OpenSearch + OpenSearch Dashboards** |
+| **Prometheus / metrics dashboards**                     | **Prometheus / AMP + Grafana**         |
+| **Business BI / reports / dashboards**                  | **QuickSight**                         |
 
 ### Example
 
 > "Load application logs into an OpenSearch cluster, run searches, and visualize the results."
 
-→ **Amazon OpenSearch Service + Kibana / OpenSearch Dashboards**
+→ **Amazon OpenSearch Service + OpenSearch Dashboards**
+
+---
+
+# Grafana
+
+**Grafana = dashboard / visualization tool mainly used for metrics.**
+
+Common pattern:
+
+```text
+Prometheus / AMP
+      ↓
+Grafana
+      ↓
+Metrics dashboards
+```
+
+### Signal
+
+> **Prometheus / PromQL + dashboards → Grafana**
+
+### Simple distinction
+
+```text
+OpenSearch
+→ logs / search
+→ OpenSearch Dashboards
+
+Prometheus / AMP
+→ metrics
+→ Grafana
+```
 
 ---
 
@@ -614,17 +657,18 @@ Example:
 
 # Analytics Family
 
-| Job                                   | Service                                     |
-| ------------------------------------- | ------------------------------------------- |
-| Big-data processing                   | **Amazon EMR**                              |
-| SQL on S3                             | **Amazon Athena**                           |
-| Query S3 from Redshift                | **Amazon Redshift Spectrum**                |
-| Data warehouse / analytical SQL       | **Amazon Redshift**                         |
-| Real-time Flink processing            | **Amazon Managed Service for Apache Flink** |
-| Kafka                                 | **Amazon MSK**                              |
-| BI dashboards                         | **Amazon QuickSight**                       |
-| Search / logs / operational analytics | **Amazon OpenSearch Service**               |
-| Time-series data                      | **Amazon Timestream**                       |
+| Job                                   | Service                                             |
+| ------------------------------------- | --------------------------------------------------- |
+| Big-data processing                   | **Amazon EMR**                                      |
+| SQL on S3                             | **Amazon Athena**                                   |
+| Query S3 from Redshift                | **Amazon Redshift Spectrum**                        |
+| Data warehouse / analytical SQL       | **Amazon Redshift**                                 |
+| Real-time Flink processing            | **Amazon Managed Service for Apache Flink**         |
+| Kafka                                 | **Amazon MSK**                                      |
+| BI dashboards                         | **Amazon QuickSight**                               |
+| Search / logs / operational analytics | **Amazon OpenSearch Service**                       |
+| Prometheus metrics dashboards         | **Amazon Managed Service for Prometheus + Grafana** |
+| Time-series data                      | **Amazon Timestream**                               |
 
 Streaming pattern:
 
@@ -646,6 +690,16 @@ Amazon Redshift
 BI / SQL analytics
 ```
 
+Metrics pattern:
+
+```text
+Prometheus / AMP
+      ↓
+Grafana
+      ↓
+Metrics dashboards
+```
+
 ---
 
 # Service Comparison
@@ -661,6 +715,8 @@ BI / SQL analytics
 | **Amazon MSK (Managed Streaming for Apache Kafka)** | Managed Apache Kafka                       | Kafka                              |
 | **Amazon QuickSight**                               | Business intelligence dashboards           | BI / dashboards                    |
 | **Amazon OpenSearch Service**                       | Search and operational analytics           | Logs / search / OpenSearch         |
+| **OpenSearch Dashboards**                           | OpenSearch visualization                   | OpenSearch dashboards              |
+| **Grafana**                                         | Metrics visualization / dashboards         | Prometheus / metrics               |
 | **Amazon Timestream**                               | Time-series database                       | IoT / metrics / telemetry          |
 | **AWS Elemental MediaConvert**                      | File-based video transcoding               | Video transcoding                  |
 | **Amazon Elastic Transcoder**                       | Legacy video/audio transcoding             | Old/legacy service                 |
@@ -741,11 +797,25 @@ Search / log analysis on data indexed in OpenSearch
 
 ---
 
+## OpenSearch vs Grafana
+
+```text
+Logs / search / OpenSearch dashboards
+→ OpenSearch + OpenSearch Dashboards
+```
+
+```text
+Prometheus / metrics / dashboards
+→ AMP + Grafana
+```
+
+---
+
 ## OpenSearch vs QuickSight
 
 ```text
 Logs / search / operational dashboards
-→ OpenSearch + Kibana / OpenSearch Dashboards
+→ OpenSearch + OpenSearch Dashboards
 ```
 
 ```text
@@ -861,11 +931,15 @@ Redshift
 
 > **"Application logs must be searched and visualized from an OpenSearch cluster."**
 
-→ **Amazon OpenSearch Service + Kibana / OpenSearch Dashboards**
+→ **Amazon OpenSearch Service + OpenSearch Dashboards**
 
 > **"The company wants to load records into an OpenSearch cluster, run searches, and visualize the results."**
 
-→ **Amazon OpenSearch Service + Kibana / OpenSearch Dashboards**
+→ **Amazon OpenSearch Service + OpenSearch Dashboards**
+
+> **"A company uses Prometheus metrics and needs dashboards for monitoring."**
+
+→ **Prometheus / AMP + Grafana**
 
 > **"File-based video transcoding for on-demand content."**
 
@@ -901,6 +975,9 @@ Redshift
 | Kafka                                    | **Amazon MSK (Managed Streaming for Apache Kafka)** |
 | BI dashboards                            | **Amazon QuickSight**                               |
 | Search / logs / operational dashboards   | **Amazon OpenSearch Service**                       |
+| OpenSearch visualization                 | **OpenSearch Dashboards**                           |
+| Prometheus metrics dashboards            | **Grafana**                                         |
+| Prometheus on AWS                        | **Amazon Managed Service for Prometheus (AMP)**     |
 | Time-series data / IoT / metrics         | **Amazon Timestream**                               |
 | File-based video transcoding             | **AWS Elemental MediaConvert**                      |
 | Live video encoding                      | **AWS Elemental MediaLive**                         |
