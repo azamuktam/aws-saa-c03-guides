@@ -132,10 +132,10 @@ HPC / ML
 
 ## Lustre deployment types
 
-| Type           | Use                             | Data protection           |
-| -------------- | ------------------------------- | ------------------------- |
-| **Scratch**    | Temporary/short-term processing | No replication            |
-| **Persistent** | Longer-term workloads           | Data replicated within AZ |
+| Type           | Use                             | Data protection |
+| -------------- | ------------------------------- | --------------- |
+| **Scratch**    | Temporary/short-term processing | No replication  |
+| **Persistent** | Longer-term workloads           | Data replicated |
 
 ### Scratch
 
@@ -143,22 +143,37 @@ Use for:
 
 * Temporary data
 * Short-term jobs
-* Maximum performance
-* Lower cost
+* Data that can be regenerated
+* Lower-cost temporary processing
 
-Data can be lost if the scratch file system fails.
+```text
+Scratch
+→ temporary
+→ no data replication
+→ data is not intended for durable storage
+```
 
 ### Persistent
 
 Use for:
 
 * Longer-running workloads
-* More data protection
-* Non-temporary processing
+* Important data
+* Higher availability/data protection
+* Sustained workloads
 
-> **Temporary → Scratch**
+```text
+Persistent
+→ longer-term
+→ data replicated
+→ better choice when data must remain available
+```
 
-> **Longer-term → Persistent**
+### Exam shortcut
+
+> **Temporary / can be regenerated → Scratch**
+
+> **Long-term / highly available / important data → Persistent**
 
 ---
 
@@ -316,6 +331,12 @@ S3 data + high-performance processing
 Lustre protocol
 → FSx for Lustre
 
+Temporary Lustre processing
+→ Lustre Scratch
+
+Long-term / highly available Lustre storage
+→ Lustre Persistent
+
 NetApp / SnapMirror
 → FSx for NetApp ONTAP
 
@@ -370,6 +391,27 @@ Normal Linux shared storage
 
 → **FSx for Lustre Persistent**
 
+> **"An animation studio needs a highly available parallel file system for important video assets. A fleet of EC2 instances will access it concurrently and the workload requires sustained throughput."**
+
+→ **FSx for Lustre with Persistent file system**
+
+### Why?
+
+```text
+HPC / parallel file system
+→ Lustre
+
+Highly available / important assets
+→ Persistent
+
+Temporary / regeneratable data
+→ Scratch
+```
+
+> **"The rendering workload only needs temporary scratch space for intermediate files that can be regenerated."**
+
+→ **FSx for Lustre Scratch**
+
 > **"Migrate on-premises NetApp storage to AWS."**
 
 → **FSx for NetApp ONTAP**
@@ -410,7 +452,9 @@ Normal Linux shared storage
 | Windows + SMB                               | **FSx for Windows**                        |
 | S3 + high-performance processing            | **FSx for Lustre**                         |
 | Temporary Lustre workload                   | **Lustre Scratch**                         |
-| Longer-term Lustre workload                 | **Lustre Persistent**                      |
+| Scratch = temporary/regeneratable data      | **No replication**                         |
+| Long-term Lustre workload                   | **Lustre Persistent**                      |
+| Persistent = important/HA data              | **Data replicated**                        |
 | NetApp / SnapMirror                         | **FSx for NetApp ONTAP**                   |
 | NetApp snapshots                            | **FSx for NetApp ONTAP**                   |
 | NFS + SMB + iSCSI                           | **FSx for NetApp ONTAP**                   |
