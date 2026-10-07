@@ -703,7 +703,7 @@ The distributed Aurora storage **does not mean another DB instance automatically
 
 # Aurora Serverless v2
 
-Automatically adjusts database capacity with workload.
+**Aurora Serverless v2** automatically adjusts the **compute capacity** of Aurora Serverless writer and reader instances based on workload.
 
 Good for:
 
@@ -712,7 +712,104 @@ Good for:
 * Intermittent workloads
 * Workloads that do not need fixed capacity
 
+```text
+Low workload
+→ lower ACU capacity
+
+Traffic spike
+→ higher ACU capacity
+
+Traffic drops
+→ lower ACU capacity
+```
+
+**ACU** = **Aurora Capacity Unit**.
+
+Aurora Serverless v2 scales the capacity of an existing serverless writer or reader within the configured minimum/maximum ACU range. It is designed for variable and unpredictable workloads such as e-commerce sales events.
+
 > Unpredictable/intermittent Aurora workload → **Aurora Serverless v2**
+
+---
+
+## Aurora Serverless v2 vs Aurora Read Replica Auto Scaling
+
+These are easy to confuse.
+
+### Aurora Serverless v2
+
+Scales the **compute capacity of a writer or reader**:
+
+```text
+One Aurora Serverless writer
+
+2 ACUs
+  ↓
+4 ACUs
+  ↓
+8 ACUs
+  ↓
+16 ACUs
+```
+
+Think:
+
+> **"The database instance itself needs more CPU/memory capacity."**
+
+### Aurora Read Replica Auto Scaling
+
+Adds or removes **reader instances**:
+
+```text
+Aurora cluster
+
+Writer
+  │
+  ├── Reader 1
+  ├── Reader 2
+  └── Reader 3
+
+Read traffic increases
+        ↓
+Auto Scaling
+        ↓
+Add Reader 4
+```
+
+Think:
+
+> **"There are too many read requests; add more readers."**
+
+Aurora can automatically add and remove Aurora Replicas based on configured performance metrics.
+
+### The simplest distinction
+
+```text
+Aurora Serverless v2
+→ Scale UP/DOWN compute capacity
+→ ACUs
+→ unpredictable overall workload
+
+Aurora Replica Auto Scaling
+→ Scale OUT/IN reader instances
+→ number of readers
+→ read-heavy workload
+```
+
+### Important
+
+They are **not mutually exclusive**.
+
+An Aurora Serverless cluster can also have readers, and those readers can provide horizontal read scaling.
+
+### Exam shortcut
+
+> **Unpredictable database compute demand → Aurora Serverless v2**
+
+> **Read-heavy workload → Aurora Read Replicas + Auto Scaling**
+
+> **Writer itself needs more capacity → Aurora Serverless v2**
+
+> **Need more reader capacity → Read Replicas / Reader Auto Scaling**
 
 ---
 
@@ -976,6 +1073,21 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > An Aurora database has unpredictable traffic with long periods of low usage and occasional spikes, and the company does not want to manage fixed database capacity.
 > → **Aurora Serverless v2**
 
+> A company has an unpredictable workload and the **database writer itself** may suddenly need more CPU and memory capacity.
+> → **Aurora Serverless v2**
+
+> A company has a **read-heavy workload** and wants the number of Aurora reader instances to increase or decrease automatically based on load.
+> → **Aurora Read Replicas + Auto Scaling**
+
+> A company says "Aurora Auto Scaling" but the requirement is to automatically give the existing writer more CPU/memory capacity rather than add readers.
+> → **Aurora Serverless v2**
+
+> A company wants to scale the **number of read replicas**, not the compute capacity of one existing DB instance.
+> → **Aurora Read Replica Auto Scaling**
+
+> A company has an Aurora Serverless workload and also needs more read capacity.
+> → **Aurora Serverless v2 + Aurora readers can be used together**
+
 > A company runs Aurora in one Region and needs cross-Region disaster recovery, very low replication lag, and read access from another Region.
 > → **Aurora Global Database**
 
@@ -1049,6 +1161,13 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 | Aurora failure + Replica exists           | **Promote Replica**                                                         |
 | Aurora failure + no Replica               | **Recreate primary instance**                                               |
 | Spiky/unpredictable Aurora workload       | **Aurora Serverless v2**                                                    |
+| Writer needs more CPU/memory              | **Aurora Serverless v2**                                                    |
+| Scale Aurora compute with ACUs            | **Aurora Serverless v2**                                                    |
+| Read-heavy workload                       | **Aurora Read Replicas**                                                    |
+| Automatically add/remove readers          | **Aurora Replica Auto Scaling**                                             |
+| Scale UP/DOWN existing DB compute         | **Aurora Serverless v2**                                                    |
+| Scale OUT/IN number of readers            | **Aurora Read Replica Auto Scaling**                                        |
+| Serverless + additional read capacity     | **Serverless v2 + Aurora readers**                                          |
 | Aurora cross-Region DR                    | **Aurora Global Database**                                                  |
 | Quick Aurora copy                         | **Aurora Cloning**                                                          |
 | Rewind Aurora MySQL                       | **Aurora Backtrack**                                                        |
