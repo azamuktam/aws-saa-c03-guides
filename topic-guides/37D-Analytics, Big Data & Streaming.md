@@ -13,6 +13,7 @@ Match the requirement to the unique service keyword.
 | **Apache Flink / real-time stream processing**     | **Amazon Managed Service for Apache Flink**         |
 | **Interactive Flink streaming analysis**           | **Flink Studio**                                    |
 | **Kafka**                                          | **Amazon MSK (Managed Streaming for Apache Kafka)** |
+| **RabbitMQ**                                       | **Amazon MQ** |
 | **BI dashboards**                                  | **Amazon QuickSight**                               |
 | **File-based video transcoding**                   | **AWS Elemental MediaConvert**                      |
 | **Legacy video transcoding**                       | **Amazon Elastic Transcoder**                       |
