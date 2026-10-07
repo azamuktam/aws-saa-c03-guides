@@ -276,7 +276,7 @@ No need to build/manage an SFTP server on EC2.
 > **"Entire dataset must remain local for low-latency access, but backups should go to AWS."**
 > → **Volume Gateway – Stored**
 
-> **"Migrate 50 TB from an on-premises NAS to S3."**
+> **"Copy 50 TB from on-premises NAS to S3 while preserving metadata."**
 > → **DataSync**
 
 > **"Copy files every night from an on-premises SMB server to EFS."**
