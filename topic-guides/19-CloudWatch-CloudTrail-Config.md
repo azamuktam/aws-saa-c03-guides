@@ -158,14 +158,14 @@ Launch Template / AMI / User Data / Systems Manager
 
 **CloudWatch Container Insights = container-focused monitoring for EKS, ECS, and other container workloads.**
 
-It automatically collects useful **container, pod, node, and application metrics/logs** and sends them to CloudWatch for monitoring and dashboards.
+It provides container-focused metrics and logs in CloudWatch for monitoring and dashboards.
 
 ```text
 EKS / ECS
    ↓
 CloudWatch Container Insights
    ↓
-Metrics + Logs
+Container / pod / node metrics + logs
    ↓
 CloudWatch dashboards / alarms
 ```
@@ -194,6 +194,64 @@ Container Insights
 > **Containerized workload → think Container Insights**
 
 > **EC2/on-prem OS metrics such as memory, swap, filesystem → think CloudWatch Agent**
+
+---
+
+# Application Insights vs Container Insights vs ALB Access Logs
+
+These three are easy to confuse:
+
+| Tool                                | Main purpose                                                                        | Think                           |
+| ----------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------- |
+| **CloudWatch Application Insights** | Monitor application components/resources and help troubleshoot application problems | **Application troubleshooting** |
+| **CloudWatch Container Insights**   | Monitor containerized workloads such as EKS/ECS                                     | **Containers / pods / nodes**   |
+| **ALB Access Logs**                 | Record detailed HTTP/HTTPS requests handled by an ALB                               | **Individual requests**         |
+
+```text
+Application Insights
+→ "What is happening with my application and its supporting resources?"
+
+Container Insights
+→ "What is happening with my containers/pods/nodes?"
+
+ALB Access Logs
+→ "What HTTP requests passed through the load balancer?"
+```
+
+### Exam shortcut
+
+```text
+EKS / ECS + container metrics/logs
+→ Container Insights
+
+Application components + troubleshooting
+→ Application Insights
+
+Client IP / request path / HTTP status / request details
+→ ALB Access Logs
+```
+
+They can be used together:
+
+```text
+ALB
+  ↓
+Access Logs
+  ↓
+S3
+
+Application
+  ↓
+Application Insights
+  ↓
+Monitoring / troubleshooting
+
+EKS / ECS
+  ↓
+Container Insights
+  ↓
+Container / pod / node monitoring
+```
 
 ---
 
@@ -562,17 +620,20 @@ Useful for:
 
 For containerized applications, it can be used for application monitoring and troubleshooting.
 
-**Application Insights does not replace ALB access logs.**
+**Application Insights does not replace ALB access logs or Container Insights.**
 
 ```text
 ALB Access Logs
 = "What requests passed through the ALB?"
 
+Container Insights
+= "What is happening with the containers/pods/nodes?"
+
 Application Insights
 = "What is happening with the application and its supporting resources?"
 ```
 
-A question can require both.
+A question can require more than one of these.
 
 ### Example architecture
 
@@ -582,18 +643,17 @@ Client
 ALB
    ├── ALB Access Logs → S3
    ↓
-Application / ECS workload
-   ↓
-CloudWatch Application Insights
-   ├── Monitoring
-   ├── Logs
-   ├── Metrics
-   └── Troubleshooting
+Application / EKS / ECS workload
+   ├── Container Insights
+   │      └── container / pod / node monitoring
+   │
+   └── Application Insights
+          └── application/resource monitoring
 ```
 
 ### Exam pattern
 
-> "Capture detailed ALB HTTP requests for traffic analysis and also simplify troubleshooting of the containerized application."
+> "Capture detailed ALB HTTP requests for traffic analysis and also simplify troubleshooting of the application."
 
 → **ALB Access Logs + CloudWatch Application Insights**
 
@@ -668,6 +728,18 @@ Changes **frequency**, not OS metric type.
 > "Monitor CPU and memory usage for a specific process running on EC2."
 
 → **CloudWatch Agent / procstat**
+
+### Container monitoring
+
+> "EKS/ECS needs centralized container metrics and logs with a dashboard and minimal operational overhead."
+
+→ **CloudWatch Container Insights**
+
+### Application troubleshooting
+
+> "Automatically monitor application components/resources and help troubleshoot application problems."
+
+→ **CloudWatch Application Insights**
 
 ### ALB request details
 
@@ -1115,6 +1187,7 @@ X-Ray      = REQUEST TRACE
 | Who changed the ALB configuration/API        | **CloudTrail**                      |
 | Which application hop is slow                | **X-Ray**                           |
 | Application/resource troubleshooting         | **CloudWatch Application Insights** |
+| Container/pod/node monitoring                | **CloudWatch Container Insights**   |
 | Target/load balancer health                  | **ELB Health Checks**               |
 
 ```text
@@ -1426,6 +1499,45 @@ The ALB may show overall latency, but **X-Ray traces the request across applicat
 
 → **CloudWatch Application Insights**
 
+## 33. EKS container monitoring
+
+> "A company has a public-facing application running on EKS. It needs centralized application/container logs and metrics, plus a dashboard, with the least operational overhead."
+
+→ **CloudWatch Container Insights**
+
+```text
+EKS
+ ↓
+Container Insights
+ ↓
+Container / pod / node metrics + logs
+ ↓
+CloudWatch dashboard
+```
+
+## 34. Application Insights vs Container Insights
+
+> "The company wants to monitor and troubleshoot application components and their supporting AWS resources."
+
+→ **CloudWatch Application Insights**
+
+> "The company wants container/pod/node monitoring for an EKS or ECS workload."
+
+→ **CloudWatch Container Insights**
+
+### Easy exam distinction
+
+```text
+Application problem
+→ Application Insights
+
+Container problem
+→ Container Insights
+
+Individual ALB HTTP request
+→ ALB Access Logs
+```
+
 ---
 
 # Very Common Monitoring Traps
@@ -1606,49 +1718,59 @@ Application monitoring / troubleshooting
 → CloudWatch Application Insights
 ```
 
+## Trap 16 — Application Insights vs Container Insights
+
+```text
+Application components/resources
+→ Application Insights
+
+Containers / pods / nodes
+→ Container Insights
+```
+
 They can be used together when the question requires both.
 
 ---
 
 # Pocket Card
 
-| Keyword                             | Answer                             |
-| ----------------------------------- | ---------------------------------- |
-| Performance / health / metrics      | **CloudWatch**                     |
-| Logs                                | **CloudWatch Logs**                |
-| Alarm on a metric                   | **CloudWatch Alarm**               |
-| Count log messages → metric         | **Metric Filter**                  |
-| Query logs                          | **Logs Insights**                  |
-| Real-time log processing            | **Subscription Filter**            |
-| Reduce alert noise                  | **Composite Alarm**                |
-| EC2 memory                          | **CloudWatch Agent**               |
-| EC2 swap                            | **CloudWatch Agent**               |
-| EC2 filesystem disk usage           | **CloudWatch Agent**               |
-| EC2 process metrics                 | **CloudWatch Agent / procstat**    |
-| EC2 metrics every 1 minute          | **Detailed Monitoring**            |
-| EKS/ECS container monitoring        | **CloudWatch Container Insights**  |
-| RDS process-level CPU/memory        | **Enhanced Monitoring**            |
-| RDS query/database load             | **Performance Insights**           |
-| Detailed HTTP requests through ALB  | **ALB Access Logs**                |
-| ALB client IP                       | **ALB Access Logs**                |
-| ALB request/target/response latency | **ALB Access Logs**                |
-| ALB aggregate request count         | **CloudWatch Metrics**             |
-| ALB health                          | **ELB Health Checks**              |
-| ALB/application troubleshooting     | **Application Insights**           |
-| Who did what / API audit            | **CloudTrail**                     |
-| Long-term API logs                  | **CloudTrail Trail → S3**          |
-| S3 object-level "who"               | **CloudTrail Data Events**         |
-| Unusual API activity                | **CloudTrail Insights**            |
-| Prove logs weren't modified         | **Log File Integrity Validation**  |
-| CloudTrail logs encrypted           | **S3 SSE-S3 by default**           |
-| New S3 objects encrypted            | **SSE-S3 by default**              |
-| Customer-controlled S3 key          | **SSE-KMS**                        |
-| Existing old unencrypted data       | **Not automatically re-encrypted** |
-| Configuration history               | **AWS Config**                     |
-| Compliance checking                 | **AWS Config Rules**               |
-| IAM access key >90 days             | **Config `access-keys-rotated`**   |
-| Configure IAM access-key age        | **`maxAccessKeyAge`**              |
-| Auto deactivate/delete old IAM key  | **Config → EventBridge → Lambda**  |
-| Automatically fix Config violations | **Config + remediation**           |
-| Prevent an action                   | **IAM / SCP**                      |
-| Trace request across services       | **X-Ray**                          |
+| Keyword                              | Answer                              |
+| ------------------------------------ | ----------------------------------- |
+| Performance / health / metrics       | **CloudWatch**                      |
+| Logs                                 | **CloudWatch Logs**                 |
+| Alarm on a metric                    | **CloudWatch Alarm**                |
+| Count log messages → metric          | **Metric Filter**                   |
+| Query logs                           | **Logs Insights**                   |
+| Real-time log processing             | **Subscription Filter**             |
+| Reduce alert noise                   | **Composite Alarm**                 |
+| EC2 memory                           | **CloudWatch Agent**                |
+| EC2 swap                             | **CloudWatch Agent**                |
+| EC2 filesystem disk usage            | **CloudWatch Agent**                |
+| EC2 process metrics                  | **CloudWatch Agent / procstat**     |
+| EC2 metrics every 1 minute           | **Detailed Monitoring**             |
+| EKS/ECS container monitoring         | **CloudWatch Container Insights**   |
+| Application/resource troubleshooting | **CloudWatch Application Insights** |
+| RDS process-level CPU/memory         | **Enhanced Monitoring**             |
+| RDS query/database load              | **Performance Insights**            |
+| Detailed HTTP requests through ALB   | **ALB Access Logs**                 |
+| ALB client IP                        | **ALB Access Logs**                 |
+| ALB request/target/response latency  | **ALB Access Logs**                 |
+| ALB aggregate request count          | **CloudWatch Metrics**              |
+| ALB health                           | **ELB Health Checks**               |
+| Who did what / API audit             | **CloudTrail**                      |
+| Long-term API logs                   | **CloudTrail Trail → S3**           |
+| S3 object-level "who"                | **CloudTrail Data Events**          |
+| Unusual API activity                 | **CloudTrail Insights**             |
+| Prove logs weren't modified          | **Log File Integrity Validation**   |
+| CloudTrail logs encrypted            | **S3 SSE-S3 by default**            |
+| New S3 objects encrypted             | **SSE-S3 by default**               |
+| Customer-controlled S3 key           | **SSE-KMS**                         |
+| Existing old unencrypted data        | **Not automatically re-encrypted**  |
+| Configuration history                | **AWS Config**                      |
+| Compliance checking                  | **AWS Config Rules**                |
+| IAM access key >90 days              | **Config `access-keys-rotated`**    |
+| Configure IAM access-key age         | **`maxAccessKeyAge`**               |
+| Auto deactivate/delete old IAM key   | **Config → EventBridge → Lambda**   |
+| Automatically fix Config violations  | **Config + remediation**            |
+| Prevent an action                    | **IAM / SCP**                       |
+| Trace request across services        | **X-Ray**                           |
