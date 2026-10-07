@@ -2,18 +2,22 @@
 
 ## The idea
 
-These AWS services commonly appear in SAA questions for **migration, messaging, database migration, and disaster recovery**.
+These AWS services commonly appear in SAA questions for **migration, messaging, database migration, backups, and disaster recovery**.
 
 Best approach:
 
 > **Read the requirement → identify the unique keyword → choose the service.**
 
 ```text
-Existing RabbitMQ application
+Existing RabbitMQ / ActiveMQ application
 → Amazon MQ
 
-Lift-and-shift servers to AWS
-→ AWS Application Migration Service (MGN)
+Lift-and-shift / rehost servers to AWS
+→ AWS Transform MGN
+  (formerly AWS Application Migration Service)
+
+Backup and restore AWS resources
+→ AWS Backup
 
 Disaster recovery for servers
 → AWS Elastic Disaster Recovery (DRS)
@@ -24,8 +28,12 @@ Migrate database data
 Different database engines
 → AWS Schema Conversion Tool (SCT) + DMS
 
-Customer engagement / marketing SMS
+Customer engagement / targeted messaging
 → Amazon Pinpoint
+  (legacy SAA knowledge; support ends Oct 30, 2026)
+
+Direct SMS / voice / push messaging
+→ AWS End User Messaging
 ```
 
 ---
@@ -49,11 +57,12 @@ Use it when an existing application already depends on traditional messaging pro
 * AMQP
 * Existing message broker
 * Minimal application changes
+* Existing broker-based application
 
 ### Important distinction
 
 ```text
-Existing broker-based application
+Existing traditional broker
 → Amazon MQ
 
 New AWS-native application
@@ -74,104 +83,112 @@ New AWS-native application
 
 # Amazon Pinpoint
 
-**Amazon Pinpoint = customer engagement and targeted messaging service.**
+**Amazon Pinpoint = customer engagement and targeted multichannel messaging service.**
 
-Use it for:
+Historically, Pinpoint was used for:
 
-* SMS campaigns
 * Email campaigns
+* SMS campaigns
 * Push notifications
 * Customer journeys
+* Audience segmentation
 * Targeted marketing
 * Engagement/event tracking
 
-### Common keywords
+### Important current-status note
+
+AWS has announced that **Amazon Pinpoint will end support on October 30, 2026**. After that date, the Pinpoint console and Pinpoint resources such as campaigns, journeys, segments, and analytics will no longer be available.
+
+However, AWS has moved messaging capabilities such as **SMS, voice, and mobile push** into **AWS End User Messaging**.
+
+### For SAA exam questions
+
+Older practice questions may still use:
 
 ```text
-Marketing campaign
-+ targeted customers
-+ SMS / email / push
+Targeted customer engagement
++ campaigns / journeys / segmentation
 → Amazon Pinpoint
 ```
 
-Pinpoint can send engagement events to services such as **Amazon Kinesis** for near-real-time processing and analysis.
+So **know Pinpoint for legacy SAA questions**, but also recognize the current AWS service direction.
+
+### Current AWS messaging model
+
+```text
+SMS / MMS / voice
+→ AWS End User Messaging SMS
+
+Push notifications
+→ AWS End User Messaging Push
+
+OTP / verification
+→ AWS End User Messaging Notify
+```
 
 ### Important distinction
 
 ```text
-Customer engagement / marketing
+Customer engagement / historical campaign platform
 → Amazon Pinpoint
 
-General pub/sub notifications
-→ Amazon SNS
-
-Queues
-→ Amazon SQS
-
-Event routing
-→ Amazon EventBridge
+Direct messaging APIs
+→ AWS End User Messaging
 ```
 
 ### Memory
 
-> **Marketing campaign + customer engagement → Amazon Pinpoint**
+> **Legacy targeted customer engagement → Amazon Pinpoint**
+> **Current direct messaging → AWS End User Messaging**
 
 ---
 
-# AWS Application Migration Service (MGN)
+# AWS Transform MGN
 
-**AWS Application Migration Service (MGN) = rehost / lift-and-shift servers to AWS.**
+**AWS Transform MGN = rehost / lift-and-shift servers to AWS.**
 
-MGN continuously replicates the source server's **block-level data** to AWS.
+> **Former name: AWS Application Migration Service**
+
+AWS renamed Application Migration Service to **AWS Transform MGN** in June 2026. The underlying MGN replication capabilities remain the same.
+
+MGN continuously replicates the source server's **block-level data** to AWS and can migrate physical, virtual, and cloud servers with minimal downtime.
 
 ```text
 On-premises server
         ↓
-AWS Replication Agent
+MGN replication
         ↓
-Continuous replication
+Continuous block-level replication
         ↓
 AWS staging area
         ↓
+Test / cutover
+        ↓
 EC2
 ```
-
-The goal is to move the server to AWS with **minimal changes**.
 
 ## Use it when
 
 > "Move existing physical or virtual servers to AWS without redesigning the application."
 
-→ **AWS Application Migration Service (MGN)**
+→ **AWS Transform MGN**
 
-MGN provides continuous data protection with **recovery points near seconds** and can achieve **recovery in minutes** in appropriate configurations.
-
-## Important terminology
-
-MGN is associated with:
+### Common keywords
 
 * Rehost
 * Lift-and-shift
-* Minimal application changes
 * Existing physical servers
 * Existing virtual servers
+* Move applications to AWS
+* Minimal application changes
+* Minimal downtime
 * Continuous block-level replication
-
-### Remember
-
-> **Rehost / lift-and-shift → AWS Application Migration Service (MGN)**
 
 ### Example
 
-```text
-Existing on-premises application
-        ↓
-No major redesign
-        ↓
-Move server to AWS
-        ↓
-AWS Application Migration Service (MGN)
-```
+> "A company needs to rehost physical servers to AWS while minimizing business interruption."
+
+→ **AWS Transform MGN**
 
 ### Memory
 
@@ -183,7 +200,7 @@ AWS Application Migration Service (MGN)
 
 **AWS Elastic Disaster Recovery (DRS) = disaster recovery for servers.**
 
-It continuously replicates workloads into AWS, but the recovery environment is mainly used **when a disaster happens**.
+It continuously replicates workloads into AWS so they can be recovered during a disaster or business continuity event.
 
 ```text
 Production server
@@ -199,17 +216,17 @@ Launch recovery instances
 
 ## Use it when
 
-> "We need a cost-effective disaster recovery solution for physical, virtual, or cloud servers."
+> "We need disaster recovery for physical, virtual, or cloud servers."
 
 → **AWS Elastic Disaster Recovery (DRS)**
 
-DRS is designed for **disaster recovery**, rather than simply being a migration mechanism.
+DRS focuses on **recovery**, not simply completing a migration project. It supports recovery instances, drill instances, recovery plans, and failback.
 
 ### Memory
 
 ```text
 DRS
-= disaster recovery
+= Disaster Recovery
 = recover servers in AWS
 ```
 
@@ -217,23 +234,13 @@ DRS
 
 # MGN vs DRS
 
-Both services use continuous replication, so SAA questions can make them look similar.
+Both services use continuous replication, so SAA questions can make them look very similar.
 
-The key difference is the **goal**:
-
-```text
-AWS Application Migration Service (MGN)
-= migrate to AWS
-
-AWS Elastic Disaster Recovery (DRS)
-= recover in AWS when disaster happens
-```
-
-### Mental model
+The key difference is the **objective**:
 
 ```text
 Need to MOVE the workload
-→ AWS Application Migration Service (MGN)
+→ AWS Transform MGN
 
 Need to RECOVER the workload after a disaster
 → AWS Elastic Disaster Recovery (DRS)
@@ -241,14 +248,12 @@ Need to RECOVER the workload after a disaster
 
 ### Comparison
 
-| Service                                     | Main purpose                    | Typical signal                   |
-| ------------------------------------------- | ------------------------------- | -------------------------------- |
-| **AWS Application Migration Service (MGN)** | Rehost / migrate servers to AWS | Lift-and-shift / minimal changes |
-| **AWS Elastic Disaster Recovery (DRS)**     | Disaster recovery for servers   | Recover after a disaster         |
+| Service                                 | Main purpose                    | Typical signal                               |
+| --------------------------------------- | ------------------------------- | -------------------------------------------- |
+| **AWS Transform MGN**                   | Rehost / migrate servers to AWS | Lift-and-shift / migration / minimal changes |
+| **AWS Elastic Disaster Recovery (DRS)** | Disaster recovery for servers   | Disaster / business continuity / recovery    |
 
-### Important distinction
-
-> **MGN and DRS both replicate servers, but the intended outcome is different.**
+### Mental model
 
 ```text
 Migration project
@@ -258,6 +263,127 @@ Business continuity / disaster recovery
 → DRS
 ```
 
+### Important exam trap
+
+Do **not** choose based only on:
+
+> "continuous replication"
+
+Both can replicate servers.
+
+Instead ask:
+
+> **Why are they replicating the servers?**
+
+```text
+To migrate them
+→ MGN
+
+To recover them
+→ DRS
+```
+
+---
+
+# AWS Backup
+
+**AWS Backup = centralized, automated backup and restore.**
+
+It is used to protect supported AWS resources and manage backup policies, schedules, retention, and recovery from a central service. AWS Backup can restore an entire EC2 instance from a recovery point, including its root and data volumes plus supported configuration settings.
+
+## Use it when
+
+> "Create backups and restore resources when needed."
+
+→ **AWS Backup**
+
+### Common keywords
+
+* Backup
+* Restore
+* Recovery point
+* Backup plan
+* Retention
+* Scheduled backups
+* Centralized backup management
+* Data protection
+* Compliance
+
+### Example
+
+> "The company needs daily backups of its AWS resources and wants centralized backup policies and retention."
+
+→ **AWS Backup**
+
+---
+
+# AWS Backup vs MGN vs DRS
+
+This is an important SAA distinction.
+
+```text
+AWS Backup
+= protect data/resources
+
+AWS Transform MGN
+= migrate servers
+
+AWS DRS
+= recover servers after disaster
+```
+
+### Think about the action
+
+```text
+"Save a copy"
+→ AWS Backup
+
+"Move this server to AWS"
+→ MGN
+
+"Recover this server when disaster happens"
+→ DRS
+```
+
+### Comparison
+
+|                                 | AWS Backup           | AWS Transform MGN        | AWS DRS                  |
+| ------------------------------- | -------------------- | ------------------------ | ------------------------ |
+| Main purpose                    | Backup / restore     | Migration / rehost       | Disaster recovery        |
+| Think                           | **Protect**          | **Move**                 | **Recover**              |
+| Continuous replication          | No — backup-oriented | Yes                      | Yes                      |
+| Whole physical server migration | No                   | **Yes**                  | Not the primary use case |
+| Minimal-downtime migration      | No                   | **Yes**                  | Not its primary purpose  |
+| Restore after failure           | **Yes**              | Possible but not primary | **Yes**                  |
+| Typical keyword                 | Backup / retention   | Lift-and-shift           | Disaster / DR            |
+
+### Critical exam distinction
+
+> **AWS Backup is not the answer just because data needs to be copied.**
+
+If the requirement is:
+
+```text
+Copy server
++ OS
++ applications
++ data
++ minimal downtime
++ move to AWS
+```
+
+→ **AWS Transform MGN**
+
+If the requirement is:
+
+```text
+Create recovery points
++ retention
++ restore later
+```
+
+→ **AWS Backup**
+
 ---
 
 # AWS DMS + SCT
@@ -266,7 +392,13 @@ Business continuity / disaster recovery
 
 **AWS Database Migration Service (DMS) = move or replicate database data.**
 
-It is used to migrate data between databases and can also support ongoing replication during migration.
+It can perform:
+
+* Full database migration
+* Ongoing replication
+* Change Data Capture (CDC)
+* Database consolidation
+* Homogeneous and heterogeneous migrations
 
 ### CDC — Change Data Capture
 
@@ -280,24 +412,36 @@ CDC
 = copy ongoing changes
 ```
 
+### Example
+
+```text
+Source database
+      ↓
+DMS
+      ↓
+Target database
+```
+
 ### Memory
 
 > **DMS = move data**
 
 ---
 
-## AWS Schema Conversion Tool (SCT)
+# AWS Schema Conversion Tool (SCT)
 
-**AWS Schema Conversion Tool (SCT) = convert schema/code when changing database engines.**
+**AWS Schema Conversion Tool (SCT) = convert database schema and database code when changing database engines.**
 
 Example:
 
 ```text
 Oracle
    ↓
-AWS SCT → convert schema
+AWS SCT
+= convert schema / database code
    ↓
-AWS DMS → move data
+AWS DMS
+= migrate data
    ↓
 Aurora PostgreSQL
 ```
@@ -315,34 +459,20 @@ DMS
 = move data
 
 SCT
-= convert schema
+= convert schema / database code
 ```
 
-### Same database engine
-
-When source and target use the same or compatible database engine:
+### Same or compatible database engine
 
 ```text
-Same database engine
-→ AWS Database Migration Service (DMS)
+Same / compatible engine
+→ DMS
 ```
 
 ### Different database engine
 
-When changing database engines:
-
 ```text
-Different database engine
-→ AWS Schema Conversion Tool (SCT) + DMS
-```
-
-### Important pattern
-
-```text
-Same database engine
-→ DMS
-
-Different database engine
+Different engine
 → SCT + DMS
 ```
 
@@ -358,10 +488,10 @@ Why?
 Oracle
  ↓
 SCT
-= convert schema / database code
+= convert schema / code
  ↓
 DMS
-= migrate the data
+= migrate data
  ↓
 Aurora PostgreSQL
 ```
@@ -372,21 +502,21 @@ Aurora PostgreSQL
 
 The **7 Rs** describe different migration strategies.
 
-| R                           | Meaning                    | Simple idea                         |
-| --------------------------- | -------------------------- | ----------------------------------- |
-| **Rehost**                  | Move without major changes | Lift-and-shift                      |
-| **Replatform**              | Move with small changes    | Use a managed AWS service           |
-| **Repurchase**              | Replace the application    | Buy/use a SaaS product              |
-| **Refactor / Re-architect** | Redesign the application   | Build for cloud-native architecture |
-| **Relocate**                | Move the whole environment | VMware Cloud on AWS, for example    |
-| **Retain**                  | Keep it where it is        | Don't migrate yet                   |
-| **Retire**                  | Stop using it              | Decommission it                     |
+| R                           | Meaning                    | Simple idea                          |
+| --------------------------- | -------------------------- | ------------------------------------ |
+| **Rehost**                  | Move without major changes | Lift-and-shift                       |
+| **Replatform**              | Move with small changes    | Use a managed AWS service            |
+| **Repurchase**              | Replace the application    | Buy/use a SaaS product               |
+| **Refactor / Re-architect** | Redesign the application   | Build for cloud-native architecture  |
+| **Relocate**                | Move the whole environment | Move VMware environment, for example |
+| **Retain**                  | Keep it where it is        | Don't migrate yet                    |
+| **Retire**                  | Stop using it              | Decommission it                      |
 
 ---
 
 ## Rehost
 
-**Move without major changes.**
+**Move without major application changes.**
 
 Example:
 
@@ -404,26 +534,24 @@ Typical signal:
 
 ```text
 Rehost
-→ AWS Application Migration Service (MGN)
+→ AWS Transform MGN
 ```
 
 ---
 
 ## Replatform
 
-**Move with small changes.**
-
-Move the workload while taking advantage of a managed AWS service.
+**Move with relatively small changes while taking advantage of managed AWS services.**
 
 Example:
 
 ```text
 MySQL on EC2
    ↓
-Amazon RDS
+Amazon RDS for MySQL
 ```
 
-The application architecture is not completely redesigned, but the underlying platform changes.
+The application is not completely redesigned, but the platform changes.
 
 ---
 
@@ -439,20 +567,20 @@ Self-hosted CRM
 SaaS CRM
 ```
 
-You effectively abandon the old application and use the new one.
+You effectively stop using the old application.
 
 ---
 
 ## Refactor / Re-architect
 
-**Redesign the application to use cloud-native architecture.**
+**Redesign the application to use a different architecture, often cloud-native.**
 
 Example:
 
 ```text
 Monolith
    ↓
-Lambda / containers / serverless architecture
+Microservices / serverless architecture
 ```
 
 Usually involves significant application changes.
@@ -461,7 +589,7 @@ Usually involves significant application changes.
 
 ## Relocate
 
-**Move the whole environment without redesigning individual workloads.**
+**Move the entire environment without individually redesigning workloads.**
 
 Example:
 
@@ -471,21 +599,13 @@ VMware environment
 VMware Cloud on AWS
 ```
 
-The idea is to move the environment rather than individually redesigning each workload.
+The whole environment is moved rather than converting each workload separately.
 
 ---
 
 ## Retain
 
 **Keep the workload where it is for now.**
-
-Example:
-
-```text
-On-premises
-   ↓
-Keep it there
-```
 
 Possible reasons:
 
@@ -539,7 +659,7 @@ Retire
 
 ---
 
-# Migration Service Decision Tree
+# Migration / Messaging / DR Decision Tree
 
 ```text
 Existing message broker?
@@ -550,19 +670,17 @@ Amazon MQ
 ```
 
 ```text
-Customer engagement / marketing?
-        ↓
-SMS / email / push / journeys
-        ↓
-Amazon Pinpoint
-```
-
-```text
-Existing server migration?
+Server migration?
         ↓
 Rehost / lift-and-shift
         ↓
-AWS Application Migration Service (MGN)
+AWS Transform MGN
+```
+
+```text
+Backup / retention / restore?
+        ↓
+AWS Backup
 ```
 
 ```text
@@ -581,6 +699,20 @@ Same engine   Different engine
 DMS            SCT + DMS
 ```
 
+```text
+Customer engagement / legacy campaigns?
+        ↓
+Amazon Pinpoint
+```
+
+```text
+Current direct messaging?
+        ↓
+SMS / voice / push / OTP
+        ↓
+AWS End User Messaging
+```
+
 ---
 
 # Common Question Patterns
@@ -591,33 +723,46 @@ DMS            SCT + DMS
 
 ---
 
-> **"A company needs a targeted multi-engagement marketing campaign that sends SMS messages to subscribers and tracks customer responses."**
+> **"Move existing physical servers to AWS with minimal application changes and minimal downtime."**
 
-→ **Amazon Pinpoint**
-
----
-
-> **"A marketing application needs to send SMS campaign events to a streaming service for near-real-time analysis."**
-
-→ **Amazon Pinpoint + Amazon Kinesis Data Streams**
+→ **AWS Transform MGN**
 
 ---
 
-> **"Move existing servers to AWS with minimal application changes."**
+> **"A company wants centralized daily backups, retention policies, and recovery points for AWS resources."**
 
-→ **AWS Application Migration Service (MGN)**
+→ **AWS Backup**
 
 ---
 
-> **"Need disaster recovery for physical, virtual, or cloud servers."**
+> **"A company needs disaster recovery for physical, virtual, or cloud servers."**
 
 → **AWS Elastic Disaster Recovery (DRS)**
+
+---
+
+> **"A company needs a targeted customer campaign using customer segments and journeys."**
+
+→ **Amazon Pinpoint**
+**Legacy/current-status note:** Pinpoint support ends **October 30, 2026**.
+
+---
+
+> **"A company needs to send SMS, voice, push, or OTP messages directly from an application."**
+
+→ **AWS End User Messaging**
 
 ---
 
 > **"Migrate Oracle to Aurora PostgreSQL."**
 
 → **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)**
+
+---
+
+> **"Continuously replicate database changes while migrating."**
+
+→ **AWS DMS with CDC**
 
 ---
 
@@ -643,33 +788,57 @@ The key question is whether the application **already depends on a traditional m
 
 ---
 
-## Pinpoint vs SNS
+## Pinpoint vs SNS vs End User Messaging
 
 ```text
-Customer engagement / marketing
+Legacy targeted customer engagement
 → Amazon Pinpoint
 
-General notifications / pub-sub
+General pub/sub notifications
 → Amazon SNS
-```
 
-> **Marketing campaign + targeted customers + SMS/email/push → Pinpoint**
+Current direct SMS / voice / push / OTP messaging
+→ AWS End User Messaging
+```
 
 ---
 
 ## MGN vs DRS
 
-Do not choose based only on the fact that both replicate servers.
-
-Look at the objective:
+Do not choose based only on replication.
 
 ```text
 "Move / migrate to AWS"
-→ AWS Application Migration Service (MGN)
+→ AWS Transform MGN
 
 "Recover after disaster"
 → AWS Elastic Disaster Recovery (DRS)
 ```
+
+---
+
+## MGN vs AWS Backup
+
+```text
+"Create backups and restore later"
+→ AWS Backup
+
+"Move running servers to AWS"
+→ AWS Transform MGN
+```
+
+### Especially important
+
+If the question mentions:
+
+* Physical server
+* Operating system
+* Applications
+* Data
+* Minimal downtime
+* Lift-and-shift
+
+→ **MGN**
 
 ---
 
@@ -695,20 +864,77 @@ SCT + DMS
 
 # Pocket Card
 
-| Keyword                                        | Answer                                                                      |
-| ---------------------------------------------- | --------------------------------------------------------------------------- |
-| Existing RabbitMQ / ActiveMQ application       | **Amazon MQ**                                                               |
-| Existing message broker / minimal code changes | **Amazon MQ**                                                               |
-| Customer engagement / marketing campaign       | **Amazon Pinpoint**                                                         |
-| Targeted SMS / email / push campaign           | **Amazon Pinpoint**                                                         |
-| Pinpoint event streaming                       | **Amazon Pinpoint + Kinesis Data Streams**                                  |
-| Minimal-change server migration / rehost       | **AWS Application Migration Service (MGN)**                                 |
-| Lift-and-shift servers                         | **AWS Application Migration Service (MGN)**                                 |
-| Disaster recovery for servers                  | **AWS Elastic Disaster Recovery (DRS)**                                     |
-| Move database data                             | **AWS Database Migration Service (DMS)**                                    |
-| Database replication / migration               | **AWS Database Migration Service (DMS)**                                    |
-| Full load + ongoing database changes           | **DMS Full Load + CDC**                                                     |
-| CDC                                            | **Capture and replicate ongoing database changes**                          |
-| Different database engines                     | **AWS Schema Conversion Tool (SCT) + DMS**                                  |
-| Convert database schema                        | **AWS Schema Conversion Tool (SCT)**                                        |
-| Oracle → Aurora PostgreSQL                     | **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)** |
+| Keyword                                         | Answer                                             |
+| ----------------------------------------------- | -------------------------------------------------- |
+| Existing RabbitMQ / ActiveMQ application        | **Amazon MQ**                                      |
+| Existing message broker / minimal code changes  | **Amazon MQ**                                      |
+| Legacy targeted customer engagement / campaigns | **Amazon Pinpoint**                                |
+| Current SMS / MMS / voice messaging             | **AWS End User Messaging SMS**                     |
+| Current push notifications                      | **AWS End User Messaging Push**                    |
+| OTP / verification messaging                    | **AWS End User Messaging Notify**                  |
+| Minimal-change server migration / rehost        | **AWS Transform MGN**                              |
+| Lift-and-shift servers                          | **AWS Transform MGN**                              |
+| Physical server → AWS                           | **AWS Transform MGN**                              |
+| Backup / retention / restore                    | **AWS Backup**                                     |
+| Centralized backup management                   | **AWS Backup**                                     |
+| Disaster recovery for servers                   | **AWS Elastic Disaster Recovery (DRS)**            |
+| Move database data                              | **AWS DMS**                                        |
+| Database replication / migration                | **AWS DMS**                                        |
+| Full load + ongoing database changes            | **DMS Full Load + CDC**                            |
+| CDC                                             | **Capture and replicate ongoing database changes** |
+| Convert database schema                         | **AWS SCT**                                        |
+| Different database engines                      | **AWS SCT + DMS**                                  |
+| Oracle → Aurora PostgreSQL                      | **AWS SCT + DMS**                                  |
+
+---
+
+# Ultimate Memory Map
+
+```text
+MESSAGE BROKER
+RabbitMQ / ActiveMQ
+→ Amazon MQ
+
+
+SERVER MIGRATION
+Move / rehost / lift-and-shift
+→ AWS Transform MGN
+
+
+BACKUP
+Protect / retention / restore
+→ AWS Backup
+
+
+DISASTER RECOVERY
+Recover after disaster
+→ AWS Elastic Disaster Recovery (DRS)
+
+
+DATABASE
+Move data
+→ DMS
+
+Convert schema
+→ SCT
+
+Different engines
+→ SCT + DMS
+
+
+MESSAGING
+Legacy targeted engagement
+→ Amazon Pinpoint
+
+Current SMS / voice / push / OTP
+→ AWS End User Messaging
+```
+
+> **MQ = broker**
+> **MGN = move**
+> **Backup = protect**
+> **DRS = recover**
+> **DMS = data**
+> **SCT = schema**
+> **Pinpoint = legacy customer engagement**
+> **End User Messaging = current direct messaging**
