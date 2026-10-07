@@ -44,13 +44,13 @@ Bulk operation on millions of existing S3 objects
 
 ---
 
-# Data Lake
+# Data Lake + Lake Formation
 
-A **data lake = a central place to store large amounts of raw data in different formats.**
+### What is a data lake?
 
-In AWS, **Amazon S3 is commonly used as the data lake storage**.
+**Data lake = a central place to store large amounts of raw data in different formats for later processing and analytics.**
 
-Example:
+In AWS, **Amazon S3 is commonly used as the storage for a data lake**.
 
 ```text
                     DATA LAKE
@@ -63,17 +63,17 @@ Example:
      Database data  Video           etc.
 ```
 
-### Simple idea
+Simple idea:
 
 ```text
 S3
-= stores the actual data
+= actual data
 
-Data Lake
-= the overall collection of data stored for later processing/analytics
+Data lake
+= the overall collection of data used for analytics
 ```
 
-Then other services work with the data:
+Other services can then process or query it:
 
 ```text
 S3
@@ -83,14 +83,20 @@ Glue / Athena / EMR
 Process / query / analyze
 ```
 
-### Where Lake Formation fits
+### What is Lake Formation?
+
+**AWS Lake Formation = governance and fine-grained access control for a data lake.**
+
+It does **not** store the actual data.
+
+Think:
 
 ```text
 S3
-= actual data
+= stores the data
 
 Lake Formation
-= controls who can access the data
+= controls who can access what
 ```
 
 For example:
@@ -109,11 +115,33 @@ Analyst
 → only selected columns
 ```
 
-So:
+Lake Formation can provide fine-grained permissions at the **table, row, and column** level.
 
-> **Data lake = the data**
+### Common pattern
 
-> **Lake Formation = governance and access control for the data lake**
+```text
+S3
+ ↓
+Glue Crawler
+ ↓
+Glue Data Catalog
+ ↓
+Lake Formation permissions
+ ↓
+Athena / EMR / other analytics
+```
+
+### SAA memory
+
+> **Data lake = data**
+
+> **S3 = common data lake storage**
+
+> **Lake Formation = who can access what**
+
+### Signal
+
+> **Data lake + fine-grained permissions → AWS Lake Formation**
 
 ---
 
@@ -647,101 +675,6 @@ Transform
 Remember previous processing
 → Job Bookmark
 ```
-
----
-
-# AWS Lake Formation
-
-**AWS Lake Formation = governance and fine-grained access control for a data lake.**
-
-First remember:
-
-```text
-Data lake
-= large collection of data for analytics
-
-S3
-= common place where the actual data is stored
-```
-
-Example:
-
-```text
-S3 data lake
-├── sales/
-├── customers/
-├── employees/
-├── logs/
-└── IoT data/
-```
-
-Lake Formation does **not** store these files.
-
-It controls **who can access what**.
-
-For example:
-
-```text
-S3
- ↓
-Actual data
- ↓
-Lake Formation
- ↓
-Access rules
-```
-
-You can give different users access to:
-
-```text
-User A
-→ entire sales table
-
-User B
-→ only selected columns
-
-User C
-→ only rows for their region
-```
-
-### Signal
-
-> **Data lake + fine-grained permissions → Lake Formation**
-
-### Simple distinction
-
-```text
-S3
-= store the data
-
-Glue
-= discover / catalog / transform the data
-
-Lake Formation
-= govern / control access to the data lake
-```
-
-### Common pattern
-
-```text
-S3
- ↓
-Glue Crawler
- ↓
-Glue Data Catalog
- ↓
-Lake Formation permissions
- ↓
-Athena / EMR / other analytics
-```
-
-### Memory
-
-> **Data lake = data**
-
-> **S3 = common data lake storage**
-
-> **Lake Formation = who can access what**
 
 ---
 
@@ -1333,3 +1266,46 @@ What does the question want?
 | Find/subscribe to third-party datasets | **AWS Data Exchange**             |
 | Bulk operation on existing S3 objects  | **S3 Batch Operations**           |
 | Millions/billions of existing objects  | **S3 Batch Operations**           |
+
+---
+
+# Final Memory
+
+```text
+Data lake
+= central place for large amounts of raw data
+
+S3
+= common AWS storage for the actual data lake data
+
+AWS Glue
+= SERVERLESS ETL + DATA CATALOG
+
+Glue Crawler
+= DISCOVER SCHEMA
+
+Glue Data Catalog
+= STORE METADATA
+
+Glue ETL
+= TRANSFORM DATA
+
+Parquet / ORC
+= COLUMNAR ANALYTICS FORMAT
+= FASTER / LESS DATA SCANNED BY ATHENA
+
+Glue Job Bookmark
+= TRACK PREVIOUSLY PROCESSED DATA
+
+Lake Formation
+= GOVERN + CONTROL ACCESS TO THE DATA LAKE
+
+AppFlow
+= SAAS → AWS
+
+AWS Data Exchange
+= THIRD-PARTY DATA
+
+S3 Batch Operations
+= BULK OPERATIONS ON EXISTING S3 OBJECTS
+```
