@@ -65,7 +65,7 @@ You can use **Spot Instances for suitable EMR task nodes** to reduce cost when t
 
 # EMR Node Types
 
-A **node = a server/instance that is part of the EMR cluster**.
+A **node = a server/instance(EC2) that is part of the EMR cluster**.
 
 A cluster usually contains multiple nodes that work together:
 
