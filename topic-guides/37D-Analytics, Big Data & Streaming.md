@@ -13,8 +13,9 @@ Match the requirement to the unique service keyword.
 | **Apache Flink / real-time stream processing**     | **Amazon Managed Service for Apache Flink**         |
 | **Interactive Flink streaming analysis**           | **Flink Studio**                                    |
 | **Kafka**                                          | **Amazon MSK (Managed Streaming for Apache Kafka)** |
-| **RabbitMQ**                                       | **Amazon MQ** |
+| **RabbitMQ**                                       | **Amazon MQ**                                       |
 | **BI dashboards**                                  | **Amazon QuickSight**                               |
+| **Search / logs / OpenSearch dashboards**          | **Amazon OpenSearch Service**                       |
 | **File-based video transcoding**                   | **AWS Elemental MediaConvert**                      |
 | **Legacy video transcoding**                       | **Amazon Elastic Transcoder**                       |
 
@@ -473,6 +474,53 @@ QuickSight is the **visualization / BI layer**, not the primary big-data process
 
 ---
 
+# OpenSearch + Kibana / OpenSearch Dashboards
+
+**Amazon OpenSearch Service = search, log analysis, and operational analytics.**
+
+Use it when data is **loaded/indexed into OpenSearch** and you want to search it and visualize the results.
+
+```text
+Records / logs
+      ↓
+Amazon OpenSearch Service
+      ↓
+Search / queries
+      ↓
+Kibana / OpenSearch Dashboards
+```
+
+### Signal
+
+> **Logs + search + OpenSearch dashboards → Amazon OpenSearch Service**
+
+### Important distinction
+
+```text
+Athena
+→ SQL directly on S3
+
+OpenSearch
+→ data is indexed/loaded into OpenSearch
+→ search/query there
+→ visualize with Kibana / OpenSearch Dashboards
+```
+
+### OpenSearch vs QuickSight
+
+| Requirement                                             | Service                                         |
+| ------------------------------------------------------- | ----------------------------------------------- |
+| **Search logs / indexed data / operational dashboards** | **OpenSearch + Kibana / OpenSearch Dashboards** |
+| **Business BI / reports / dashboards**                  | **QuickSight**                                  |
+
+### Example
+
+> "Load application logs into an OpenSearch cluster, run searches, and visualize the results."
+
+→ **Amazon OpenSearch Service + Kibana / OpenSearch Dashboards**
+
+---
+
 # AWS Elemental MediaConvert
 
 **AWS Elemental MediaConvert = managed file-based video transcoding service.**
@@ -563,16 +611,17 @@ Example:
 
 # Analytics Family
 
-| Job                             | Service                                     |
-| ------------------------------- | ------------------------------------------- |
-| Big-data processing             | **Amazon EMR**                              |
-| SQL on S3                       | **Amazon Athena**                           |
-| Query S3 from Redshift          | **Amazon Redshift Spectrum**                |
-| Data warehouse / analytical SQL | **Amazon Redshift**                         |
-| Real-time Flink processing      | **Amazon Managed Service for Apache Flink** |
-| Kafka                           | **Amazon MSK**                              |
-| BI dashboards                   | **Amazon QuickSight**                       |
-| Time-series data                | **Amazon Timestream**                       |
+| Job                                   | Service                                     |
+| ------------------------------------- | ------------------------------------------- |
+| Big-data processing                   | **Amazon EMR**                              |
+| SQL on S3                             | **Amazon Athena**                           |
+| Query S3 from Redshift                | **Amazon Redshift Spectrum**                |
+| Data warehouse / analytical SQL       | **Amazon Redshift**                         |
+| Real-time Flink processing            | **Amazon Managed Service for Apache Flink** |
+| Kafka                                 | **Amazon MSK**                              |
+| BI dashboards                         | **Amazon QuickSight**                       |
+| Search / logs / operational analytics | **Amazon OpenSearch Service**               |
+| Time-series data                      | **Amazon Timestream**                       |
 
 Streaming pattern:
 
@@ -608,6 +657,7 @@ BI / SQL analytics
 | **Flink Studio**                                    | Interactive Flink development and analysis | Interactive Flink                  |
 | **Amazon MSK (Managed Streaming for Apache Kafka)** | Managed Apache Kafka                       | Kafka                              |
 | **Amazon QuickSight**                               | Business intelligence dashboards           | BI / dashboards                    |
+| **Amazon OpenSearch Service**                       | Search and operational analytics           | Logs / search / OpenSearch         |
 | **Amazon Timestream**                               | Time-series database                       | IoT / metrics / telemetry          |
 | **AWS Elemental MediaConvert**                      | File-based video transcoding               | Video transcoding                  |
 | **Amazon Elastic Transcoder**                       | Legacy video/audio transcoding             | Old/legacy service                 |
@@ -671,6 +721,34 @@ Already using Redshift + need to query S3
 ```
 
 **Spectrum does not mean you must load the S3 data into Redshift first.**
+
+---
+
+## Athena vs OpenSearch
+
+```text
+SQL directly on S3
+→ Amazon Athena
+```
+
+```text
+Search / log analysis on data indexed in OpenSearch
+→ Amazon OpenSearch Service
+```
+
+---
+
+## OpenSearch vs QuickSight
+
+```text
+Logs / search / operational dashboards
+→ OpenSearch + Kibana / OpenSearch Dashboards
+```
+
+```text
+Business reports / BI dashboards
+→ Amazon QuickSight
+```
 
 ---
 
@@ -778,6 +856,14 @@ Redshift
 
 → **Amazon QuickSight**
 
+> **"Application logs must be searched and visualized from an OpenSearch cluster."**
+
+→ **Amazon OpenSearch Service + Kibana / OpenSearch Dashboards**
+
+> **"The company wants to load records into an OpenSearch cluster, run searches, and visualize the results."**
+
+→ **Amazon OpenSearch Service + Kibana / OpenSearch Dashboards**
+
 > **"File-based video transcoding for on-demand content."**
 
 → **AWS Elemental MediaConvert**
@@ -811,6 +897,7 @@ Redshift
 | Interactive Flink streaming analysis     | **Flink Studio**                                    |
 | Kafka                                    | **Amazon MSK (Managed Streaming for Apache Kafka)** |
 | BI dashboards                            | **Amazon QuickSight**                               |
+| Search / logs / operational dashboards   | **Amazon OpenSearch Service**                       |
 | Time-series data / IoT / metrics         | **Amazon Timestream**                               |
 | File-based video transcoding             | **AWS Elemental MediaConvert**                      |
 | Live video encoding                      | **AWS Elemental MediaLive**                         |
