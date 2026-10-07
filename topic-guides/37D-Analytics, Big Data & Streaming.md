@@ -266,10 +266,13 @@ Job completes
 ```text
 Amazon EMR
 → You use/manage an EMR cluster
+→ can integrate with Apache Ranger 
 
 EMR Serverless
 → No cluster/node management
 → AWS automatically handles resources
+→ can not integrate with Apache Ranger 
+
 ```
 
 Use EMR Serverless for **batch processing** when you do not want to provision and manage an EMR cluster.
