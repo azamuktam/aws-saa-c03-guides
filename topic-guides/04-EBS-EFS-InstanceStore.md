@@ -161,6 +161,12 @@ The correct concept is:
 
 → **io1/io2 Multi-Attach**
 
+### Small Elastic Volumes note
+
+**Elastic Volumes** can increase the EBS volume size, change the volume type, and adjust supported performance settings, but **cannot shrink an existing EBS volume**.
+
+> **Increase/grow → ✅ | Shrink → ❌**
+
 ---
 
 # New EBS volume: format and mount it
@@ -603,7 +609,7 @@ infrequent-access workload
 General-purpose SSD
 → gp3
 
-Provisioned IOPS / predictable low latency
+Provisioned, predictable low latency
 → io1/io2
 
 Extreme IOPS / 256,000
@@ -1388,6 +1394,7 @@ SR-IOV is not an EBS volume type.
 | Multi-Attach limit                                                | **up to 16 instances, same AZ**            |
 | gp3 Multi-Attach                                                  | **No**                                     |
 | Multi-Attach multi-AZ                                             | **No — same AZ only**                      |
+| Elastic Volumes shrink existing EBS volume                        | **No**                                     |
 | root volume survives termination                                  | **DeleteOnTermination = false**            |
 | new EBS data volume                                               | **format + mount**                         |
 | EBS volume usable during snapshot                                 | **Yes — read/write continues**             |
