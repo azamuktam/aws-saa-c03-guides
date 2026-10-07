@@ -133,6 +133,40 @@ No database server needs to be provisioned just to query the data.
 
 ---
 
+## Athena + QuickSight Reporting
+
+**Pattern: S3 data + weekly reporting + visualization + cost-effective → Glue Crawler + Athena + QuickSight**
+
+```text
+S3
+ ↓
+Glue Crawler
+ ↓
+Glue Data Catalog
+ ↓
+Athena
+ ↓
+QuickSight
+```
+
+| Service          | Role                          |
+| ---------------- | ----------------------------- |
+| **Glue Crawler** | Discovers the S3 data schema  |
+| **Athena**       | Serverless SQL directly on S3 |
+| **QuickSight**   | Dashboards / visualization    |
+
+> A company is preparing a solution that the sales team can use for generating weekly revenue reports. The team must be able to run analysis on sales records stored in Amazon S3 and visualize the results of queries.
+>
+> How can the solutions architect meet the requirement in the most cost-effective way possible?
+
+→ **Use AWS Glue crawler to build tables in AWS Glue Data Catalog. Run queries using Amazon Athena. Use Amazon QuickSight for visualization.**
+
+### Exam signal
+
+> **S3 + SQL + occasional/weekly reporting + visualization → Glue + Athena + QuickSight**
+
+---
+
 # Amazon Redshift
 
 **Amazon Redshift = managed cloud data warehouse for analytical workloads.**
@@ -755,6 +789,10 @@ Redshift
 
 → **Enable Cross-Region Snapshot Copy**
 
+> **"A company is preparing a solution that the sales team can use for generating weekly revenue reports. The team must be able to run analysis on sales records stored in Amazon S3 and visualize the results of queries."**
+
+→ **Use AWS Glue crawler to build tables in AWS Glue Data Catalog. Run queries using Amazon Athena. Use Amazon QuickSight for visualization.**
+
 ---
 
 # Pocket Card
@@ -776,3 +814,4 @@ Redshift
 | File-based video transcoding             | **AWS Elemental MediaConvert**                      |
 | Live video encoding                      | **AWS Elemental MediaLive**                         |
 | Legacy video transcoding                 | **Amazon Elastic Transcoder — discontinued**        |
+| S3 + weekly reports + visualization      | **Glue + Athena + QuickSight**                      |
