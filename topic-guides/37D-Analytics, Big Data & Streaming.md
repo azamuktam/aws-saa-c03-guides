@@ -479,7 +479,8 @@ QuickSight is the **visualization / BI layer**, not the primary big-data process
 **Amazon OpenSearch Service = search, log analysis, and operational analytics.**
 
 Use it when data is **loaded/indexed into OpenSearch** and you want to search it and visualize the results.
-
+**Kibana = visualization UI for Elasticsearch**
+**OpenSearch Dashboards = visualization UI for OpenSearch**
 ```text
 Records / logs
       ↓
