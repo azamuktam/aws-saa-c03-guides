@@ -59,11 +59,33 @@ Key difference:
 
 ## The process
 
-1. Order the device.
-2. AWS ships it to you.
-3. Copy data to it; data is encrypted.
-4. Ship it back.
-5. AWS imports the data into S3.
+### On-premises → AWS
+
+```text
+Your data
+   ↓
+Snowball Edge
+   ↓
+Ship to AWS
+   ↓
+S3
+```
+
+Use Snowball when sending the data over the network would take too long.
+
+### AWS S3 → On-premises
+
+```text
+S3
+   ↓
+Snowball Edge Export
+   ↓
+Ship to you
+   ↓
+Data center
+```
+
+**Snowball can also export data from S3 to your data center.**
 
 ### THE trap
 
@@ -85,19 +107,23 @@ Think:
 
 ## Question patterns
 
-> *"Migrate 200 TB, the site has a 100 Mbps link, deadline in 3 weeks"* → **Snowball Edge Storage Optimized** (network math = months, so ship devices — a few 80 TB units)
+> *"Migrate 200 TB, the site has a 100 Mbps link, deadline in 3 weeks"* → **Snowball Edge Storage Optimized** (network transfer is too slow)
 
-> *"Decommission an entire datacenter: multiple petabytes (>10 PB) to AWS"* → **Snowmobile** (past ~10 PB, send the truck)
+> *"Decommission an entire datacenter: multiple petabytes (>10 PB) to AWS"* → **Snowmobile** (huge transfer → truck)
 
-> *"Research ship must run analysis on collected data with no internet connectivity"* → **Snowball Edge Compute Optimized** (compute at the disconnected edge; GPU if ML is mentioned)
+> *"Research ship must run analysis on collected data with no internet connectivity"* → **Snowball Edge Compute Optimized** (compute at the disconnected edge)
 
-> *"Company wants to archive 80 TB directly into S3 Glacier using Snowball"* → **Import to S3, then lifecycle rule to Glacier** (Snowball can't write to Glacier directly — THE trap)
+> *"Company wants to transfer 50 TB from S3 to its data center and the internet connection is too slow"* → **Snowball Edge Export**
 
-> *"Small remote clinic needs to transfer ~8–10 TB from a space- and power-constrained site"* → **Snowcone** (tiny footprint, tiny capacity)
+> *"Company wants to transfer 50 TB from its data center to AWS and the network is too slow"* → **Snowball Edge Import**
 
-> *"Transfer 40 TB once; would take 6 weeks over the existing connection"* → **Snowball Edge** (>1 week over the wire → Snow family)
+> *"Company wants to archive 80 TB directly into S3 Glacier using Snowball"* → **Import to S3, then lifecycle rule to Glacier** (Snowball can't write to Glacier directly)
 
-> *"Manage Snow devices with a graphical interface"* → **AWS OpsHub** (the Snow GUI)
+> *"Small remote clinic needs to transfer ~8–10 TB from a space- and power-constrained site"* → **Snowcone**
+
+> *"Transfer 40 TB once; would take 6 weeks over the existing connection"* → **Snowball Edge**
+
+> *"Manage Snow devices with a graphical interface"* → **AWS OpsHub**
 
 > *"Company already has its own storage devices and wants to physically bring them to AWS for a high-speed bulk transfer"* → **AWS Data Transfer Terminal**
 
@@ -114,6 +140,8 @@ Think:
 | 50–500 TB migration                                                    | Snowball Edge Storage Optimized |
 | Process data offline / GPU at edge                                     | Snowball Edge Compute Optimized |
 | > 10 PB, up to 100 PB                                                  | Snowmobile                      |
+| **On-premises → AWS, network too slow**                                | **Snowball Edge Import**        |
+| **S3 → on-premises, network too slow**                                 | **Snowball Edge Export**        |
 | Already have your own storage devices and physically bring them to AWS | **Data Transfer Terminal**      |
 | AWS sends you a device to load and return                              | **Snowball Edge**               |
 | Transfer over the network / migration / synchronization                | **DataSync**                    |
