@@ -65,29 +65,130 @@ You can use **Spot Instances for suitable EMR task nodes** to reduce cost when t
 
 # EMR Node Types
 
-| Node        | Purpose                          | Common choice |
-| ----------- | -------------------------------- | ------------- |
-| **Primary** | Manages/co-ordinates the cluster | On-Demand     |
-| **Core**    | Compute + stores HDFS data       | **On-Demand** |
-| **Task**    | Compute only, no HDFS data       | **Spot**      |
+A **node = a server/instance that is part of the EMR cluster**.
 
-### Memory
+A cluster usually contains multiple nodes that work together:
 
-> **Primary = manage**
+```text
+EMR Cluster
+├── Server
+├── Server
+├── Server
+└── Server
+```
 
-> **Core = compute + data**
+EMR gives these servers different **roles**.
 
-> **Task = compute only**
+```text
+                    EMR CLUSTER
+                         │
+          ┌──────────────┼──────────────┐
+          ↓              ↓              ↓
+       PRIMARY          CORE           TASK
+        "boss"       "workers"     "extra workers"
+```
 
-### Cost-effective batch pattern
+## Primary node
 
-**Transient EMR + On-Demand primary/core + Spot task nodes**
+**Primary node = manages/co-ordinates the cluster.**
 
-Use when a batch job runs periodically and task nodes can tolerate interruption.
+It handles cluster management and coordinates the work of the other nodes.
 
-> **Core → On-Demand** because it stores HDFS data.
+Think:
 
-> **Task → Spot** because it does not store HDFS data.
+> **Primary = boss / manager**
+
+Example:
+
+```text
+You submit a Spark job
+        ↓
+    Primary
+        ↓
+coordinates the work
+      ↙   ↘
+   Core   Task
+```
+
+---
+
+## Core nodes
+
+**Core nodes = workers that do computation and can store data in HDFS.**
+
+Think:
+
+> **Core = worker + storage**
+
+Example:
+
+```text
+Primary
+   │
+   ├── Core 1 → compute + HDFS
+   ├── Core 2 → compute + HDFS
+   └── Core 3 → compute + HDFS
+```
+
+Because core nodes can store HDFS data, losing them can affect data availability.
+
+> **Core → usually On-Demand**
+
+---
+
+## Task nodes
+
+**Task nodes = extra workers that provide compute capacity but do not store HDFS data.**
+
+Think:
+
+> **Task = extra worker / extra compute**
+
+Example:
+
+```text
+Primary
+   │
+   ├── Core 1 → compute + HDFS
+   ├── Core 2 → compute + HDFS
+   ├── Task 1 → compute only
+   ├── Task 2 → compute only
+   └── Task 3 → compute only
+```
+
+Task nodes are useful when you temporarily need more processing capacity.
+
+Because they do not store HDFS data:
+
+> **Task → often Spot**
+
+If a Spot task node is interrupted, you mainly lose compute capacity, not HDFS data stored on the core nodes.
+
+---
+
+## Node type memory
+
+| Node        | Simple meaning       | Main role                        |
+| ----------- | -------------------- | -------------------------------- |
+| **Primary** | **Boss**             | Manages/co-ordinates the cluster |
+| **Core**    | **Worker + storage** | Compute + HDFS data              |
+| **Task**    | **Extra worker**     | Compute only                     |
+
+### Common cost-saving pattern
+
+```text
+Primary → On-Demand
+Core    → On-Demand
+Task    → Spot
+```
+
+> **Core → On-Demand** because it can store HDFS data.
+
+> **Task → Spot** because it is compute-only and can tolerate interruption more easily.
+
+### Important
+
+Many EMR workloads use **Amazon S3 for their main data storage** rather than HDFS. The Core-node/HDFS distinction matters when the cluster is using HDFS.
 
 ---
 
@@ -137,6 +238,8 @@ Node types
 → Core
 → Task
 ```
+
+For periodic batch processing, **transient EMR is often more cost-effective** than keeping a cluster running.
 
 ---
 
