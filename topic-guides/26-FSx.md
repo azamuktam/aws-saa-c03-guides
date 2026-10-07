@@ -14,7 +14,7 @@ Windows / SMB / AD
 → FSx for Windows
 
 HPC / ML / S3 high-performance
-→ FSx for Lustre
+→ FSx for Lustre, **lustre protocol**
 
 NetApp / SnapMirror / NFS + SMB + iSCSI
 → FSx for NetApp ONTAP
