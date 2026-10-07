@@ -53,7 +53,8 @@ Key difference:
 
 * **Snowcone** has a preinstalled **DataSync agent**.
 * Multiple Snowballs can be used for large migrations.
-* **AWS OpsHub** = GUI for managing Snow devices.
+* **AWS Snow Family Management Console** = create/manage Snow jobs and track their status.
+* **AWS OpsHub** = GUI for managing the physical Snow device locally.
 
 ---
 
@@ -123,7 +124,9 @@ Think:
 
 > *"Transfer 40 TB once; would take 6 weeks over the existing connection"* → **Snowball Edge**
 
-> *"Manage Snow devices with a graphical interface"* → **AWS OpsHub**
+> *"Manage the Snow device with a graphical interface locally"* → **AWS OpsHub**
+
+> *"Create/order a Snowball job and track its status"* → **AWS Snow Family Management Console**
 
 > *"Company already has its own storage devices and wants to physically bring them to AWS for a high-speed bulk transfer"* → **AWS Data Transfer Terminal**
 
@@ -133,21 +136,20 @@ Think:
 
 ## Pocket card
 
-| Keyword                                                                | Answer                          |
-| ---------------------------------------------------------------------- | ------------------------------- |
-| Transfer would take > 1 week                                           | Snow family                     |
-| 8–14 TB, tiny/rugged/edge                                              | Snowcone                        |
-| 50–500 TB migration                                                    | Snowball Edge Storage Optimized |
-| Process data offline / GPU at edge                                     | Snowball Edge Compute Optimized |
-| > 10 PB, up to 100 PB                                                  | Snowmobile                      |
-| **On-premises → AWS, network too slow**                                | **Snowball Edge Import**        |
-| **S3 → on-premises, network too slow**                                 | **Snowball Edge Export**        |
-| Already have your own storage devices and physically bring them to AWS | **Data Transfer Terminal**      |
-| AWS sends you a device to load and return                              | **Snowball Edge**               |
-| Transfer over the network / migration / synchronization                | **DataSync**                    |
-| Straight to Glacier?                                                   | No — S3 first + lifecycle rule  |
-| Encryption on device                                                   | KMS, automatic                  |
-| GUI for Snow devices                                                   | OpsHub                          |
-| Preinstalled DataSync agent                                            | Snowcone                        |
-
-Once your data (and everything else) is in AWS, you'll want to build environments the same way twice without clicking — that's CloudFormation's whole reason to exist.
+| Keyword                                                                | Answer                             |
+| ---------------------------------------------------------------------- | ---------------------------------- |
+| Transfer would take > 1 week                                           | Snow family                        |
+| 8–14 TB, tiny/rugged/edge                                              | Snowcone                           |
+| 50–500 TB migration                                                    | Snowball Edge Storage Optimized    |
+| Process data offline / GPU at edge                                     | Snowball Edge Compute Optimized    |
+| > 10 PB, up to 100 PB                                                  | Snowmobile                         |
+| **On-premises → AWS, network too slow**                                | **Snowball Edge Import**           |
+| **S3 → on-premises, network too slow**                                 | **Snowball Edge Export**           |
+| Create/order/manage Snow jobs                                          | **Snow Family Management Console** |
+| GUI to operate/manage the physical Snow device                         | **OpsHub**                         |
+| Already have your own storage devices and physically bring them to AWS | **Data Transfer Terminal**         |
+| AWS sends you a device to load and return                              | **Snowball Edge**                  |
+| Transfer over the network / migration / synchronization                | **DataSync**                       |
+| Straight to Glacier?                                                   | No — S3 first + lifecycle rule     |
+| Encryption on device                                                   | KMS, automatic                     |
+| Preinstalled DataSync agent                                            | Snowcone                           |
