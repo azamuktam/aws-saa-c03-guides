@@ -2,59 +2,86 @@
 
 ## The idea
 
-**AWS Snow Family = physical AWS devices that help you move or process huge amounts of data when using the internet is too slow or impractical.**
+**AWS Snow Family = physical AWS devices for moving or processing large amounts of data when network transfer is too slow or impractical.**
 
-## Why do we need it?
-
-Imagine your company has **500 TB of data** on-premises.
-
-You could upload it:
+Example:
 
 ```text
-Company → Internet → S3
-
-But with a slow connection, this could take a very long time.
-
-Instead, AWS can send you a Snow device:
-
 Company
    ↓
 Snow device
    ↓
-Ship it to AWS
+Ship to AWS
    ↓
 S3
 ```
-So the basic idea is:
 
-Instead of sending the data through the internet, physically send the storage device to AWS.
+Instead of sending huge amounts of data over the internet, **physically move the device**.
 
+---
 
 ## The device lineup
 
-| Device | Capacity | When |
-|---|---|---|
-| **Snowcone** | 8–14 TB | Tiny, rugged, ships anywhere (even drone-deliverable); small edge sites |
-| **Snowball Edge Storage Optimized** | ~80 TB usable | **The workhorse** — migrations of ~50–500 TB (order several) |
-| **Snowball Edge Compute Optimized** | Less storage, more CPU + **optional GPU** | Edge processing: run EC2/Lambda where there's no connectivity |
-| **Snowmobile** | Up to **100 PB** | An actual shipping-container truck; consider at **>10 PB** |
+| Device                              | Capacity                              | When                                 |
+| ----------------------------------- | ------------------------------------- | ------------------------------------ |
+| **Snowcone**                        | 8–14 TB                               | Small, rugged, remote/edge sites     |
+| **Snowball Edge Storage Optimized** | ~80 TB usable                         | Large data migrations                |
+| **Snowball Edge Compute Optimized** | Less storage, more CPU + optional GPU | Edge computing                       |
+| **Snowmobile**                      | Up to **100 PB**                      | Huge transfers, typically **>10 PB** |
 
-Extra flavor points:
-- **Snowcone** comes with the **DataSync agent preinstalled** — copy data on it, and it can sync back online later, or you ship it.
-- Multiple Snowballs can be ordered in parallel for big jobs (e.g., 200 TB ≈ 3 × 80 TB Snowball Edge Storage Optimized).
-- **AWS OpsHub** = the **GUI application** for managing Snow devices (no CLI wrestling required).
+### AWS Data Transfer Terminal
+
+**Data Transfer Terminal = AWS facility where you bring your own storage devices and transfer data to AWS over a high-speed connection.**
+
+```text
+Your storage devices
+        ↓
+AWS Data Transfer Terminal
+        ↓
+AWS
+```
+
+Key difference:
+
+* **Snowball Edge** → AWS gives you the device.
+* **Data Transfer Terminal** → **you bring your own storage devices.**
+* **DataSync** → network-based transfer.
+
+---
+
+## Extra points
+
+* **Snowcone** has a preinstalled **DataSync agent**.
+* Multiple Snowballs can be used for large migrations.
+* **AWS OpsHub** = GUI for managing Snow devices.
+
+---
 
 ## The process
 
-1. **Order** the device in the AWS console.
-2. AWS **ships** it to you.
-3. You connect it locally and **copy data — encrypted automatically with KMS** (Key Management Service). Keys never live on the device in usable form.
-4. **Ship it back** (E Ink label updates itself).
-5. AWS **loads the data into S3**, then securely wipes the device.
+1. Order the device.
+2. AWS ships it to you.
+3. Copy data to it; data is encrypted.
+4. Ship it back.
+5. AWS imports the data into S3.
 
-THE trap: **Snowball cannot import directly into S3 Glacier.** Data always lands in **S3 first**; if you want Glacier, you attach an **S3 lifecycle rule** that transitions the objects afterward. Any answer choice saying "import from Snowball straight to Glacier" is wrong — reliably tested.
+### THE trap
 
-**Edge computing angle:** Snowball Edge Compute Optimized (with optional GPU) runs EC2 AMIs and Lambda locally. Scenario smells: "vessel collecting sensor data with intermittent connectivity," "remote facility must process video before transfer." Process on the device, ship or sync results later.
+**Snowball cannot import directly into S3 Glacier.**
+
+Data goes to **S3 first**, then an **S3 lifecycle rule** can move it to Glacier.
+
+---
+
+## Edge computing angle
+
+**Snowball Edge Compute Optimized** can run **EC2 and Lambda locally**.
+
+Think:
+
+> Remote location + little/no connectivity + need to process data locally
+
+---
 
 ## Question patterns
 
@@ -72,18 +99,27 @@ THE trap: **Snowball cannot import directly into S3 Glacier.** Data always lands
 
 > *"Manage Snow devices with a graphical interface"* → **AWS OpsHub** (the Snow GUI)
 
+> *"Company already has its own storage devices and wants to physically bring them to AWS for a high-speed bulk transfer"* → **AWS Data Transfer Terminal**
+
+> *"On-premises file servers need to migrate/synchronize data over the network"* → **AWS DataSync**, not Data Transfer Terminal
+
+---
+
 ## Pocket card
 
-| Keyword | Answer |
-|---|---|
-| Transfer would take > 1 week | Snow family |
-| 8–14 TB, tiny/rugged/edge | Snowcone |
-| 50–500 TB migration | Snowball Edge Storage Optimized |
-| Process data offline / GPU at edge | Snowball Edge Compute Optimized |
-| > 10 PB, up to 100 PB | Snowmobile |
-| Straight to Glacier? | No — S3 first + lifecycle rule |
-| Encryption on device | KMS, automatic |
-| GUI for Snow devices | OpsHub |
-| Preinstalled DataSync agent | Snowcone |
+| Keyword                                                                | Answer                          |
+| ---------------------------------------------------------------------- | ------------------------------- |
+| Transfer would take > 1 week                                           | Snow family                     |
+| 8–14 TB, tiny/rugged/edge                                              | Snowcone                        |
+| 50–500 TB migration                                                    | Snowball Edge Storage Optimized |
+| Process data offline / GPU at edge                                     | Snowball Edge Compute Optimized |
+| > 10 PB, up to 100 PB                                                  | Snowmobile                      |
+| Already have your own storage devices and physically bring them to AWS | **Data Transfer Terminal**      |
+| AWS sends you a device to load and return                              | **Snowball Edge**               |
+| Transfer over the network / migration / synchronization                | **DataSync**                    |
+| Straight to Glacier?                                                   | No — S3 first + lifecycle rule  |
+| Encryption on device                                                   | KMS, automatic                  |
+| GUI for Snow devices                                                   | OpsHub                          |
+| Preinstalled DataSync agent                                            | Snowcone                        |
 
 Once your data (and everything else) is in AWS, you'll want to build environments the same way twice without clicking — that's CloudFormation's whole reason to exist.
