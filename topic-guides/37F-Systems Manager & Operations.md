@@ -1,4 +1,4 @@
-# Section 37F: Systems Manager & Operations
+**# Section 37F: Systems Manager & Operations
 
 ## The idea
 
@@ -669,3 +669,4 @@ The on-premises server requires the required agent and connectivity configuratio
 | Automatically react to AWS Health event   | **Amazon EventBridge**                                                           |
 | Prometheus / PromQL                       | **Amazon Managed Service for Prometheus (AMP)**                                  |
 | Kubernetes / container Prometheus metrics | **Amazon Managed Service for Prometheus (AMP)**                                  |
+**
