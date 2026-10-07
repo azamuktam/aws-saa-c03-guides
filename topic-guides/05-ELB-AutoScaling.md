@@ -422,12 +422,22 @@ With ECS using EC2:
 | **ECS Cluster Auto Scaling** | EC2 instances        | Container capacity                   |
 | **Capacity Provider**        | EC2 capacity for ECS | Connects task demand to EC2 capacity |
 
+
 ```text
 High application load
 → More ECS tasks
 
 Not enough EC2 capacity
 → More EC2 instances
+
+                ECS
+                /   \
+             EC2    Fargate
+              ↓        ↓
+           Tasks     Tasks
+              ↓        ↓
+         Containers  Containers
+
 ```
 
 ---
