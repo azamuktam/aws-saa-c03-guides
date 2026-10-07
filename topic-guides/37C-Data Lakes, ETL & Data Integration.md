@@ -145,6 +145,74 @@ Athena / EMR / other analytics
 
 ---
 
+# Lake Formation Tag-Based Access Control (LF-TBAC)
+
+**LF-TBAC = use tags to control access to many data resources.**
+
+Instead of manually granting permissions to each table, database, or column, you attach **LF-Tags** to resources and grant permissions based on those tags.
+
+Example:
+
+```text
+Sales data
+→ LF-Tag: department=sales
+
+DevOps data
+→ LF-Tag: department=devops
+
+HR data
+→ LF-Tag: department=hr
+```
+
+Then:
+
+```text
+DevOps team
+→ permission for department=devops
+→ gets access to matching resources
+```
+
+This is useful when:
+
+* there are many datasets
+* data is spread across multiple AWS accounts
+* fine-grained access control is required
+* minimal operational overhead is important
+
+### Why LF-TBAC?
+
+Without tags:
+
+```text
+Table 1 → manually grant
+Table 2 → manually grant
+Table 3 → manually grant
+Table 4 → manually grant
+...
+```
+
+With LF-TBAC:
+
+```text
+Tag resources
+      ↓
+Grant permission to the tag
+      ↓
+Matching resources are covered
+```
+
+### Signal
+
+> **Many datasets + fine-grained access + cross-account sharing + minimal operational overhead**
+
+→ **Lake Formation Tag-Based Access Control (LF-TBAC)**
+
+### Exam shortcut
+
+> **Lake Formation + scalable fine-grained authorization → LF-TBAC**
+
+---
+
 # AWS Glue
 
 **AWS Glue = serverless ETL and Data Catalog service.**
@@ -1100,27 +1168,28 @@ If the question asks for the **most operationally efficient** way to prevent rep
 
 # Pocket Card
 
-| Keyword                                | Answer                            |
-| -------------------------------------- | --------------------------------- |
-| Serverless ETL / data catalog          | **AWS Glue**                      |
-| Discover schema                        | **Glue Crawler**                  |
-| Automatically discover S3 file schema  | **Glue Crawler**                  |
-| Store metadata                         | **Glue Data Catalog**             |
-| Store table/schema definitions         | **Glue Data Catalog**             |
-| Transform data                         | **Glue ETL**                      |
-| CSV → Parquet                          | **Glue ETL**                      |
-| Athena + large JSON dataset            | **Parquet / ORC**                 |
-| Reduce Athena data scanned             | **Parquet / ORC**                 |
-| Glue reprocesses old data              | **Glue Job Bookmark**             |
-| Incremental Glue ETL processing        | **Glue Job Bookmark**             |
-| Data lake + fine-grained permissions   | **Lake Formation**                |
-| S3 = actual data in the data lake      | **Amazon S3**                     |
-| Lake Formation = data lake access      | **AWS Lake Formation**            |
-| Lake Formation data access             | **`lakeformation:GetDataAccess`** |
-| Table/row/column permissions           | **Lake Formation**                |
-| SaaS → S3                              | **AppFlow**                       |
-| SaaS → Redshift                        | **AppFlow**                       |
-| Find/subscribe to third-party datasets | **AWS Data Exchange**             |
-| Bulk operation on existing S3 objects  | **S3 Batch Operations**           |
-| Millions/billions of existing objects  | **S3 Batch Operations**           |
-
+| Keyword                                          | Answer                            |
+| ------------------------------------------------ | --------------------------------- |
+| Serverless ETL / data catalog                    | **AWS Glue**                      |
+| Discover schema                                  | **Glue Crawler**                  |
+| Automatically discover S3 file schema            | **Glue Crawler**                  |
+| Store metadata                                   | **Glue Data Catalog**             |
+| Store table/schema definitions                   | **Glue Data Catalog**             |
+| Transform data                                   | **Glue ETL**                      |
+| CSV → Parquet                                    | **Glue ETL**                      |
+| Athena + large JSON dataset                      | **Parquet / ORC**                 |
+| Reduce Athena data scanned                       | **Parquet / ORC**                 |
+| Glue reprocesses old data                        | **Glue Job Bookmark**             |
+| Incremental Glue ETL processing                  | **Glue Job Bookmark**             |
+| Data lake + fine-grained permissions             | **Lake Formation**                |
+| Data lake + many datasets + scalable permissions | **Lake Formation LF-TBAC**        |
+| S3 = actual data in the data lake                | **Amazon S3**                     |
+| Lake Formation = data lake access                | **AWS Lake Formation**            |
+| Lake Formation data access                       | **`lakeformation:GetDataAccess`** |
+| Table/row/column permissions                     | **Lake Formation**                |
+| Cross-account fine-grained access                | **Lake Formation LF-TBAC**        |
+| SaaS → S3                                        | **AppFlow**                       |
+| SaaS → Redshift                                  | **AppFlow**                       |
+| Find/subscribe to third-party datasets           | **AWS Data Exchange**             |
+| Bulk operation on existing S3 objects            | **S3 Batch Operations**           |
+| Millions/billions of existing objects            | **S3 Batch Operations**           |
