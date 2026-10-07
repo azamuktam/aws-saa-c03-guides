@@ -17,6 +17,7 @@ Match the requirement to the unique service keyword.
 | **BI dashboards**                                  | **Amazon QuickSight**                               |
 | **Search / logs / OpenSearch dashboards**          | **Amazon OpenSearch Service**                       |
 | **Prometheus metrics dashboards**                  | **Amazon Managed Service for Prometheus + Grafana** |
+| **Serverless Spark / Hive batch processing**       | **Amazon EMR Serverless**                           |
 | **File-based video transcoding**                   | **AWS Elemental MediaConvert**                      |
 | **Legacy video transcoding**                       | **Amazon Elastic Transcoder**                       |
 
@@ -59,6 +60,116 @@ You can use **Spot Instances for suitable EMR task nodes** to reduce cost when t
 ### Memory
 
 > **Large-scale Spark/Hadoop processing → Amazon EMR**
+
+---
+
+# EMR Node Types
+
+| Node        | Purpose                          | Common choice |
+| ----------- | -------------------------------- | ------------- |
+| **Primary** | Manages/co-ordinates the cluster | On-Demand     |
+| **Core**    | Compute + stores HDFS data       | **On-Demand** |
+| **Task**    | Compute only, no HDFS data       | **Spot**      |
+
+### Memory
+
+> **Primary = manage**
+
+> **Core = compute + data**
+
+> **Task = compute only**
+
+### Cost-effective batch pattern
+
+**Transient EMR + On-Demand primary/core + Spot task nodes**
+
+Use when a batch job runs periodically and task nodes can tolerate interruption.
+
+> **Core → On-Demand** because it stores HDFS data.
+
+> **Task → Spot** because it does not store HDFS data.
+
+---
+
+# EMR Cluster Lifecycle
+
+These are **lifecycle patterns**, not node types.
+
+## Transient EMR Cluster
+
+```text
+Create cluster
+    ↓
+Run job
+    ↓
+Job finishes
+    ↓
+Cluster terminates
+```
+
+Good for periodic or batch jobs.
+
+> **Transient = create → run → terminate**
+
+## Long-Running EMR Cluster
+
+```text
+Create cluster
+    ↓
+Cluster stays running
+    ↓
+Many jobs over time
+```
+
+Good for continuous or repeatedly used workloads.
+
+> **Long-running = stays running**
+
+### Memory
+
+```text
+Lifecycle
+→ Transient
+→ Long-running
+
+Node types
+→ Primary
+→ Core
+→ Task
+```
+
+---
+
+# Amazon EMR Serverless
+
+**Amazon EMR Serverless = run Spark or Hive jobs without managing an EMR cluster or EC2 nodes.**
+
+```text
+Submit job
+   ↓
+EMR Serverless
+   ↓
+AWS automatically provisions/scales resources
+   ↓
+Job completes
+```
+
+### Signal
+
+> **Serverless Spark/Hive + no cluster management → Amazon EMR Serverless**
+
+### Simple distinction
+
+```text
+Amazon EMR
+→ You use/manage an EMR cluster
+
+EMR Serverless
+→ No cluster/node management
+→ AWS automatically handles resources
+```
+
+Use EMR Serverless for **batch processing** when you do not want to provision and manage an EMR cluster.
 
 ---
 
@@ -660,6 +771,7 @@ Example:
 | Job                                   | Service                                             |
 | ------------------------------------- | --------------------------------------------------- |
 | Big-data processing                   | **Amazon EMR**                                      |
+| Serverless Spark / Hive batch         | **Amazon EMR Serverless**                           |
 | SQL on S3                             | **Amazon Athena**                                   |
 | Query S3 from Redshift                | **Amazon Redshift Spectrum**                        |
 | Data warehouse / analytical SQL       | **Amazon Redshift**                                 |
@@ -707,6 +819,7 @@ Metrics dashboards
 | Service                                             | What it does                               | Signal keyword                     |
 | --------------------------------------------------- | ------------------------------------------ | ---------------------------------- |
 | **Amazon EMR (Elastic MapReduce)**                  | Managed big-data processing                | Spark / Hadoop                     |
+| **Amazon EMR Serverless**                           | Serverless Spark / Hive batch processing   | No cluster management              |
 | **Amazon Athena**                                   | SQL directly on S3                         | SQL on S3                          |
 | **Amazon Redshift Spectrum**                        | Query S3 data from Redshift                | S3 + existing Redshift             |
 | **Amazon Redshift**                                 | Data warehouse / analytical SQL            | BI / analytical workloads          |
@@ -724,6 +837,55 @@ Metrics dashboards
 ---
 
 # Important SAA Traps
+
+## EMR vs EMR Serverless
+
+```text
+Need an EMR cluster / node control
+→ Amazon EMR
+
+Need Spark/Hive without managing a cluster
+→ Amazon EMR Serverless
+```
+
+---
+
+## EMR Node Types
+
+```text
+Primary
+→ manages the cluster
+
+Core
+→ compute + HDFS data
+
+Task
+→ compute only
+```
+
+Cost-saving pattern:
+
+```text
+Primary → On-Demand
+Core    → On-Demand
+Task    → Spot
+```
+
+---
+
+## EMR Lifecycle
+
+```text
+Transient
+→ create → run job → terminate
+
+Long-running
+→ cluster stays running
+```
+
+For periodic batch workloads, **transient EMR is often more cost-effective** than keeping a cluster running.
+
+---
 
 ## EMR vs Redshift
 
@@ -889,6 +1051,18 @@ Cross-Region Snapshot Copy
 
 → **Amazon EMR**
 
+> **"A company wants to run Spark jobs without managing an EMR cluster."**
+
+→ **Amazon EMR Serverless**
+
+> **"A daily batch job runs for several hours and should use a cost-effective EMR cluster."**
+
+→ **Transient EMR cluster**
+
+> **"A batch EMR workload must avoid data loss but also reduce compute costs."**
+
+→ **On-Demand primary/core + Spot task nodes**
+
 > **"Query files in S3 using SQL."**
 
 → **Amazon Athena**
@@ -965,6 +1139,7 @@ Redshift
 | ---------------------------------------- | --------------------------------------------------- |
 | Spark / Hadoop                           | **Amazon EMR (Elastic MapReduce)**                  |
 | Large-scale big-data processing          | **Amazon EMR**                                      |
+| Serverless Spark / Hive batch            | **Amazon EMR Serverless**                           |
 | SQL on S3                                | **Amazon Athena**                                   |
 | S3 + existing Redshift                   | **Redshift Spectrum**                               |
 | Data warehouse                           | **Amazon Redshift**                                 |
