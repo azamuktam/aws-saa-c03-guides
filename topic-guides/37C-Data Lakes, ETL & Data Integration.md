@@ -1012,58 +1012,6 @@ Lake Formation
 
 # Important SAA Traps
 
-## Glue Crawler vs Glue ETL
-
-This is one of the most important distinctions in this group.
-
-```text
-Discover schema
-→ Glue Crawler
-
-Transform data
-→ Glue ETL
-```
-
-For example:
-
-```text
-"Find out the columns and data types in CSV files."
-→ Crawler
-
-"Convert CSV files to Parquet."
-→ Glue ETL
-```
-
----
-
-## Glue Data Catalog vs S3
-
-The Catalog does not contain the actual dataset.
-
-```text
-Actual files
-→ S3
-
-Metadata about those files
-→ Glue Data Catalog
-```
-
-For example:
-
-```text
-S3
-= customer.csv
-
-Glue Data Catalog
-= customer table
-= columns
-= data types
-= S3 location
-= schema
-```
-
----
-
 ## Glue Job Bookmark vs Partitioning
 
 Do not confuse these.
@@ -1110,48 +1058,6 @@ rather than simply compressing the JSON with GZIP.
 
 ---
 
-## Glue vs Lake Formation
-
-These services can work together, but their roles differ.
-
-```text
-Glue
-= discover + catalog + transform
-
-Lake Formation
-= data lake governance + fine-grained permissions
-```
-
----
-
-## AppFlow vs Glue
-
-Both can move or work with data, but the signal is different.
-
-```text
-SaaS application → AWS
-→ AppFlow
-
-ETL / transformation / data preparation
-→ Glue
-```
-
-Example:
-
-```text
-Salesforce
-   ↓
-AppFlow
-   ↓
-S3
-   ↓
-Glue
-   ↓
-Transform data
-```
-
----
-
 ## AppFlow vs Data Exchange
 
 ```text
@@ -1192,55 +1098,6 @@ If the question asks for the **most operationally efficient** way to prevent rep
 
 ---
 
-# Data Processing Decision Tree
-
-When you see a data-related question, first identify the operation.
-
-```text
-What does the question want?
-          │
-          ├── Discover schema
-          │      ↓
-          │   Glue Crawler
-          │
-          ├── Store metadata
-          │      ↓
-          │   Glue Data Catalog
-          │
-          ├── Transform data
-          │      ↓
-          │   Glue ETL
-          │
-          ├── Improve Athena query performance
-          │      ↓
-          │   Parquet / ORC
-          │
-          ├── Prevent reprocessing
-          │   of previously processed data
-          │      ↓
-          │   Glue Job Bookmark
-          │
-          ├── Govern data lake permissions
-          │      ↓
-          │   Lake Formation
-          │
-          ├── SaaS → AWS data transfer
-          │      ↓
-          │   AppFlow
-          │
-          ├── Find / subscribe to
-          │   third-party datasets
-          │      ↓
-          │   AWS Data Exchange
-          │
-          └── Bulk operation on existing
-              S3 objects
-                 ↓
-             S3 Batch Operations
-```
-
----
-
 # Pocket Card
 
 | Keyword                                | Answer                            |
@@ -1267,45 +1124,3 @@ What does the question want?
 | Bulk operation on existing S3 objects  | **S3 Batch Operations**           |
 | Millions/billions of existing objects  | **S3 Batch Operations**           |
 
----
-
-# Final Memory
-
-```text
-Data lake
-= central place for large amounts of raw data
-
-S3
-= common AWS storage for the actual data lake data
-
-AWS Glue
-= SERVERLESS ETL + DATA CATALOG
-
-Glue Crawler
-= DISCOVER SCHEMA
-
-Glue Data Catalog
-= STORE METADATA
-
-Glue ETL
-= TRANSFORM DATA
-
-Parquet / ORC
-= COLUMNAR ANALYTICS FORMAT
-= FASTER / LESS DATA SCANNED BY ATHENA
-
-Glue Job Bookmark
-= TRACK PREVIOUSLY PROCESSED DATA
-
-Lake Formation
-= GOVERN + CONTROL ACCESS TO THE DATA LAKE
-
-AppFlow
-= SAAS → AWS
-
-AWS Data Exchange
-= THIRD-PARTY DATA
-
-S3 Batch Operations
-= BULK OPERATIONS ON EXISTING S3 OBJECTS
-```
