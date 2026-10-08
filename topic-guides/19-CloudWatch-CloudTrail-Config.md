@@ -796,6 +796,84 @@ CloudTrail
 
 ---
 
+# CloudTrail Multi-Region Trails & Global Service Events
+
+These are two small but important SAA concepts.
+
+### Multi-Region trail
+
+A normal trail can log only the Region where it was created.
+
+A **Multi-Region trail** logs events from **all enabled AWS Regions**.
+
+Use:
+
+```text
+--is-multi-region-trail
+```
+
+> Need API activity from multiple/all AWS Regions → **Multi-Region trail**
+
+### Global service events
+
+Some AWS services are **global services**, such as IAM. CloudTrail can include their API events with:
+
+```text
+--include-global-service-events
+```
+
+For a **Multi-Region trail**, global service events should be included so the trail captures those events.
+
+### Simple exam mapping
+
+```text
+All Regions
+→ --is-multi-region-trail
+
+Global services such as IAM
+→ --include-global-service-events
+```
+
+### Example
+
+```text
+aws cloudtrail create-trail \
+    --name MyTrail \
+    --s3-bucket-name my-log-bucket \
+    --is-multi-region-trail \
+    --include-global-service-events
+```
+
+The current AWS CLI supports both options for `create-trail`.
+
+### Exam pattern
+
+> "Track API activity across all AWS Regions and include IAM/global service activity."
+
+→ **Multi-Region CloudTrail trail + global service events**
+
+### Trap
+
+```text
+--no-include-global-service-events
+```
+
+→ **Excludes global service events** and therefore does not satisfy a requirement to capture them.
+
+> **Multi-Region ≠ automatically the same thing as global service events**
+
+Think:
+
+```text
+Multi-Region
+→ WHERE? → all Regions
+
+Global service events
+→ WHICH special services? → global services
+```
+
+---
+
 # CloudTrail Event History
 
 CloudTrail provides **90 days of management event history** without requiring a trail.
@@ -816,7 +894,7 @@ Store logs in S3 for long-term retention.
 
 → **CloudTrail Trail → S3**
 
-### Event History vs 
+### Event History vs CloudTrail Lake
 
 ```text
 CloudTrail Event History
@@ -885,7 +963,6 @@ Athena
 → commonly queries CloudTrail logs stored in S3
 → requires the S3/log/table setup
 ```
-
 
 ### Exam shortcut
 
@@ -1400,7 +1477,21 @@ Detailed → 1 minute
 
 → **CloudTrail Trail → S3**
 
-## 15. CloudTrail Lake — IAM error analysis
+## 15. CloudTrail Multi-Region + global services
+
+> "A company has resources in multiple AWS Regions and needs API activity across all Regions, including events from global services such as IAM."
+
+→ **Multi-Region CloudTrail trail + global service events**
+
+```text
+All Regions
+→ --is-multi-region-trail
+
+Global services
+→ --include-global-service-events
+```
+
+## 16. CloudTrail Lake — IAM error analysis
 
 > "A multinational corporation needs to efficiently find and analyze IAM-related `AccessDenied` and `Unauthorized` errors in its CloudTrail events. CloudTrail is already enabled. Which solution meets the requirement with the least effort?"
 
@@ -1432,7 +1523,7 @@ QuickSight is for **BI dashboards and visualization**, which is unnecessary for 
 
 > **Query/analyze CloudTrail events → CloudTrail Lake**
 
-## 16. CloudTrail log encryption
+## 17. CloudTrail log encryption
 
 > "CloudTrail logs stored in S3 must be encrypted."
 
@@ -1455,7 +1546,7 @@ CloudTrail
 → SSE-KMS
 ```
 
-## 17. S3 default encryption
+## 18. S3 default encryption
 
 > "Are newly uploaded S3 objects encrypted by default?"
 
@@ -1465,31 +1556,31 @@ CloudTrail
 
 → **No.**
 
-## 18. Unusual API activity
+## 19. Unusual API activity
 
 > "Detect unusual spikes in API activity."
 
 → **CloudTrail Insights**
 
-## 19. Prove logs were not modified
+## 20. Prove logs were not modified
 
 > "Provide evidence that CloudTrail logs have not been tampered with."
 
 → **CloudTrail Log File Integrity Validation**
 
-## 20. Historical configuration
+## 21. Historical configuration
 
 > "What did this security group look like last Tuesday?"
 
 → **AWS Config**
 
-## 21. Compliance
+## 22. Compliance
 
 > "Identify security groups that allow SSH from the Internet."
 
 → **AWS Config Rule**
 
-## 22. Automatic compliance remediation
+## 23. Automatic compliance remediation
 
 > "Automatically fix resources that violate the security rule."
 
@@ -1507,7 +1598,7 @@ SSM Automation
 Fix
 ```
 
-## 23. IAM access key rotation
+## 24. IAM access key rotation
 
 > "A company wants to identify IAM user access keys that are more than 90 days old."
 
@@ -1517,7 +1608,7 @@ Fix
 maxAccessKeyAge = 90 days
 ```
 
-## 24. IAM access key automatic cleanup
+## 25. IAM access key automatic cleanup
 
 > "A company wants to automatically deactivate and delete any IAM user access key that is more than 90 days old with the least operational effort."
 
@@ -1548,7 +1639,7 @@ Deactivate + delete
 
 Config performs the access-key age/compliance evaluation first.
 
-## 25. Prevent the action
+## 26. Prevent the action
 
 > "Prevent developers from disabling CloudTrail."
 
@@ -1556,27 +1647,17 @@ Config performs the access-key age/compliance evaluation first.
 
 Not → **AWS Config**
 
-## 26. Distributed application latency
+## 27. Distributed application latency
 
 > "A request passes through API Gateway, Lambda, several microservices, and DynamoDB. Find which component is causing the delay."
 
 → **X-Ray**
 
-## 27. ALB client IP and request details
+## 28. ALB client IP and request details
 
 > "Capture detailed information about every HTTP request through an ALB, including client IP addresses and latency."
 
 → **ALB Access Logs**
-
-## 28. ALB traffic patterns
-
-> "Analyze detailed traffic patterns from requests passing through the Application Load Balancer."
-
-→ **ALB Access Logs**
-
-If the question also asks for application troubleshooting:
-
-→ **ALB Access Logs + CloudWatch Application Insights**
 
 ## 29. ALB API changes
 
@@ -1652,6 +1733,8 @@ Container problem
 Individual ALB HTTP request
 → ALB Access Logs
 ```
+
+They can be used together when the question requires both.
 
 ---
 
@@ -1872,47 +1955,49 @@ Query CloudTrail logs stored in S3
 
 # Pocket Card
 
-| Keyword                              | Answer                              |
-| ------------------------------------ | ----------------------------------- |
-| Performance / health / metrics       | **CloudWatch**                      |
-| Logs                                 | **CloudWatch Logs**                 |
-| Alarm on a metric                    | **CloudWatch Alarm**                |
-| Count log messages → metric          | **Metric Filter**                   |
-| Query logs                           | **Logs Insights**                   |
-| Real-time log processing             | **Subscription Filter**             |
-| Reduce alert noise                   | **Composite Alarm**                 |
-| EC2 memory                           | **CloudWatch Agent**                |
-| EC2 swap                             | **CloudWatch Agent**                |
-| EC2 filesystem disk usage            | **CloudWatch Agent**                |
-| EC2 process metrics                  | **CloudWatch Agent / procstat**     |
-| EC2 metrics every 1 minute           | **Detailed Monitoring**             |
-| EKS/ECS container monitoring         | **CloudWatch Container Insights**   |
-| Application/resource troubleshooting | **CloudWatch Application Insights** |
-| RDS process-level CPU/memory         | **Enhanced Monitoring**             |
-| RDS query/database load              | **Performance Insights**            |
-| Detailed HTTP requests through ALB   | **ALB Access Logs**                 |
-| ALB client IP                        | **ALB Access Logs**                 |
-| ALB request/target/response latency  | **ALB Access Logs**                 |
-| ALB aggregate request count          | **CloudWatch Metrics**              |
-| ALB health                           | **ELB Health Checks**               |
-| Who did what / API audit             | **CloudTrail**                      |
-| Last 90 days management events       | **CloudTrail Event History**        |
-| Query CloudTrail events with SQL     | **CloudTrail Lake**                 |
-| AccessDenied / Unauthorized analysis | **CloudTrail Lake**                 |
-| CloudTrail logs stored in S3         | **CloudTrail Trail → S3**           |
-| S3 object-level "who"                | **CloudTrail Data Events**          |
-| Unusual API activity                 | **CloudTrail Insights**             |
-| Prove logs weren't modified          | **Log File Integrity Validation**   |
-| CloudTrail logs encrypted            | **S3 SSE-S3 by default**            |
-| New S3 objects encrypted             | **SSE-S3 by default**               |
-| Customer-controlled S3 key           | **SSE-KMS**                         |
-| Existing old unencrypted data        | **Not automatically re-encrypted**  |
-| Query CloudTrail logs in S3          | **Athena**                          |
-| Configuration history                | **AWS Config**                      |
-| Compliance checking                  | **AWS Config Rules**                |
-| IAM access key >90 days              | **Config `access-keys-rotated`**    |
-| Configure IAM access-key age         | **`maxAccessKeyAge`**               |
-| Auto deactivate/delete old IAM key   | **Config → EventBridge → Lambda**   |
-| Automatically fix Config violations  | **Config + remediation**            |
-| Prevent an action                    | **IAM / SCP**                       |
-| Trace request across services        | **X-Ray**                           |
+| Keyword                              | Answer                                |
+| ------------------------------------ | ------------------------------------- |
+| Performance / health / metrics       | **CloudWatch**                        |
+| Logs                                 | **CloudWatch Logs**                   |
+| Alarm on a metric                    | **CloudWatch Alarm**                  |
+| Count log messages → metric          | **Metric Filter**                     |
+| Query logs                           | **Logs Insights**                     |
+| Real-time log processing             | **Subscription Filter**               |
+| Reduce alert noise                   | **Composite Alarm**                   |
+| EC2 memory                           | **CloudWatch Agent**                  |
+| EC2 swap                             | **CloudWatch Agent**                  |
+| EC2 filesystem disk usage            | **CloudWatch Agent**                  |
+| EC2 process metrics                  | **CloudWatch Agent / procstat**       |
+| EC2 metrics every 1 minute           | **Detailed Monitoring**               |
+| EKS/ECS container monitoring         | **CloudWatch Container Insights**     |
+| Application/resource troubleshooting | **CloudWatch Application Insights**   |
+| RDS process-level CPU/memory         | **Enhanced Monitoring**               |
+| RDS query/database load              | **Performance Insights**              |
+| Detailed HTTP requests through ALB   | **ALB Access Logs**                   |
+| ALB client IP                        | **ALB Access Logs**                   |
+| ALB request/target/response latency  | **ALB Access Logs**                   |
+| ALB aggregate request count          | **CloudWatch Metrics**                |
+| ALB health                           | **ELB Health Checks**                 |
+| Who did what / API audit             | **CloudTrail**                        |
+| All Regions                          | **`--is-multi-region-trail`**         |
+| Global service events                | **`--include-global-service-events`** |
+| Last 90 days management events       | **CloudTrail Event History**          |
+| Query CloudTrail events with SQL     | **CloudTrail Lake**                   |
+| AccessDenied / Unauthorized analysis | **CloudTrail Lake**                   |
+| CloudTrail logs stored in S3         | **CloudTrail Trail → S3**             |
+| S3 object-level "who"                | **CloudTrail Data Events**            |
+| Unusual API activity                 | **CloudTrail Insights**               |
+| Prove logs weren't modified          | **Log File Integrity Validation**     |
+| CloudTrail logs encrypted            | **S3 SSE-S3 by default**              |
+| New S3 objects encrypted             | **SSE-S3 by default**                 |
+| Customer-controlled S3 key           | **SSE-KMS**                           |
+| Existing old unencrypted data        | **Not automatically re-encrypted**    |
+| Query CloudTrail logs in S3          | **Athena**                            |
+| Configuration history                | **AWS Config**                        |
+| Compliance checking                  | **AWS Config Rules**                  |
+| IAM access key >90 days              | **Config `access-keys-rotated`**      |
+| Configure IAM access-key age         | **`maxAccessKeyAge`**                 |
+| Auto deactivate/delete old IAM key   | **Config → EventBridge → Lambda**     |
+| Automatically fix Config violations  | **Config + remediation**              |
+| Prevent an action                    | **IAM / SCP**                         |
+| Trace request across services        | **X-Ray**                             |
