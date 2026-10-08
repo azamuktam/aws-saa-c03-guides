@@ -4,7 +4,7 @@
 
 This section is mainly a **service-matching game**. Identify the service from the scenario:
 
-* **WAF(Web Application Firewall)** → Layer 7 HTTP filtering
+* **WAF (Web Application Firewall)** → Layer 7 HTTP filtering
 * **Shield** → DDoS protection
 * **Firewall Manager** → centralized security policies across AWS Organizations
 * **Network Firewall** → VPC-wide traffic inspection
@@ -13,6 +13,24 @@ This section is mainly a **service-matching game**. Identify the service from th
 ### WAF — the Layer 7 firewall
 
 **AWS WAF (Web Application Firewall)** works at **Layer 7** and reads HTTP requests: URLs, headers, query strings, and body content.
+
+### Web ACL
+
+**Web ACL (Web Access Control List)** = the collection of WAF rules that decides whether web requests are **allowed, blocked, or counted**.
+
+```text
+AWS WAF
+  ↓
+Web ACL
+  ↓
+Rules
+  ↓
+Allow / Block / Count
+```
+
+> **WAF = service**
+>
+> **Web ACL = rule collection/configuration**
 
 | Rule type               | Purpose                                                                   |
 | ----------------------- | ------------------------------------------------------------------------- |
@@ -101,7 +119,7 @@ It can automatically apply policies to **new accounts and new resources**.
 | Service          | One-liner                                                                                                                                              |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **GuardDuty**    | **ML threat detection** using **CloudTrail, VPC Flow Logs, DNS logs**; no agents. Detects **cryptomining, unusual API calls, compromised credentials** |
-| **Macie**        | **PII / sensitive-data discovery in S3**; uses ML to identify data such as credit cards and SSNs .                                                      |
+| **Macie**        | **PII / sensitive-data discovery in S3**; uses ML to identify data such as credit cards and SSNs.                                                      |
 | **Inspector**    | **Vulnerability scanner** for **CVEs** on **EC2 (via SSM agent), ECR container images, Lambda**                                                        |
 | **Security Hub** | **Aggregation dashboard** for findings from security services + compliance standards such as **CIS and PCI**                                           |
 | **Detective**    | **Post-finding investigation**; builds relationship graphs to help identify **root cause**                                                             |
@@ -130,8 +148,10 @@ GuardDuty / Macie / Inspector
 * **CVE** → Inspector
 
 **Trap:** *"Macie for EC2 or RDS"* → no. **Macie is S3-only.**
- Identify sensitive data using **Amazon Macie** and create an Amazon EventBridge (Amazon CloudWatch Events) rule to capture the **SensitiveData** event type.
- Set up an Amazon SNS topic as the target for an Amazon EventBridge (Amazon CloudWatch Events) rule that sends notifications when the error occurs again.
+
+Identify sensitive data using **Amazon Macie** and create an **Amazon EventBridge** rule to capture the **SensitiveData** event type.
+
+Set up an **Amazon SNS** topic as the target for an Amazon EventBridge rule that sends notifications when the error occurs again.
 
 ## Question patterns
 
@@ -162,6 +182,7 @@ GuardDuty / Macie / Inspector
 | Keyword                                                  | Answer                                        |
 | -------------------------------------------------------- | --------------------------------------------- |
 | SQLi / XSS / HTTP filtering                              | **WAF**                                       |
+| WAF rule collection                                      | **Web ACL**                                   |
 | Rate limit per IP                                        | **WAF rate-based rule**                       |
 | Test rule without blocking                               | **WAF Count mode**                            |
 | WAF attach points                                        | **CloudFront, ALB, API GW, AppSync, Cognito** |
