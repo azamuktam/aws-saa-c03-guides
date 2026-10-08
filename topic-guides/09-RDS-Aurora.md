@@ -67,6 +67,53 @@ Aurora's maximum cluster volume is **256 TiB for supported newer engine versions
 
 ---
 
+# DB Subnet Groups
+
+A **DB subnet group** is a collection of subnets that Amazon RDS or Aurora can use for database placement.
+
+DB subnet groups are typically made from **private subnets** so the database is not directly reachable from the public internet.
+
+```text
+VPC
+├── Public Subnet A
+├── Public Subnet B
+├── Private Subnet A ──┐
+└── Private Subnet B ──┤
+                       ↓
+                 DB Subnet Group
+                       ↓
+                  RDS / Aurora
+```
+
+A DB subnet group must cover subnets in **at least two Availability Zones** in the Region for standard RDS/Aurora deployments.
+
+### Important distinction
+
+```text
+DB Subnet Group
+→ Where can RDS/Aurora place the database?
+
+Security Group
+→ What traffic is allowed to the database?
+
+Network ACL (NACL)
+→ What traffic is allowed at the subnet level?
+```
+
+### Exam shortcut
+
+> RDS/Aurora + private subnets for database placement → **DB subnet group**
+
+> EC2 + choose where to launch → **Select a subnet directly**
+
+> Database network access → **Security Group**
+
+> Subnet-level traffic filtering → **Network ACL (NACL)**
+
+**DB subnet groups are specifically for database services such as RDS/Aurora.**
+
+---
+
 # Provisioned RDS vs Aurora Serverless v2
 
 Standard **RDS DB instances use provisioned compute capacity**.
@@ -1297,6 +1344,11 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 | Dynamic database compute                   | **Aurora Serverless v2 / ACUs**                                             |
 | RDS storage growing                        | **RDS Storage Auto Scaling**                                                |
 | RDS storage auto scaling ≠ compute scaling | **Important distinction**                                                   |
+| RDS/Aurora database placement              | **DB subnet group**                                                         |
+| DB subnet group                            | **Collection of subnets, typically private**                                |
+| DB subnet group AZ requirement             | **At least 2 AZs**                                                          |
+| Database network access                    | **Security Group**                                                          |
+| Subnet-level traffic filtering             | **Network ACL (NACL)**                                                      |
 | Scale reads                                | **Read Replica**                                                            |
 | Cross-Region RDS DR                        | **Cross-Region Read Replica**                                               |
 | Aurora cross-Region DR                     | **Aurora Global Database**                                                  |
