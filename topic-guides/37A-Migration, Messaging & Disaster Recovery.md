@@ -81,7 +81,33 @@ New AWS-native application
 
 → **Amazon MQ**
 
+### RabbitMQ vs ActiveMQ HA deployment
+
+A small SAA-specific distinction:
+
+```text
+Amazon MQ for RabbitMQ
+→ Cluster deployment for HA
+→ Multiple broker nodes across AZs
+
+Amazon MQ for ActiveMQ
+→ Active/standby deployment for HA
+→ One active + one standby broker
+```
+
+### Exam pattern
+
+> Existing **RabbitMQ** + need high availability → **Amazon MQ for RabbitMQ with cluster deployment**
+
+> Existing **ActiveMQ** + need high availability → **Amazon MQ for ActiveMQ with active/standby deployment**
+
+You do **not** need to memorize deeper broker implementation details for SAA.
+
 ### Memory
+
+> **RabbitMQ → Cluster**
+
+> **ActiveMQ → Active/Standby**
 
 > **Existing message broker → Amazon MQ**
 
@@ -145,6 +171,7 @@ Direct messaging APIs
 ### Memory
 
 > **Legacy targeted customer engagement → Amazon Pinpoint**
+
 > **Current direct messaging → AWS End User Messaging**
 
 ---
@@ -992,6 +1019,22 @@ The key question is whether the application **already depends on a traditional m
 
 ---
 
+## RabbitMQ vs ActiveMQ HA
+
+For the SAA-level distinction:
+
+```text
+RabbitMQ
+→ Amazon MQ cluster deployment
+
+ActiveMQ
+→ Amazon MQ active/standby deployment
+```
+
+The important point is simply recognizing the appropriate Amazon MQ HA deployment for the broker type.
+
+---
+
 ## Pinpoint vs SNS vs End User Messaging
 
 ```text
@@ -1072,6 +1115,8 @@ SCT + DMS
 | ----------------------------------------------- | -------------------------------------------------- |
 | Existing RabbitMQ / ActiveMQ application        | **Amazon MQ**                                      |
 | Existing message broker / minimal code changes  | **Amazon MQ**                                      |
+| RabbitMQ HA                                     | **Amazon MQ cluster deployment**                   |
+| ActiveMQ HA                                     | **Amazon MQ active/standby deployment**            |
 | Discover / inventory on-premises servers        | **AWS Application Discovery Service**              |
 | Discover application/server dependencies        | **AWS Application Discovery Service**              |
 | Inventory servers before migration              | **AWS Application Discovery Service**              |
@@ -1096,3 +1141,51 @@ SCT + DMS
 | Oracle → Aurora PostgreSQL                      | **AWS SCT + DMS**                                  |
 
 ## Ultimate migration cheat sheet
+
+```text
+EXISTING MESSAGE BROKER
+RabbitMQ / ActiveMQ
+→ Amazon MQ
+
+RabbitMQ HA
+→ Cluster deployment
+
+ActiveMQ HA
+→ Active/standby
+
+DISCOVER
+"What do we have?"
+→ Application Discovery Service
+
+TRACK
+"How far along are we?"
+→ Migration Hub
+
+MOVE
+"How do we rehost these servers?"
+→ AWS Transform MGN
+
+BACKUP
+"Save recovery points / restore later"
+→ AWS Backup
+
+RECOVER
+"How do we recover after a disaster?"
+→ AWS DRS
+
+DATABASE DATA
+"Move / replicate database data"
+→ DMS
+
+DATABASE ENGINE
+"Change Oracle → PostgreSQL, etc."
+→ SCT + DMS
+
+LEGACY CUSTOMER ENGAGEMENT
+"Campaigns / journeys / segmentation"
+→ Amazon Pinpoint
+
+CURRENT DIRECT MESSAGING
+"SMS / voice / push / OTP"
+→ AWS End User Messaging
+```
