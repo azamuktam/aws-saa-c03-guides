@@ -2,7 +2,7 @@
 
 ## The idea
 
-These are AWS services that commonly appear in SAA questions involving **data lakes, ETL, metadata, schema discovery, incremental processing, and bulk operations on S3 objects**.
+These are AWS services that commonly appear in SAA questions involving **data lakes, ETL, metadata, schema discovery, data preparation, incremental processing, and bulk operations on S3 objects**.
 
 You generally don't need deep knowledge of each one.
 
@@ -26,6 +26,9 @@ Transform CSV → Parquet
 Visual / drag-and-drop Glue ETL jobs
 → Glue Studio
 
+Clean / mask / anonymize data with minimal custom code
+→ AWS Glue DataBrew
+
 Athena query performance on large S3 data
 → Parquet / ORC
 
@@ -43,6 +46,9 @@ Salesforce → S3
 
 Find/subscribe to third-party datasets
 → AWS Data Exchange
+
+Discover sensitive data in S3
+→ Amazon Macie
 
 Bulk operation on millions of existing S3 objects
 → S3 Batch Operations
@@ -445,6 +451,132 @@ Glue ETL
 
 ---
 
+# AWS Glue DataBrew
+
+**AWS Glue DataBrew = visual, no-code/low-code data preparation and cleaning service.**
+
+It is useful when the requirement is to **clean, normalize, transform, or anonymize data without developing custom code**.
+
+Typical operations include:
+
+* cleaning data
+* replacing values
+* masking sensitive information
+* removing unwanted data
+* standardizing data
+* preparing datasets for analytics or development
+
+### Typical pattern
+
+```text
+Amazon RDS
+    ↓
+DataBrew
+    ↓
+Clean / mask / transform data
+    ↓
+Amazon S3
+    ↓
+Development / analytics
+```
+
+### Strong SAA signal
+
+> **"Clean or sanitize data with minimal custom code."**
+
+→ **AWS Glue DataBrew**
+
+Especially when the question says:
+
+* remove or replace personal identifiers
+* mask sensitive values
+* prepare a copy of production data for development
+* reduce custom code
+* minimize operational overhead
+
+### Example
+
+A company exports customer data from RDS every week to create development data.
+
+Customer names and personal identifiers must be removed or replaced with random values.
+
+```text
+RDS
+ ↓
+DataBrew
+ ↓
+Replace / mask sensitive values
+ ↓
+S3
+ ↓
+Development environment
+```
+
+→ **DataBrew**
+
+### DataBrew vs Glue ETL
+
+Both can transform data, but the exam distinction is:
+
+```text
+Glue ETL
+→ Serverless ETL
+→ More general / programmable data transformation
+
+DataBrew
+→ Visual data preparation
+→ Little/no custom code
+→ Cleaning / masking / standardizing data
+```
+
+### DataBrew vs Macie
+
+This is an important SAA trap.
+
+```text
+Macie
+→ Discover sensitive data in S3
+
+DataBrew
+→ Clean / transform / mask data
+```
+
+Do not choose Macie just because the question mentions **PII**.
+
+If the requirement is:
+
+> **"Find/discover sensitive data in S3."**
+
+→ **Macie**
+
+If the requirement is:
+
+> **"Remove, replace, mask, or clean sensitive data with minimal code."**
+
+→ **DataBrew**
+
+### DataBrew vs Athena
+
+```text
+Athena
+→ Query/analyze data in S3 using SQL
+
+DataBrew
+→ Visually clean/transform data
+```
+
+If you need to write SQL/regular expressions to perform the transformation, that usually means **more operational overhead** than DataBrew.
+
+### Exam shortcut
+
+> **Clean / mask / anonymize data + minimal code → DataBrew**
+
+> **Discover sensitive data in S3 → Macie**
+
+> **Query S3 data with SQL → Athena**
+
+---
+
 # Parquet for Athena
 
 **Apache Parquet = columnar file format optimized for analytics.**
@@ -787,6 +919,7 @@ If the question specifically says that **previously processed data keeps getting
 | **Glue Data Catalog** | Store metadata            | Tables / schema / metadata                |
 | **Glue ETL**          | Transform data            | CSV → Parquet / ETL                       |
 | **Glue Studio**       | Visual ETL job creation   | Drag-and-drop ETL                         |
+| **Glue DataBrew**     | Visual data preparation   | Clean / mask / anonymize with little code |
 | **Glue Job Bookmark** | Track processing progress | Prevent reprocessing previously read data |
 
 ### Quick memory
@@ -803,6 +936,9 @@ Transform
 
 Visual ETL
 → Glue Studio
+
+Clean / mask / anonymize with little code
+→ DataBrew
 
 Remember previous processing
 → Job Bookmark
@@ -900,6 +1036,72 @@ AppFlow
 
 Data Exchange
 = discover / subscribe to external datasets
+```
+
+---
+
+# Amazon Macie
+
+**Amazon Macie = discover and identify sensitive data in Amazon S3.**
+
+Macie uses pattern matching and machine learning techniques to help identify sensitive data and provide visibility into data security risks.
+
+Typical examples include:
+
+* personal information
+* credentials
+* financial information
+* other sensitive-data patterns
+
+### Typical pattern
+
+```text
+S3
+ ↓
+Macie
+ ↓
+Discover sensitive data
+```
+
+### Signal
+
+> **"Discover sensitive data in S3."**
+
+→ **Amazon Macie**
+
+### Important distinction
+
+Macie is primarily about **discovery and visibility**, not general-purpose data cleaning.
+
+```text
+Macie
+→ Find sensitive data
+
+DataBrew
+→ Clean / transform / mask data
+
+Athena
+→ Query data
+```
+
+### SAA trap
+
+A question may mention:
+
+> **customer names / personal identifiers / PII**
+
+Do not automatically choose Macie.
+
+Ask:
+
+> **Does the requirement say to discover the sensitive data, or to transform/remove it?**
+
+```text
+Discover PII in S3
+→ Macie
+
+Remove / replace / mask PII with minimal code
+→ DataBrew
 ```
 
 ---
@@ -1047,6 +1249,20 @@ Lake Formation permissions
 Athena / QuickSight
 ```
 
+For data preparation / anonymization:
+
+```text
+RDS export
+    ↓
+DataBrew
+    ↓
+Clean / mask / replace sensitive values
+    ↓
+S3
+    ↓
+Development environment
+```
+
 The roles remain different:
 
 ```text
@@ -1068,11 +1284,17 @@ Glue Data Catalog
 Glue ETL
 = transform data
 
+DataBrew
+= visually clean / mask / prepare data
+
 Glue Job Bookmark
 = track previously processed data
 
 Lake Formation
 = control data lake access
+
+Macie
+= discover sensitive data in S3
 ```
 
 ---
@@ -1106,6 +1328,18 @@ Lake Formation
 > **"Create Glue ETL jobs using a visual interface instead of building the job entirely in code."**
 
 → **Glue Studio**
+
+---
+
+> **"Clean, mask, or anonymize customer data with minimal custom code."**
+
+→ **AWS Glue DataBrew**
+
+---
+
+> **"A weekly copy of RDS customer data is needed for development, but names and personal identifiers must be removed or replaced."**
+
+→ **AWS Glue DataBrew**
 
 ---
 
@@ -1175,6 +1409,12 @@ Lake Formation
 
 ---
 
+> **"A company wants to discover sensitive data patterns in an S3 bucket."**
+
+→ **Amazon Macie**
+
+---
+
 > **"Apply an operation to millions of existing S3 objects."**
 
 → **S3 Batch Operations**
@@ -1235,6 +1475,44 @@ rather than simply compressing the JSON with GZIP.
 
 ---
 
+## DataBrew vs Macie
+
+This is one of the most useful distinctions in this section.
+
+```text
+Macie
+→ Discover sensitive data in S3
+
+DataBrew
+→ Clean / transform / mask / anonymize data
+```
+
+Exam trigger:
+
+```text
+Find PII
+→ Macie
+
+Remove / replace / mask PII
+→ DataBrew
+```
+
+---
+
+## DataBrew vs Athena
+
+```text
+Athena
+→ Query/analyze S3 data using SQL
+
+DataBrew
+→ Visually clean/transform data
+```
+
+If the question emphasizes **minimal custom code** for cleaning or preparing data, DataBrew is usually the better fit.
+
+---
+
 ## AppFlow vs Data Exchange
 
 ```text
@@ -1289,6 +1567,60 @@ Glue Data Catalog
 
 ---
 
+# Glue + DataBrew + Macie + Athena
+
+A useful way to separate the services:
+
+```text
+             S3 data
+                │
+      ┌─────────┼───────────┐
+      ↓         ↓           ↓
+   Macie     DataBrew    Athena
+      │         │           │
+   DISCOVER   CLEAN       QUERY
+   sensitive   / MASK      / ANALYZE
+     data      data         data
+```
+
+And for ETL:
+
+```text
+S3
+ ↓
+Glue Crawler
+ ↓
+Glue Data Catalog
+ ↓
+Glue ETL
+ ↓
+Transformed data
+```
+
+So:
+
+```text
+Crawler
+→ discover
+
+Catalog
+→ metadata
+
+ETL
+→ transform
+
+DataBrew
+→ visually clean / mask
+
+Macie
+→ discover sensitive data in S3
+
+Athena
+→ query
+```
+
+---
+
 # Pocket Card
 
 | Keyword                                          | Answer                             |
@@ -1301,6 +1633,9 @@ Glue Data Catalog
 | Transform data                                   | **Glue ETL**                       |
 | CSV → Parquet                                    | **Glue ETL**                       |
 | Visual / drag-and-drop ETL                       | **Glue Studio**                    |
+| Clean / mask / anonymize data + minimal code     | **AWS Glue DataBrew**              |
+| Discover sensitive data in S3                    | **Amazon Macie**                   |
+| Query S3 data with SQL                           | **Amazon Athena**                  |
 | Athena + large JSON dataset                      | **Parquet / ORC**                  |
 | Reduce Athena data scanned                       | **Parquet / ORC**                  |
 | Glue reprocesses old data                        | **Glue Job Bookmark**              |
@@ -1323,3 +1658,6 @@ Glue Data Catalog
 | Find/subscribe to third-party datasets           | **AWS Data Exchange**              |
 | Bulk operation on existing S3 objects            | **S3 Batch Operations**            |
 | Millions/billions of existing objects            | **S3 Batch Operations**            |
+
+```
+```
