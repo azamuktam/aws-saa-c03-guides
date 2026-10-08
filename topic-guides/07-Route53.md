@@ -40,8 +40,8 @@ It is a **Route 53 feature** that lets an A or AAAA record point to supported AW
 
 | Record    | Maps                                                                    | Key point                       |
 | --------- | ----------------------------------------------------------------------- | ------------------------------- |
-| **A**     | Name → IPv4 address                                                     | IPv4 record type                |
-| **AAAA**  | Name → IPv6 address                                                     | IPv6 record type                |
+| **A**     | Name → IPv4 address                                                     | IPv4 record type, Can be used at the zone apex                |
+| **AAAA**  | Name → IPv6 address                                                     | IPv6 record type , Can be used at the zone apex               |
 | **CNAME** | Name → another DNS name                                                 | Cannot be used at the zone apex |
 | **Alias** | Route 53 feature for pointing A/AAAA records to supported AWS resources | Can be used at the zone apex    |
 
