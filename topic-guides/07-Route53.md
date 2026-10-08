@@ -33,50 +33,146 @@ User → Route 53 → ALB → EC2
 
 # DNS records
 
-| Record    | Maps                          | Key point              |
-| --------- | ----------------------------- | ---------------------- |
-| **A**     | Name → IPv4                   | IPv4                   |
-| **AAAA**  | Name → IPv6                   | IPv6                   |
-| **CNAME** | Name → DNS name               | Cannot be at zone apex |
-| **Alias** | Name → supported AWS resource | Can be at zone apex    |
+**A, AAAA, and CNAME are DNS record types.**
+
+**Alias is not a separate DNS record type.**
+It is a **Route 53 feature** that lets an A or AAAA record point to supported AWS resources.
+
+| Record    | Maps                                                                    | Key point                       |
+| --------- | ----------------------------------------------------------------------- | ------------------------------- |
+| **A**     | Name → IPv4 address                                                     | IPv4 record type                |
+| **AAAA**  | Name → IPv6 address                                                     | IPv6 record type                |
+| **CNAME** | Name → another DNS name                                                 | Cannot be used at the zone apex |
+| **Alias** | Route 53 feature for pointing A/AAAA records to supported AWS resources | Can be used at the zone apex    |
 
 ### A / AAAA
 
 ```text
-A     → 192.0.2.10
-AAAA  → 2001:db8::1
+A
+→ 192.0.2.10
+
+AAAA
+→ 2001:db8::1
 ```
 
 ### CNAME
 
+A CNAME points one domain name to another **DNS name**.
+
 ```text
 www.example.com
+ ↓
+CNAME
  ↓
 app.example.com
 ```
 
-Cannot be used for:
+A CNAME **cannot exist at the zone apex**:
 
 ```text
 example.com
 ```
-CNAME record cannot exist AT the apex zone (example.com), but it CAN forward to an apex zone.
-### Alias
 
-Points to supported AWS resources such as:
+But a CNAME **can point to a name that is itself an apex name**.
 
-* ALB
-* NLB
+For example:
+
+```text
+app.example.com
+ ↓
+CNAME
+ ↓
+other-example.com
+```
+
+The restriction is on **where the CNAME record exists**, not what name it points to.
+
+---
+
+# Alias
+
+**Alias is a Route 53 feature, not a separate DNS record type.**
+
+An Alias is used with an **A or AAAA record** to point to supported AWS resources.
+
+```text
+Alias A
+→ IPv4 + AWS resource
+
+Alias AAAA
+→ IPv6 + AWS resource
+```
+
+Supported resources include:
+
+* Application Load Balancer (ALB)
+* Network Load Balancer (NLB)
 * CloudFront
 * API Gateway
 * S3 website endpoint
 
-Advantages:
+### Examples
 
-* Works at the **root/apex**
+```text
+example.com
+ ↓
+Alias A
+ ↓
+ALB
+```
+
+```text
+example.com
+ ↓
+Alias AAAA
+ ↓
+Dual-stack ALB
+```
+
+For a dual-stack ALB:
+
+```text
+Alias A
+→ IPv4
+
+Alias AAAA
+→ IPv6
+```
+
+### Advantages
+
+* Can be used at the **root/apex**
 * No Route 53 charge for Alias queries
 
-> Root domain → AWS resource → **Alias**
+> **Root domain → AWS resource → Alias**
+
+> **ALB + IPv4 → Alias A**
+
+> **ALB + IPv6 → Alias AAAA**
+
+> **Dual-stack ALB → Alias A + Alias AAAA**
+
+### CNAME vs Alias
+
+```text
+CNAME
+→ DNS name → another DNS name
+```
+
+```text
+Alias A / Alias AAAA
+→ DNS name → supported AWS resource
+```
+
+### Important exam distinction
+
+```text
+A / AAAA / CNAME
+→ DNS record types
+
+Alias
+→ Route 53 feature
+```
 
 ---
 
@@ -574,10 +670,16 @@ This avoids waiting for normal DNS TTL behavior when switching endpoints.
 # Question patterns
 
 > **Root domain → ALB**
-> → **Alias**
+> → **Alias A or Alias AAAA**
+
+> **Dual-stack ALB → both IPv4 and IPv6**
+> → **Alias A + Alias AAAA**
 
 > **Subdomain → another DNS name**
 > → **CNAME**
+
+> **ALB does not have a fixed IP that should be hardcoded in Route 53**
+> → **Use Alias rather than a normal A/AAAA record**
 
 > **S3 static website + Route 53**
 > → **Static website hosting + matching bucket/domain + Alias**
@@ -631,30 +733,32 @@ This avoids waiting for normal DNS TTL behavior when switching endpoints.
 
 # Pocket card
 
-| Keyword                          | Answer                                  |
-| -------------------------------- | --------------------------------------- |
-| IPv4                             | **A**                                   |
-| IPv6                             | **AAAA**                                |
-| Name → DNS name                  | **CNAME**                               |
-| Root domain → AWS resource       | **Alias**                               |
-| S3 website + Route 53            | **Matching bucket/domain + Alias**      |
-| Public DNS                       | **Public hosted zone**                  |
-| VPC-only DNS                     | **Private hosted zone**                 |
-| On-prem → AWS DNS                | **Inbound Resolver endpoint**           |
-| AWS → on-prem DNS                | **Outbound Resolver endpoint**          |
-| Percentage                       | **Weighted**                            |
-| Lowest latency                   | **Latency**                             |
-| Primary + DR                     | **Failover**                            |
-| User location                    | **Geolocation**                         |
-| Geographic bias                  | **Geoproximity**                        |
-| Multiple healthy IPs             | **Multi-Value Answer**                  |
-| Private health check             | **CloudWatch alarm-based health check** |
-| Combine health checks            | **Calculated health check**             |
-| Faster DNS changes               | **Lower TTL**                           |
-| Choose between Regions           | **Route 53**                            |
-| Choose between instances         | **ELB**                                 |
-| Fast global failover + static IP | **Global Accelerator**                  |
-| Multiple active Regions          | **Active-Active**                       |
-| Primary + standby                | **Active-Passive**                      |
-
----
+| Keyword                          | Answer                                           |
+| -------------------------------- | ------------------------------------------------ |
+| IPv4                             | **A**                                            |
+| IPv6                             | **AAAA**                                         |
+| Name → DNS name                  | **CNAME**                                        |
+| Root domain → AWS resource       | **Alias A / Alias AAAA**                         |
+| **Alias meaning**                | **Route 53 feature, not a separate record type** |
+| ALB → IPv4                       | **Alias A**                                      |
+| ALB → IPv6                       | **Alias AAAA**                                   |
+| Dual-stack ALB                   | **Alias A + Alias AAAA**                         |
+| S3 website + Route 53            | **Matching bucket/domain + Alias**               |
+| Public DNS                       | **Public hosted zone**                           |
+| VPC-only DNS                     | **Private hosted zone**                          |
+| On-prem → AWS DNS                | **Inbound Resolver endpoint**                    |
+| AWS → on-prem DNS                | **Outbound Resolver endpoint**                   |
+| Percentage                       | **Weighted**                                     |
+| Lowest latency                   | **Latency**                                      |
+| Primary + DR                     | **Failover**                                     |
+| User location                    | **Geolocation**                                  |
+| Geographic bias                  | **Geoproximity**                                 |
+| Multiple healthy IPs             | **Multi-Value Answer**                           |
+| Private health check             | **CloudWatch alarm-based health check**          |
+| Combine health checks            | **Calculated health check**                      |
+| Faster DNS changes               | **Lower TTL**                                    |
+| Choose between Regions           | **Route 53**                                     |
+| Choose between instances         | **ELB**                                          |
+| Fast global failover + static IP | **Global Accelerator**                           |
+| Multiple active Regions          | **Active-Active**                                |
+| Primary + standby                | **Active-Passive**                               |
