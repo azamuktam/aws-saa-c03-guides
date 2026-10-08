@@ -8,9 +8,9 @@ These services solve different problems:
 * **DataSync** → **move/copy data**
 * **Transfer Family** → **file transfers** using SFTP/FTP/FTPS/AS2
 
-```text id="3ez6pv"
-Gateway     = ACCESS
-DataSync    = COPY
+```text
+Gateway         = ACCESS
+DataSync        = COPY
 Transfer Family = FILE TRANSFER
 ```
 
@@ -20,7 +20,7 @@ Transfer Family = FILE TRANSFER
 
 Connects on-premises systems to AWS storage while allowing existing applications to use familiar storage protocols.
 
-```text id="1g0l4e"
+```text
 On-premises
    ↓
 Storage Gateway
@@ -32,7 +32,7 @@ AWS storage
 
 Provides **NFS/SMB** file access while storing files in **S3**.
 
-```text id="yqf1xy"
+```text
 Application → NFS/SMB → S3 File Gateway → S3
 ```
 
@@ -50,7 +50,7 @@ Application → NFS/SMB → S3 File Gateway → S3
 
 Provides **SMB** access from on-premises to **FSx for Windows File Server**.
 
-```text id="82l0ma"
+```text
 On-premises → SMB → FSx File Gateway → FSx for Windows
 ```
 
@@ -77,7 +77,7 @@ The key question:
 
 Only frequently accessed data is cached locally.
 
-```text id="9m2j40"
+```text
 S3
 = main dataset
 
@@ -93,7 +93,7 @@ Local
 
 S3 stores snapshots for backup/DR.
 
-```text id="b4j4yl"
+```text
 Local
 = full dataset
 
@@ -124,7 +124,7 @@ Replaces physical tape infrastructure with **virtual tapes in AWS**.
 
 Provides a **Virtual Tape Library (VTL)** so existing backup software can continue working.
 
-```text id="mw6n3j"
+```text
 Backup software
       ↓
 Tape Gateway
@@ -151,7 +151,7 @@ Use for:
 
 Examples:
 
-```text id="2g8j6t"
+```text
 On-prem NFS → S3
 On-prem SMB → EFS
 S3 → EFS
@@ -180,7 +180,7 @@ It supports **bandwidth throttling**.
 | **Move/copy the data**                      | **DataSync**        |
 | **Keep using AWS storage from on-premises** | **Storage Gateway** |
 
-```text id="a4ifz7"
+```text
 Old storage
    ↓
 DataSync
@@ -190,7 +190,7 @@ New storage
 
 vs.
 
-```text id="tduwha"
+```text
 On-prem application
        ↓
 Storage Gateway
@@ -221,7 +221,7 @@ Storage backends:
 
 Example:
 
-```text id="0jnk7o"
+```text
 Partner
    ↓
 SFTP
@@ -234,6 +234,24 @@ S3 / EFS
 > Business partners already use SFTP → **Transfer Family**
 
 No need to build/manage an SFTP server on EC2.
+
+### Small exam note
+
+> **SFTP does not require EFS → Transfer Family supports S3 or EFS**
+
+> **SFTP + only approved public IPs → VPC-hosted internet-facing endpoint + Security Group**
+
+```text
+Approved IP
+    ↓
+VPC endpoint + Security Group
+    ↓
+Transfer Family
+    ↓
+S3 / EFS
+```
+
+> Normal **public Transfer Family endpoint + source-IP allow list** → ❌
 
 ---
 
@@ -288,24 +306,41 @@ No need to build/manage an SFTP server on EC2.
 > **"Business partners upload files using SFTP."**
 > → **Transfer Family**
 
+> **"SFTP service does not need a managed EC2 server."**
+> → **Transfer Family**
+
+> **"Transfer Family can use S3 as the storage backend."**
+> → **Transfer Family + S3**
+
+> **"Transfer Family can use EFS as the storage backend."**
+> → **Transfer Family + EFS**
+
+> **"SFTP service must accept connections only from approved public IP addresses."**
+> → **Transfer Family + VPC-hosted internet-facing endpoint + Security Group**
+
+> **"Use a normal public Transfer Family endpoint and restrict clients by source IP."**
+> → **Wrong**; use a VPC-hosted internet-facing endpoint with a Security Group.
+
 ---
 
 # Pocket card
 
-| Keyword                      | Answer                    |
-| ---------------------------- | ------------------------- |
-| On-prem → AWS storage access | **Storage Gateway**       |
-| Move/copy/sync data          | **DataSync**              |
-| SFTP/FTPS/FTP/AS2            | **Transfer Family**       |
-| NFS/SMB → S3                 | **S3 File Gateway**       |
-| SMB → FSx Windows            | **FSx File Gateway**      |
-| Cloud primary                | **Volume Gateway Cached** |
-| Local primary + AWS backup   | **Volume Gateway Stored** |
-| Physical tape replacement    | **Tape Gateway**          |
-| DataSync on-prem             | **Agent**                 |
-| DataSync bandwidth control   | **Bandwidth throttling**  |
-| Transfer Family storage      | **S3 / EFS**              |
-
+| Keyword                         | Answer                            |
+| ------------------------------- | --------------------------------- |
+| On-prem → AWS storage access    | **Storage Gateway**               |
+| Move/copy/sync data             | **DataSync**                      |
+| SFTP/FTPS/FTP/AS2               | **Transfer Family**               |
+| NFS/SMB → S3                    | **S3 File Gateway**               |
+| SMB → FSx Windows               | **FSx File Gateway**              |
+| Cloud primary                   | **Volume Gateway Cached**         |
+| Local primary + AWS backup      | **Volume Gateway Stored**         |
+| Physical tape replacement       | **Tape Gateway**                  |
+| DataSync on-prem                | **Agent**                         |
+| DataSync bandwidth control      | **Bandwidth throttling**          |
+| Transfer Family storage         | **S3 / EFS**                      |
+| SFTP + trusted public IPs       | **VPC endpoint + Security Group** |
+| Public endpoint + IP allow list | **Not the intended solution**     |
+| SFTP requires EFS?              | **No, S3 also works**             |
 
 ### One important extra service
 
