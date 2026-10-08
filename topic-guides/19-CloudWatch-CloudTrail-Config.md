@@ -1085,7 +1085,7 @@ CloudTrail Insights = unusual API activity
 
 ---
 
-# AWS Config — "What was the configuration, and is it compliant?"
+# AWS Config — "What is the configuration, and is it compliant?"
 
 **AWS Config = resource configuration history + compliance checking.**
 
@@ -1241,6 +1241,34 @@ Config
 
 SCP / IAM
 = prevent / control permissions
+```
+
+---
+
+# AWS Audit Manager — "Can I prove compliance?"
+
+**AWS Audit Manager = collect and organize evidence for compliance audits.**
+
+```text
+Audit Manager
+→ "Can I provide evidence for the required compliance controls?"
+```
+
+### Exam pattern
+
+> "Collect evidence and prepare for a compliance audit/framework."
+
+→ **AWS Audit Manager**
+
+```text
+Config
+→ Is the resource configured correctly?
+
+Audit Manager
+→ Can I prove compliance with the required controls?
+
+Trusted Advisor
+→ Are we following AWS best practices?
 ```
 
 ---
@@ -1959,10 +1987,12 @@ Log File Validation
 | Existing old unencrypted data            | **Not automatically re-encrypted**    |
 | Query CloudTrail logs in S3              | **Athena**                            |
 | Configuration history                    | **AWS Config**                        |
-| Compliance checking                      | **AWS Config Rules**                  |
+| Configuration compliance                 | **AWS Config Rules**                  |
 | IAM access key >90 days                  | **Config `access-keys-rotated`**      |
 | Configure IAM access-key age             | **`maxAccessKeyAge`**                 |
 | Auto deactivate/delete old IAM key       | **Config → EventBridge → Lambda**     |
 | Automatically fix Config violations      | **Config + remediation**              |
+| Compliance audit / collect evidence      | **AWS Audit Manager**                 |
+| AWS best-practice recommendations        | **Trusted Advisor**                   |
 | Prevent an action                        | **IAM / SCP**                         |
 | Trace request across services            | **X-Ray**                             |
