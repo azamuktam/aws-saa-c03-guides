@@ -182,6 +182,12 @@ Disadvantages:
 * You manage the underlying instances
 * You must think about EC2 capacity, patching, and scaling
 
+### Compute cost
+
+You pay for the **EC2 instances** that provide the compute capacity. The instances can continue to incur compute charges even when the containers running on them are idle.
+
+> **ECS on EC2 = pay for the EC2 capacity you provision.**
+
 ---
 
 # ECS on Fargate
@@ -204,6 +210,14 @@ You do not manage the EC2 instances running your containers.
 > **"Run containers without managing servers/infrastructure"**
 
 → **Fargate**
+
+### Compute cost
+
+With **Fargate**, you pay for the CPU and memory resources allocated to **running tasks**.
+
+If the task is merely **idle but still running**, you generally **still pay**. To stop Fargate compute charges, the task must be stopped or the service must scale the task count down (potentially to **zero**).
+
+> **Fargate = no EC2 instance management, but running tasks still incur compute charges.**
 
 ### Important limitation
 
