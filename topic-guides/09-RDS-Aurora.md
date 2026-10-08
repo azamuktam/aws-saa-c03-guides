@@ -205,73 +205,72 @@ You cannot simply enable encryption on an existing unencrypted RDS DB instance.
 
 ---
 
-# Encryption in transit — RDS SQL Server
+# Encryption in transit — RDS and Aurora
 
-**Encryption in transit** protects data while it moves between the application and the RDS database.
+**Encryption in transit** protects data while it moves between the application and the database.
 
-For **RDS for Microsoft SQL Server**, use **SSL/TLS** to encrypt the connection between the client application and RDS. AWS supports two main approaches: force SSL for all connections or configure individual clients/connections to use SSL.
+Use **SSL/TLS**.
 
-## 1. Force all connections to use SSL
+### RDS for SQL Server
 
-Set:
+Force all connections to use SSL:
 
 ```text
 rds.force_ssl = 1
 ```
 
-Then reboot the DB instance because the parameter is **static**.
+> All RDS SQL Server connections must use encryption in transit → **`rds.force_ssl = 1`**
+
+### Aurora PostgreSQL
+
+Force SSL:
 
 ```text
-EC2 / application
-       ↓
-     SSL/TLS
-       ↓
-RDS SQL Server
-
 rds.force_ssl = 1
-→ unencrypted connections are not allowed
 ```
 
-> **All in-flight data between EC2 and RDS must be encrypted → `rds.force_ssl = 1`**
+### Aurora MySQL
 
-## 2. Configure the client application to use SSL
-
-For client-specific encryption:
+Require encrypted connections:
 
 ```text
-RDS SQL Server certificate / CA
-          ↓
-Download certificate
-          ↓
-Import into client/server trust store
-          ↓
-Configure application / connection to use SSL
+require_secure_transport = ON
 ```
 
-The application can then establish an encrypted SSL/TLS connection to RDS. AWS documents importing the appropriate RDS certificate into the client and enabling encrypted connections.
+### Client certificate verification
 
-### Exam pattern
+If the requirement says the client must **verify the Aurora/RDS server certificate**:
 
-> **All EC2 → RDS SQL Server connections must use encryption in transit**
-
-→ **`rds.force_ssl = 1`**
-
-and, when the choices ask for client-side SSL configuration:
-
-→ **Download/import the RDS CA certificate + configure the application to use SSL**
+```text
+RDS / Aurora
+    ↓
+AWS CA certificate
+    ↓
+Import CA certificate into client trust store
+    ↓
+Client verifies certificate
+    ↓
+SSL/TLS connection
+```
 
 ### Do not confuse these
 
-| Requirement                                  | Solution                                                               |
-| -------------------------------------------- | ---------------------------------------------------------------------- |
-| Encrypt data **in transit**                  | **SSL/TLS**                                                            |
-| Force all SQL Server connections to use SSL  | **`rds.force_ssl = 1`**                                                |
-| Client needs to verify/trust RDS certificate | **Import RDS CA certificate into client trust store**                  |
-| Encrypt data **at rest**                     | **RDS encryption / TDE where supported**                               |
-| Control network access                       | **Security Groups**                                                    |
-| Database authentication                      | **Password / IAM DB authentication / supported authentication method** |
+| Requirement                                | Solution                                                               |
+| ------------------------------------------ | ---------------------------------------------------------------------- |
+| Encrypt data **in transit**                | **SSL/TLS**                                                            |
+| Force RDS SQL Server connections to SSL    | **`rds.force_ssl = 1`**                                                |
+| Force Aurora PostgreSQL connections to SSL | **`rds.force_ssl = 1`**                                                |
+| Force Aurora MySQL connections to TLS      | **`require_secure_transport = ON`**                                    |
+| Client must verify DB certificate          | **Trust/import appropriate RDS CA certificate**                        |
+| Encrypt data **at rest**                   | **RDS/Aurora encryption / TDE where supported**                        |
+| Control network access                     | **Security Groups**                                                    |
+| Database authentication                    | **Password / IAM DB authentication / supported authentication method** |
 
-**TDE** does not encrypt network traffic; it is an encryption-at-rest feature. Security Groups also do not encrypt traffic.
+**TDE** does not encrypt network traffic; it is an encryption-at-rest feature.
+
+**Security Groups** control network access but do not encrypt traffic.
+
+> **SAA priority:** memorize **SSL/TLS = in transit**. Exact certificate-installation steps are lower priority.
 
 ---
 
@@ -335,14 +334,14 @@ The database account is created with the AWS authentication plugin instead of a 
 
 ### Important distinction
 
-| Requirement                                 | Solution                                                                    |
-| ------------------------------------------- | --------------------------------------------------------------------------- |
-| Temporary token to connect to RDS           | **IAM Database Authentication**                                             |
-| Store/rotate database passwords             | **AWS Secrets Manager**                                                     |
-| Control whether an IAM identity can connect | **IAM policy / `rds-db:connect`**                                           |
-| Network access to the DB                    | **Security Group**                                                          |
-| Workforce SSO / AWS application access      | **IAM Identity Center**                                                     |
-| MFA-based AWS authentication                | **Multi-Factor Authentication (MFA)**; not the RDS database-token mechanism |
+| Requirement                                 | Solution                                      |
+| ------------------------------------------- | --------------------------------------------- |
+| Temporary token to connect to RDS           | **IAM Database Authentication**               |
+| Store/rotate database passwords             | **AWS Secrets Manager**                       |
+| Control whether an IAM identity can connect | **IAM policy / `rds-db:connect`**             |
+| Network access to the DB                    | **Security Group**                            |
+| Workforce SSO / AWS application access      | **IAM Identity Center**                       |
+| MFA-based AWS authentication                | **MFA**; not the RDS database-token mechanism |
 
 **SSO** = **Single Sign-On**.
 
@@ -392,6 +391,16 @@ Read Replica → read scaling
 Automatically increases allocated storage as the database approaches its threshold.
 
 > Storage is growing unpredictably → **RDS Storage Auto Scaling**
+
+**Important:** RDS Storage Auto Scaling scales **storage**, not the DB instance's CPU/memory capacity.
+
+```text
+RDS Storage Auto Scaling
+→ storage ↑
+
+Aurora Serverless v2
+→ compute capacity ↑/↓
+```
 
 ---
 
@@ -597,14 +606,6 @@ DMS
 
 → **Babelfish + AWS SCT + AWS DMS**
 
-The exact combination depends on the question's answer choices. If the question asks for the two actions that achieve the migration:
-
-> **Enable Babelfish on Aurora PostgreSQL**
-
-*
-
-> **Use AWS SCT for schema conversion and AWS DMS for data migration**
-
 ---
 
 # Aurora endpoints
@@ -671,8 +672,6 @@ Cluster / Writer endpoint points to new primary
 
 Aurora promotes an existing Aurora Replica to become the new primary. Failover is much faster than creating a new DB instance.
 
-**Aurora flips the canonical name record (CNAME) for your DB Instance to point at the healthy replica, which in turn is promoted to become the new primary.**
-
 **CNAME** = **Canonical Name record**, a DNS record that points one domain name to another canonical name.
 
 > **Primary failure + Aurora Replica** → **Promote the Aurora Replica**
@@ -721,20 +720,6 @@ No Replica
 
 The distributed Aurora storage **does not mean another DB instance automatically exists in every AZ**.
 
-### Exam pattern
-
-> **Aurora primary fails + Replica exists**
-
-→ **Promote Replica**
-
-> **Aurora primary fails + only one DB instance**
-
-→ **Create replacement instance in the same AZ**
-
-> **Aurora has distributed storage**
-
-→ **Does NOT mean a DB instance automatically exists in each AZ**
-
 ---
 
 # Aurora Serverless v2
@@ -761,15 +746,11 @@ Traffic drops
 
 **ACU** = **Aurora Capacity Unit**.
 
-Aurora Serverless v2 scales the capacity of an existing serverless writer or reader within the configured minimum/maximum ACU range. It is designed for variable and unpredictable workloads such as e-commerce sales events.
-
 > Unpredictable/intermittent Aurora workload → **Aurora Serverless v2**
 
 ---
 
 ## Aurora Serverless v2 vs Aurora Read Replica Auto Scaling
-
-These are easy to confuse.
 
 ### Aurora Serverless v2
 
@@ -814,8 +795,6 @@ Add Reader 4
 Think:
 
 > **"There are too many read requests; add more readers."**
-
-Aurora can automatically add and remove Aurora Replicas based on configured performance metrics.
 
 ### The simplest distinction
 
@@ -1027,7 +1006,6 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 
 > A company has a standard RDS database with highly variable compute demand and wants the database compute capacity itself to automatically scale up and down based on workload.
 > → **Aurora Serverless v2**
-> **Note:** Standard RDS DB compute is provisioned; Aurora Serverless v2 provides dynamic compute scaling.
 
 > A company has an unpredictable workload with long low-usage periods and occasional database traffic spikes. It wants to avoid keeping fixed database compute capacity.
 > → **Aurora Serverless v2**
@@ -1061,6 +1039,15 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 
 > A company wants all RDS for SQL Server connections to use SSL/TLS and the application/client must trust the RDS certificate.
 > → **Set `rds.force_ssl = 1` + configure the client/application with the RDS CA certificate**
+
+> A company wants to force all Aurora PostgreSQL connections to use SSL/TLS.
+> → **`rds.force_ssl = 1`**
+
+> A company wants to force all Aurora MySQL connections to use encrypted transport.
+> → **`require_secure_transport = ON`**
+
+> A client application must verify the Aurora/RDS server certificate during the TLS connection.
+> → **Trust/import the appropriate RDS CA certificate**
 
 > A company wants encryption in transit, not encryption at rest.
 > → **SSL/TLS**
@@ -1119,16 +1106,16 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > An Aurora database has unpredictable traffic with long periods of low usage and occasional spikes, and the company does not want to manage fixed database capacity.
 > → **Aurora Serverless v2**
 
-> A company has an unpredictable workload and the **database writer itself** may suddenly need more CPU and memory capacity.
+> A company has an unpredictable workload and the database writer itself may suddenly need more CPU and memory capacity.
 > → **Aurora Serverless v2**
 
-> A company has a **read-heavy workload** and wants the number of Aurora reader instances to increase or decrease automatically based on load.
+> A company has a read-heavy workload and wants the number of Aurora reader instances to increase or decrease automatically based on load.
 > → **Aurora Read Replicas + Auto Scaling**
 
 > A company says "Aurora Auto Scaling" but the requirement is to automatically give the existing writer more CPU/memory capacity rather than add readers.
 > → **Aurora Serverless v2**
 
-> A company wants to scale the **number of read replicas**, not the compute capacity of one existing DB instance.
+> A company wants to scale the number of read replicas, not the compute capacity of one existing DB instance.
 > → **Aurora Read Replica Auto Scaling**
 
 > A company has an Aurora Serverless workload and also needs more read capacity.
@@ -1164,61 +1151,65 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > An application stores time-series data such as IoT sensor measurements and application metrics.
 > → **Amazon Timestream**
 
-> An **Aurora** cluster needs highly available storage across Availability Zones.
+> An Aurora cluster needs highly available storage across Availability Zones.
 > → **Aurora automatically replicates storage across 3 Availability Zones**
 
 ---
 
 # Pocket card
 
-| Keyword                               | Answer                                                                      |
-| ------------------------------------- | --------------------------------------------------------------------------- |
-| AZ failure                            | **Multi-AZ**                                                                |
-| Automatic regional failover           | **Multi-AZ**                                                                |
-| Standard RDS compute                  | **Provisioned DB instance**                                                 |
-| Spiky Aurora compute workload         | **Aurora Serverless v2**                                                    |
-| Dynamic database compute              | **Aurora Serverless v2 / ACUs**                                             |
-| Scale reads                           | **Read Replica**                                                            |
-| Cross-Region RDS DR                   | **Cross-Region Read Replica**                                               |
-| Aurora cross-Region DR                | **Aurora Global Database**                                                  |
-| Lambda + too many DB connections      | **RDS Proxy**                                                               |
-| Point-in-time restore                 | **Automated backup / PITR**                                                 |
-| Long-term backup                      | **Manual snapshot**                                                         |
-| Existing unencrypted RDS → encrypted  | **Snapshot → encrypted copy → restore**                                     |
-| Encrypt RDS SQL Server in transit     | **SSL/TLS**                                                                 |
-| Force SQL Server connections to SSL   | **`rds.force_ssl = 1`**                                                     |
-| Client trusts RDS certificate         | **Import RDS CA certificate + enable SSL/TLS**                              |
-| Temporary DB auth token               | **IAM Database Authentication**                                             |
-| IAM DB token lifetime                 | **15 minutes**                                                              |
-| MySQL IAM authentication              | **`AWSAuthenticationPlugin`**                                               |
-| Allow IAM identity to connect         | **`rds-db:connect`**                                                        |
-| Store/rotate DB passwords             | **Secrets Manager**                                                         |
-| Oracle → RDS Oracle                   | **AWS Database Migration Service (DMS)**                                    |
-| Oracle → different engine             | **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)** |
-| Oracle backup/recovery                | **Oracle Recovery Manager (RMAN)**                                          |
-| Oracle AZ HA                          | **RDS Multi-AZ**                                                            |
-| Existing Oracle license               | **Bring Your Own License (BYOL)**                                           |
-| OS-level DB control                   | **EC2 / RDS Custom**                                                        |
-| SQL Server → Aurora PostgreSQL        | **Babelfish**                                                               |
-| SQL Server schema conversion          | **AWS Schema Conversion Tool (SCT)**                                        |
-| Database data migration               | **AWS Database Migration Service (DMS)**                                    |
-| Aurora current writer                 | **Writer/Cluster endpoint**                                                 |
-| Aurora read balancing                 | **Reader endpoint**                                                         |
-| One Aurora instance                   | **Instance endpoint**                                                       |
-| Different Aurora instance groups      | **Custom endpoint**                                                         |
-| Aurora failure + Replica exists       | **Promote Replica**                                                         |
-| Aurora failure + no Replica           | **Recreate primary instance**                                               |
-| Spiky/unpredictable Aurora workload   | **Aurora Serverless v2**                                                    |
-| Writer needs more CPU/memory          | **Aurora Serverless v2**                                                    |
-| Scale Aurora compute with ACUs        | **Aurora Serverless v2**                                                    |
-| Read-heavy workload                   | **Aurora Read Replicas**                                                    |
-| Automatically add/remove readers      | **Aurora Replica Auto Scaling**                                             |
-| Scale UP/DOWN existing DB compute     | **Aurora Serverless v2**                                                    |
-| Scale OUT/IN number of readers        | **Aurora Read Replica Auto Scaling**                                        |
-| Serverless + additional read capacity | **Serverless v2 + Aurora readers**                                          |
-| Aurora cross-Region DR                | **Aurora Global Database**                                                  |
-| Quick Aurora copy                     | **Aurora Cloning**                                                          |
-| Rewind Aurora MySQL                   | **Aurora Backtrack**                                                        |
-| Multi-Region NoSQL                    | **DynamoDB Global Tables**                                                  |
-| Time-series database                  | **Amazon Timestream**                                                       |
-| Aurora distributed storage            | **Replicated across 3 AZs**                                                 |
+| Keyword                                    | Answer                                                                      |
+| ------------------------------------------ | --------------------------------------------------------------------------- |
+| AZ failure                                 | **Multi-AZ**                                                                |
+| Automatic regional failover                | **Multi-AZ**                                                                |
+| Standard RDS compute                       | **Provisioned DB instance**                                                 |
+| Spiky Aurora compute workload              | **Aurora Serverless v2**                                                    |
+| Dynamic database compute                   | **Aurora Serverless v2 / ACUs**                                             |
+| RDS storage growing                        | **RDS Storage Auto Scaling**                                                |
+| RDS storage auto scaling ≠ compute scaling | **Important distinction**                                                   |
+| Scale reads                                | **Read Replica**                                                            |
+| Cross-Region RDS DR                        | **Cross-Region Read Replica**                                               |
+| Aurora cross-Region DR                     | **Aurora Global Database**                                                  |
+| Lambda + too many DB connections           | **RDS Proxy**                                                               |
+| Point-in-time restore                      | **Automated backup / PITR**                                                 |
+| Long-term backup                           | **Manual snapshot**                                                         |
+| Existing unencrypted RDS → encrypted       | **Snapshot → encrypted copy → restore**                                     |
+| Encrypt DB traffic                         | **SSL/TLS**                                                                 |
+| Force RDS SQL Server SSL                   | **`rds.force_ssl = 1`**                                                     |
+| Force Aurora PostgreSQL SSL                | **`rds.force_ssl = 1`**                                                     |
+| Force Aurora MySQL TLS                     | **`require_secure_transport = ON`**                                         |
+| Client verifies DB certificate             | **Trust/import RDS CA certificate**                                         |
+| Temporary DB auth token                    | **IAM Database Authentication**                                             |
+| IAM DB token lifetime                      | **15 minutes**                                                              |
+| MySQL IAM authentication                   | **`AWSAuthenticationPlugin`**                                               |
+| Allow IAM identity to connect              | **`rds-db:connect`**                                                        |
+| Store/rotate DB passwords                  | **Secrets Manager**                                                         |
+| Oracle → RDS Oracle                        | **AWS Database Migration Service (DMS)**                                    |
+| Oracle → different engine                  | **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)** |
+| Oracle backup/recovery                     | **Oracle Recovery Manager (RMAN)**                                          |
+| Oracle AZ HA                               | **RDS Multi-AZ**                                                            |
+| Existing Oracle license                    | **Bring Your Own License (BYOL)**                                           |
+| OS-level DB control                        | **EC2 / RDS Custom**                                                        |
+| SQL Server → Aurora PostgreSQL             | **Babelfish**                                                               |
+| SQL Server schema conversion               | **AWS Schema Conversion Tool (SCT)**                                        |
+| Database data migration                    | **AWS Database Migration Service (DMS)**                                    |
+| Aurora current writer                      | **Writer/Cluster endpoint**                                                 |
+| Aurora read balancing                      | **Reader endpoint**                                                         |
+| One Aurora instance                        | **Instance endpoint**                                                       |
+| Different Aurora instance groups           | **Custom endpoint**                                                         |
+| Aurora failure + Replica exists            | **Promote Replica**                                                         |
+| Aurora failure + no Replica                | **Recreate primary instance**                                               |
+| Spiky/unpredictable relational DB          | **Aurora Serverless v2**                                                    |
+| Writer needs more CPU/memory               | **Aurora Serverless v2**                                                    |
+| Scale Aurora compute with ACUs             | **Aurora Serverless v2**                                                    |
+| Read-heavy workload                        | **Aurora Read Replicas**                                                    |
+| Automatically add/remove readers           | **Aurora Replica Auto Scaling**                                             |
+| Scale UP/DOWN existing DB compute          | **Aurora Serverless v2**                                                    |
+| Scale OUT/IN number of readers             | **Aurora Read Replica Auto Scaling**                                        |
+| Serverless + additional read capacity      | **Serverless v2 + Aurora readers**                                          |
+| Aurora cross-Region DR                     | **Aurora Global Database**                                                  |
+| Quick Aurora copy                          | **Aurora Cloning**                                                          |
+| Rewind Aurora MySQL                        | **Aurora Backtrack**                                                        |
+| Multi-Region NoSQL                         | **DynamoDB Global Tables**                                                  |
+| Time-series database                       | **Amazon Timestream**                                                       |
+| Aurora distributed storage                 | **Replicated across 3 AZs**                                                 |
