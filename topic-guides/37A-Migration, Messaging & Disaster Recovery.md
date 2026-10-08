@@ -12,6 +12,12 @@ Best approach:
 Existing RabbitMQ / ActiveMQ application
 → Amazon MQ
 
+Discover / inventory on-premises servers
+→ AWS Application Discovery Service
+
+Track migration progress
+→ AWS Migration Hub
+
 Lift-and-shift / rehost servers to AWS
 → AWS Transform MGN
   (formerly AWS Application Migration Service)
@@ -140,6 +146,121 @@ Direct messaging APIs
 
 > **Legacy targeted customer engagement → Amazon Pinpoint**
 > **Current direct messaging → AWS End User Messaging**
+
+---
+
+# AWS Application Discovery Service
+
+**AWS Application Discovery Service = discover and inventory on-premises servers before migration.**
+
+Use it when a company first needs to understand its existing environment before deciding how to migrate it.
+
+It can help collect information about:
+
+* Servers
+* VM configurations
+* Application dependencies
+* Network dependencies
+* Performance information
+* Server relationships
+
+### Discovery approaches
+
+```text
+Discovery Agent
+→ Install agent on individual servers
+
+Discovery Connector
+→ Deploy connector in the on-premises environment
+→ Useful for discovering VMware virtual machines
+```
+
+### Common keywords
+
+* Inventory on-premises servers
+* Discover servers
+* Discover applications
+* Application dependencies
+* Network dependencies
+* Before migration
+* Assess migration
+* Hundreds of servers / VMs
+
+### Memory
+
+> **Application Discovery Service = "What do we have?"**
+
+---
+
+# AWS Migration Hub
+
+**AWS Migration Hub = centralized migration tracking.**
+
+It provides a central place to track the progress of application migrations across AWS migration tools.
+
+### Common keywords
+
+* Track migration
+* Migration progress
+* Central migration dashboard
+* Track applications being migrated
+* View migration status
+
+### Memory
+
+> **Migration Hub = "Where are we in the migration?"**
+
+---
+
+# Application Discovery Service vs MGN vs Migration Hub
+
+This is an important SAA distinction.
+
+```text
+Need to discover/inventory existing servers
+→ AWS Application Discovery Service
+
+Need to actually migrate/rehost servers
+→ AWS Transform MGN
+
+Need to track migration progress
+→ AWS Migration Hub
+```
+
+### Example
+
+> "A company has hundreds of on-premises VMs. Before migration, it wants an inventory of its servers and wants to track the migration of each application."
+
+→ **AWS Application Discovery Service + AWS Migration Hub**
+
+```text
+On-premises VMs
+      ↓
+Application Discovery Service
+      ↓
+Server inventory / dependencies
+      ↓
+Migration Hub
+      ↓
+Track migration progress
+```
+
+### Critical exam trap
+
+Do **not** choose MGN simply because the question mentions migration.
+
+Ask what the company actually needs:
+
+```text
+"Discover / inventory"
+→ Application Discovery Service
+
+"Move / rehost"
+→ MGN
+
+"Track migration"
+→ Migration Hub
+```
 
 ---
 
@@ -670,23 +791,24 @@ Amazon MQ
 ```
 
 ```text
-Server migration?
+Migration question
         ↓
-Rehost / lift-and-shift
-        ↓
-AWS Transform MGN
-```
-
-```text
-Backup / retention / restore?
-        ↓
-AWS Backup
-```
-
-```text
-Disaster recovery?
-        ↓
-AWS Elastic Disaster Recovery (DRS)
+What is the requirement?
+        │
+        ├── Discover / inventory on-prem servers
+        │       → AWS Application Discovery Service
+        │
+        ├── Track migration progress
+        │       → AWS Migration Hub
+        │
+        ├── Move / rehost servers to AWS
+        │       → AWS Transform MGN
+        │
+        ├── Backup / retention / restore
+        │       → AWS Backup
+        │
+        └── Disaster recovery
+                → AWS Elastic Disaster Recovery (DRS)
 ```
 
 ```text
@@ -723,7 +845,41 @@ AWS End User Messaging
 
 ---
 
+> **"A company has hundreds of on-premises virtual machines. Before migration, it needs an inventory of its servers and wants to track the migration of each application."**
+
+→ **AWS Application Discovery Service + AWS Migration Hub**
+
+**Why?**
+
+```text
+Inventory
+→ Application Discovery Service
+
+Track migration
+→ Migration Hub
+```
+
+---
+
+> **"A company needs to discover its on-premises servers and application dependencies before deciding how to migrate them."**
+
+→ **AWS Application Discovery Service**
+
+---
+
+> **"A company needs a central place to track the progress of its application migrations."**
+
+→ **AWS Migration Hub**
+
+---
+
 > **"Move existing physical servers to AWS with minimal application changes and minimal downtime."**
+
+→ **AWS Transform MGN**
+
+---
+
+> **"A company needs to rehost physical servers to AWS while minimizing business interruption."**
 
 → **AWS Transform MGN**
 
@@ -744,6 +900,7 @@ AWS End User Messaging
 > **"A company needs a targeted customer campaign using customer segments and journeys."**
 
 → **Amazon Pinpoint**
+
 **Legacy/current-status note:** Pinpoint support ends **October 30, 2026**.
 
 ---
@@ -767,6 +924,53 @@ AWS End User Messaging
 ---
 
 # SAA Traps & Distinctions
+
+## Application Discovery Service vs MGN vs Migration Hub
+
+This is one of the most important additions to this section.
+
+```text
+"What servers/applications do we have?"
+→ Application Discovery Service
+
+"Move these servers to AWS."
+→ MGN
+
+"How far along are our migrations?"
+→ Migration Hub
+```
+
+Do not choose **MGN** merely because the question says "migration."
+
+The requirement determines the service.
+
+---
+
+## Application Discovery Service vs DataSync
+
+```text
+Discover / inventory servers
+→ Application Discovery Service
+
+Transfer files / data
+→ AWS DataSync
+```
+
+DataSync does **not** replace Application Discovery Service for server inventory.
+
+---
+
+## Migration Hub vs QuickSight
+
+If the requirement is:
+
+> "Track migration progress"
+
+→ **Migration Hub**
+
+You do not need QuickSight simply because information needs to be visualized.
+
+---
 
 ## Amazon MQ vs SQS / SNS / EventBridge
 
@@ -868,6 +1072,11 @@ SCT + DMS
 | ----------------------------------------------- | -------------------------------------------------- |
 | Existing RabbitMQ / ActiveMQ application        | **Amazon MQ**                                      |
 | Existing message broker / minimal code changes  | **Amazon MQ**                                      |
+| Discover / inventory on-premises servers        | **AWS Application Discovery Service**              |
+| Discover application/server dependencies        | **AWS Application Discovery Service**              |
+| Inventory servers before migration              | **AWS Application Discovery Service**              |
+| Track migration progress                        | **AWS Migration Hub**                              |
+| Central migration tracking                      | **AWS Migration Hub**                              |
 | Legacy targeted customer engagement / campaigns | **Amazon Pinpoint**                                |
 | Current SMS / MMS / voice messaging             | **AWS End User Messaging SMS**                     |
 | Current push notifications                      | **AWS End User Messaging Push**                    |
@@ -886,3 +1095,4 @@ SCT + DMS
 | Different database engines                      | **AWS SCT + DMS**                                  |
 | Oracle → Aurora PostgreSQL                      | **AWS SCT + DMS**                                  |
 
+## Ultimate migration cheat sheet
