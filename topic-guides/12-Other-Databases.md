@@ -749,6 +749,46 @@ The question needs to specifically point toward **SimpleDB** before choosing it.
 
 ---
 
+## Cross-account Lambda invocation — small exam note
+
+This is a **Lambda + IAM** topic rather than a database topic, but it is useful to recognize:
+
+> **Another AWS account needs to invoke a Lambda function**
+> → Lambda **resource-based policy**
+
+> **Least privilege**
+> → `lambda:InvokeFunction`
+
+```text
+Dev account
+   ↓
+Lambda resource-based policy
+   ↓
+lambda:InvokeFunction
+   ↓
+Lambda in another account
+```
+
+Do not confuse this with the Lambda **execution role**:
+
+```text
+Resource-based policy
+→ Who can access the Lambda
+
+Execution role
+→ What the Lambda function can access
+```
+
+### Exam pattern
+
+> *"Users in another AWS account must invoke a Lambda function."* → **Lambda resource-based policy**
+
+> *"Only invocation is required."* → **`lambda:InvokeFunction`**
+
+> *"Do not use `lambda:*` when least privilege is required.*
+
+---
+
 ## The decision algorithm
 
 When you see an "other database" question, first identify the **workload**.
@@ -816,6 +856,8 @@ Blockchain / multiple parties / shared ledger
 
 > *"Analytical queries are slowing down the production OLTP database"* → **Move the analytical workload away from the production database**, typically to **Redshift** or **Athena** depending on where the data is and the workload.
 
+> *"Users from another AWS account need to invoke a Lambda function"* → **Lambda resource-based policy + `lambda:InvokeFunction`**
+
 ---
 
 ## Pocket card
@@ -838,59 +880,5 @@ Blockchain / multiple parties / shared ledger
 | Multiple parties + blockchain                | **Managed Blockchain**                               |
 | QLDB                                         | **Legacy — ended support July 31, 2025**             |
 | Analytics slowing production OLTP            | **Move analytics to Redshift/Athena as appropriate** |
-
-## Final memory
-
-```text
-Redshift
-= BIG ANALYTICS
-
-Athena
-= SQL ON S3
-
-Spectrum
-= REDSHIFT → S3 DATA
-
-Neptune
-= RELATIONSHIPS
-
-Timestream
-= TIME
-
-DocumentDB
-= MONGODB
-
-Keyspaces
-= CASSANDRA
-
-SimpleDB
-= SIMPLE NON-RELATIONAL DATA
-
-OpenSearch
-= SEARCH
-
-Managed Blockchain
-= SHARED BLOCKCHAIN
-```
-
-The most important distinction is:
-
-```text
-Need to run the application
-→ RDS / Aurora / DynamoDB
-
-Need to analyze huge datasets
-→ Redshift / Athena
-
-Need to search text
-→ OpenSearch
-
-Need to understand relationships
-→ Neptune
-
-Need timestamped measurements
-→ Timestream
-
-Need a simple older non-relational datastore
-→ SimpleDB
-```
+| Cross-account Lambda invocation              | **Resource-based policy + `lambda:InvokeFunction`**  |
+| Lambda execution role                        | **What the Lambda function can access**              |
