@@ -6,6 +6,7 @@
 
 Supported engines:
 
+* IBM Db2
 * MySQL
 * PostgreSQL
 * MariaDB
@@ -26,16 +27,16 @@ Need:
 
 # RDS vs Aurora
 
-|                      | **RDS**                                        | **Aurora**                               |
-| -------------------- | ---------------------------------------------- | ---------------------------------------- |
-| Type                 | Managed relational database service            | AWS relational database engine           |
-| Engines              | MySQL, PostgreSQL, MariaDB, Oracle, SQL Server | MySQL-compatible / PostgreSQL-compatible |
-| Storage architecture | Traditional DB storage                         | Distributed shared cluster storage       |
-| Storage scaling      | Depends on engine/storage configuration        | Automatically grows                      |
-| Maximum storage      | Depends on engine                              | Up to **256 TiB** for supported versions |
-| Replicas             | Read Replicas                                  | Aurora Replicas                          |
-| Fast DB failover     | Multi-AZ                                       | Promote Aurora Replica                   |
-| Cross-Region DR      | Cross-Region Read Replica                      | Aurora Global Database                   |
+|                      | **RDS**                                             | **Aurora**                               |
+| -------------------- | --------------------------------------------------- | ---------------------------------------- |
+| Type                 | Managed relational database service                 | AWS relational database engine           |
+| Engines              | Db2, MySQL, PostgreSQL, MariaDB, Oracle, SQL Server | MySQL-compatible / PostgreSQL-compatible |
+| Storage architecture | Traditional DB storage                              | Distributed shared cluster storage       |
+| Storage scaling      | Depends on engine/storage configuration             | Automatically grows                      |
+| Maximum storage      | Depends on engine                                   | Up to **256 TiB** for supported versions |
+| Replicas             | Read Replicas                                       | Aurora Replicas                          |
+| Fast DB failover     | Multi-AZ                                            | Promote Aurora Replica                   |
+| Cross-Region DR      | Cross-Region Read Replica                           | Aurora Global Database                   |
 
 ### Simple decision rule
 
@@ -60,7 +61,9 @@ NoSQL
 
 **ACID** = **Atomicity, Consistency, Isolation, Durability**: the standard properties associated with reliable database transactions.
 
-**Important:** OLTP, ACID, and complex SQL alone do **not** automatically mean Aurora. Both RDS and Aurora can support these workloads. Very large and growing storage requirements can be an important reason to choose Aurora.
+**Important:** OLTP, ACID, and complex SQL alone do **not** automatically mean Aurora. Both RDS and Aurora can support these workloads. Very large and growing storage requirements can be an important reason to consider Aurora.
+
+Aurora's maximum cluster volume is **256 TiB for supported newer engine versions**; earlier supported Aurora versions can have a 128 TiB maximum.
 
 ---
 
@@ -94,7 +97,9 @@ Aurora Serverless v2
 
 > Unpredictable or spiky Aurora workload → **Aurora Serverless v2**
 
-> Minimize capacity during low usage → **Aurora Serverless v2**
+> Minimize compute capacity during low usage → **Aurora Serverless v2**
+
+Aurora Serverless v2 capacity is version-dependent. Current supported versions can use ranges up to **256 ACUs**, and supported versions can scale as low as **0 ACUs** with auto-pause. Each ACU provides approximately **2 GiB of memory plus associated CPU and networking**.
 
 This does **not** mean RDS cannot scale at all. RDS can use features such as **storage auto scaling**, Read Replicas, and manual instance resizing. The key distinction is that standard RDS does not automatically scale its DB compute capacity up and down like Aurora Serverless v2.
 
@@ -111,7 +116,7 @@ An **Availability Zone (AZ)** is an isolated location within an AWS Region.
 | Main purpose       | High availability                       | Read scaling                                                   |
 | Replication        | Synchronous for standard Multi-AZ       | Asynchronous                                                   |
 | Read from standby? | **No** for traditional Multi-AZ standby | **Yes**                                                        |
-| Automatic failover | **Yes**                                 | **No** as normal RR feature                                    |
+| Automatic failover | **Yes**                                 | **No** as normal Read Replica feature                          |
 | Location           | Another AZ / depends on deployment      | Same Region, another AZ, or another Region depending on engine |
 
 **Read Replica (RR)** = a separate copy of a database that primarily handles read traffic.
@@ -125,7 +130,7 @@ Primary
 Standby → automatic failover
 ```
 
-Standby is **not for normal reads**.
+For the traditional Multi-AZ DB instance deployment, the standby is **not for normal reads**.
 
 ### Read Replica
 
@@ -144,9 +149,9 @@ Used for read traffic.
 
 > Read-heavy workload → **Read Replica**
 
-> Use Multi-AZ standby for reads → **Wrong**
+> Use Multi-AZ standby for reads → **Wrong** for the traditional Multi-AZ standby
 
-> Read replica automatically replaces primary → **Wrong**; promotion is separate.
+> Read replica automatically replaces primary → **Wrong**; promotion/failover behavior depends on the architecture.
 
 You can use both:
 
@@ -165,9 +170,11 @@ Provide **Point-in-Time Recovery (PITR)**.
 
 **PITR** = **Point-in-Time Recovery**: restore a database to a specific time within the backup retention period.
 
-Standard RDS DB instance retention:
+For standard RDS DB instances:
 
 **0–35 days**
+
+Setting retention to **0 disables automated backups**. For RDS Multi-AZ DB clusters, the retention range is **1–35 days**.
 
 > Restore to a specific point in time → **Automated backups / PITR**
 
@@ -201,7 +208,7 @@ Copy snapshot with encryption
 Restore encrypted DB
 ```
 
-You cannot simply enable encryption on an existing unencrypted RDS DB instance.
+You cannot simply enable encryption on an existing unencrypted RDS DB instance. AWS documents the snapshot → encrypted copy → restore workflow for converting it to an encrypted DB.
 
 ---
 
@@ -219,7 +226,13 @@ Force all connections to use SSL:
 rds.force_ssl = 1
 ```
 
-> All RDS SQL Server connections must use encryption in transit → **`rds.force_ssl = 1`**
+### RDS PostgreSQL
+
+Force SSL:
+
+```text
+rds.force_ssl = 1
+```
 
 ### Aurora PostgreSQL
 
@@ -229,6 +242,16 @@ Force SSL:
 rds.force_ssl = 1
 ```
 
+For newer Aurora PostgreSQL versions, SSL/TLS may already be enabled by default. For example, AWS currently documents `rds.force_ssl = 1` as the default for Aurora PostgreSQL 17 and later.
+
+### RDS MySQL
+
+Require encrypted connections:
+
+```text
+require_secure_transport = ON
+```
+
 ### Aurora MySQL
 
 Require encrypted connections:
@@ -236,6 +259,8 @@ Require encrypted connections:
 ```text
 require_secure_transport = ON
 ```
+
+For current Aurora MySQL versions, the default varies by version; Aurora MySQL 8.4 has `require_secure_transport` enabled by default, while versions 2 and 3 have historically defaulted to `OFF`.
 
 ### Client certificate verification
 
@@ -259,8 +284,9 @@ SSL/TLS connection
 | ------------------------------------------ | ---------------------------------------------------------------------- |
 | Encrypt data **in transit**                | **SSL/TLS**                                                            |
 | Force RDS SQL Server connections to SSL    | **`rds.force_ssl = 1`**                                                |
+| Force RDS PostgreSQL connections to SSL    | **`rds.force_ssl = 1`**                                                |
 | Force Aurora PostgreSQL connections to SSL | **`rds.force_ssl = 1`**                                                |
-| Force Aurora MySQL connections to TLS      | **`require_secure_transport = ON`**                                    |
+| Force RDS/Aurora MySQL connections to TLS  | **`require_secure_transport = ON`**                                    |
 | Client must verify DB certificate          | **Trust/import appropriate RDS CA certificate**                        |
 | Encrypt data **at rest**                   | **RDS/Aurora encryption / TDE where supported**                        |
 | Control network access                     | **Security Groups**                                                    |
@@ -270,19 +296,42 @@ SSL/TLS connection
 
 **Security Groups** control network access but do not encrypt traffic.
 
-> **SAA priority:** memorize **SSL/TLS = in transit**. Exact certificate-installation steps are lower priority.
+> **SAA priority:** memorize **SSL/TLS = in transit**. Exact certificate-installation details are lower priority.
 
 ---
 
-# Database Authentication
+# IAM Database Authentication
 
-RDS supports several database authentication methods depending on the engine:
+Some database engines support IAM authentication, allowing clients to use temporary IAM authentication tokens instead of a long-lived database password.
 
-* **Password authentication** → traditional database username/password.
-* **IAM Database Authentication** → temporary authentication token generated through **AWS Identity and Access Management (IAM)** instead of a database password.
-* **Kerberos authentication** → external authentication through Kerberos / Microsoft Active Directory for supported engines.
+### Supports IAM database authentication
 
-## IAM Database Authentication
+* RDS for MySQL
+* RDS for MariaDB
+* RDS for PostgreSQL
+* Aurora MySQL
+* Aurora PostgreSQL
+* Amazon DocumentDB **instance-based cluster version 5.0**
+
+### Does NOT use IAM database authentication
+
+* RDS for Db2
+* RDS for Oracle
+* Other database engines/services that do not explicitly support IAM database authentication
+
+AWS currently documents IAM database authentication for RDS **MariaDB, MySQL, and PostgreSQL**, and for **Aurora MySQL and Aurora PostgreSQL**. RDS for Db2 and Oracle are not supported for IAM DB authentication.
+
+Amazon DocumentDB also supports IAM authentication, but specifically for **instance-based cluster version 5.0**. It uses the `MONGODB-AWS` authentication mechanism.
+
+### Exam trap
+
+Do not assume that because a database is an AWS service, IAM roles can automatically replace database credentials.
+
+IAM database authentication is **service/engine/version-specific**.
+
+---
+
+## RDS IAM Database Authentication
 
 Use when the requirement says:
 
@@ -312,7 +361,9 @@ Temporary DB authentication
 * Authentication is managed through IAM, so the application does not need to store a long-lived DB password.
 * The IAM policy needs permission for **`rds-db:connect`**.
 * AWS Command Line Interface (**AWS CLI**) and AWS Software Development Kits (**AWS SDKs**) can generate/sign the token.
-* IAM DB authentication can also be used from services such as **AWS Lambda**.
+* IAM DB authentication can be used from services such as **AWS Lambda**.
+
+AWS documents that IAM authentication tokens expire after 15 minutes and are used instead of a password.
 
 ### MySQL / MariaDB
 
@@ -330,7 +381,7 @@ AWSAuthenticationPlugin
 IAM authentication token
 ```
 
-The database account is created with the AWS authentication plugin instead of a normal password.
+The database account is configured for IAM authentication rather than relying on a normal long-lived password.
 
 ### Important distinction
 
@@ -347,7 +398,7 @@ The database account is created with the AWS authentication plugin instead of a 
 
 **MFA** = **Multi-Factor Authentication**.
 
-**THE trap:** Secrets Manager does **not** generate IAM DB authentication tokens. It is used to store and rotate database credentials.
+**THE trap:** Secrets Manager does **not** generate IAM DB authentication tokens. It stores and rotates database credentials.
 
 **THE trap:** MFA does **not** replace IAM Database Authentication for RDS.
 
@@ -363,6 +414,60 @@ The database account is created with the AWS authentication plugin instead of a 
 
 ---
 
+## DocumentDB IAM Authentication
+
+Amazon DocumentDB now supports IAM authentication for:
+
+**Instance-based cluster version 5.0**
+
+Authentication uses:
+
+```text
+MONGODB-AWS
+```
+
+Example concept:
+
+```text
+IAM User / IAM Role
+        ↓
+MONGODB-AWS
+        ↓
+Amazon DocumentDB
+```
+
+IAM users and roles are mapped to DocumentDB users in the `$external` database.
+
+Traditional password-based authentication is also supported through SCRAM.
+
+### Important distinction
+
+```text
+DocumentDB 5.0 instance-based cluster
+→ IAM authentication supported
+→ MONGODB-AWS
+
+Traditional DocumentDB authentication
+→ SCRAM
+→ username + password
+```
+
+A DocumentDB user uses either a SCRAM mechanism or the `MONGODB-AWS` mechanism; these authentication mechanisms are mutually exclusive for that user.
+
+### Exam trap
+
+Older practice questions may say:
+
+> "DocumentDB requires username and password and cannot use IAM."
+
+That is **outdated for current DocumentDB instance-based cluster version 5.0**.
+
+For current AWS behavior:
+
+> DocumentDB 5.0 instance-based cluster + IAM authentication → **`MONGODB-AWS`**
+
+---
+
 # RDS Proxy
 
 **Amazon RDS Proxy = managed database connection pool.**
@@ -374,6 +479,7 @@ Lambda → RDS Proxy → RDS
 ```
 
 * Pools connections
+* Reuses connections
 * Reduces connection overhead
 * Helps prevent connection storms
 
@@ -383,6 +489,8 @@ Lambda → RDS Proxy → RDS
 RDS Proxy → connection management
 Read Replica → read scaling
 ```
+
+RDS Proxy currently supports RDS for MariaDB, Microsoft SQL Server, MySQL, and PostgreSQL.
 
 ---
 
@@ -474,7 +582,7 @@ Standby
 
 ### License Included
 
-AWS provides the Oracle license under the supported RDS model.
+AWS provides the Oracle license under the supported RDS licensing model.
 
 ### BYOL
 
@@ -494,6 +602,13 @@ Need:
 
 → **EC2** or **RDS Custom for Oracle**, depending on the scenario.
 
+**RDS Custom** provides access to the underlying operating system and database environment for supported legacy/custom workloads.
+
+RDS Custom currently supports:
+
+* Oracle Database
+* Microsoft SQL Server
+
 ---
 
 # Aurora
@@ -503,7 +618,7 @@ Need:
 * MySQL
 * PostgreSQL
 
-Its key architectural difference from standard RDS is **shared cluster storage**.
+Its key architectural difference from standard RDS is **distributed shared cluster storage**.
 
 ```text
 Aurora Cluster
@@ -517,20 +632,22 @@ Aurora Cluster
 
 Aurora storage is automatically replicated across multiple AZs.
 
-Aurora supports:
+Aurora can have:
 
-**1 primary + up to 15 Aurora Replicas**
+**1 writer + up to 15 Aurora Replicas**
+
+Aurora storage uses six copies of each storage segment across three Availability Zones.
 
 ---
 
-## Aurora vs RDS Multi-AZ
+# Aurora vs RDS Multi-AZ
 
-| Requirement                   | RDS MySQL                     | Aurora                                                   |
-| ----------------------------- | ----------------------------- | -------------------------------------------------------- |
-| Automatic AZ failover         | **Multi-AZ**                  | **Aurora reader + automatic failover**                   |
-| Storage replicated across AZs | Multi-AZ standby architecture | **Aurora storage automatically replicated across 3 AZs** |
-| Read scaling                  | Read Replicas                 | **Aurora Replicas**                                      |
-| Cross-Region DR               | Cross-Region Read Replica     | Aurora Global Database                                   |
+| Requirement                   | RDS MySQL                     | Aurora                                  |
+| ----------------------------- | ----------------------------- | --------------------------------------- |
+| Automatic AZ failover         | **Multi-AZ**                  | **Aurora Replica + automatic failover** |
+| Storage replicated across AZs | Multi-AZ standby architecture | **Six storage copies across 3 AZs**     |
+| Read scaling                  | Read Replicas                 | **Aurora Replicas**                     |
+| Cross-Region DR               | Cross-Region Read Replica     | Aurora Global Database                  |
 
 ---
 
@@ -550,7 +667,7 @@ Existing SQL Server application
        Babelfish
 ```
 
-Instead of rewriting the application completely for PostgreSQL, Babelfish allows many existing SQL Server applications to continue using their SQL Server-compatible connection protocol and syntax.
+Instead of rewriting the application completely for PostgreSQL, Babelfish allows many existing SQL Server applications to continue using SQL Server-compatible connectivity and syntax.
 
 ### SAA exam signal
 
@@ -670,13 +787,11 @@ New primary
 Cluster / Writer endpoint points to new primary
 ```
 
-Aurora promotes an existing Aurora Replica to become the new primary. Failover is much faster than creating a new DB instance.
+Aurora promotes an existing Aurora Replica to become the new primary.
 
-**CNAME** = **Canonical Name record**, a DNS record that points one domain name to another canonical name.
+Aurora currently supports up to **15 Aurora Replicas** for a cluster, and recommends distributing replicas across up to three AZs for higher availability.
 
 > **Primary failure + Aurora Replica** → **Promote the Aurora Replica**
-
-For high availability, Aurora Replicas should ideally be placed in different Availability Zones.
 
 ---
 
@@ -691,16 +806,10 @@ No Replica to promote
      ↓
 Aurora recreates the primary
      ↓
-Same Availability Zone
-     ↓
-Service becomes available again
+Best effort in the same Availability Zone
 ```
 
-Aurora automatically attempts to create a new primary DB instance in the **same Availability Zone** when there are no Aurora Replicas.
-
-> **Single Aurora instance + failure** → **Create replacement DB instance in the same AZ**
-
-This recovery is significantly slower than promoting an existing Replica.
+Aurora attempts to create a new DB instance in the **same AZ** when no Replica is available.
 
 ### Very important distinction
 
@@ -718,7 +827,7 @@ No Replica
 → recreate the DB instance
 ```
 
-The distributed Aurora storage **does not mean another DB instance automatically exists in every AZ**.
+The distributed Aurora storage **does not mean another database compute instance automatically exists in every AZ**.
 
 ---
 
@@ -745,6 +854,8 @@ Traffic drops
 ```
 
 **ACU** = **Aurora Capacity Unit**.
+
+Current supported versions can range up to **256 ACUs**, and some versions can auto-pause down to **0 ACUs**.
 
 > Unpredictable/intermittent Aurora workload → **Aurora Serverless v2**
 
@@ -851,7 +962,13 @@ Secondary Region
 
 Secondary Regions can also serve reads.
 
+Current Aurora Global Database configurations can span a primary Region plus up to **10 secondary Regions**.
+
+For DR, AWS documents **RTO in the order of minutes** and **RPO typically measured in seconds**, depending on replication lag and configuration.
+
 > Aurora + cross-Region DR + very low RPO / fast recovery → **Aurora Global Database**
+
+**RTO = Recovery Time Objective**: how quickly the system must be restored.
 
 **RPO = Recovery Point Objective**: how much recent data loss is acceptable after a failure.
 
@@ -873,7 +990,7 @@ Use for:
 
 # RDS cross-Region Read Replicas
 
-Standard RDS engines can use **cross-Region Read Replicas**.
+Standard RDS engines can use **cross-Region Read Replicas** where supported.
 
 ```text
 Primary Region
@@ -954,6 +1071,13 @@ Example:
 
 > Quickly undo accidental Aurora MySQL changes → **Aurora Backtrack**
 
+Current AWS documentation states:
+
+* Backtrack is for **Aurora MySQL**, not Aurora PostgreSQL.
+* Supported Aurora MySQL versions include version 2, version 3, and version 8.4 where available.
+* Maximum backtrack window = **72 hours**.
+* The cluster must have been created with Backtrack enabled.
+
 ---
 
 # Aurora storage
@@ -966,15 +1090,15 @@ It is:
 * Self-healing
 * Shared by Aurora DB instances
 
-Readers use the shared Aurora storage rather than maintaining independent full database copies.
-
 ```text
 Aurora DB instances
         ↓
 Shared cluster volume
         ↓
-Copies across multiple AZs
+Six copies across 3 AZs
 ```
+
+Aurora automatically divides the volume into segments and replicates storage six ways across three Availability Zones.
 
 The storage layer and database-instance layer are separate:
 
@@ -1004,7 +1128,7 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > An RDS database is growing unpredictably and the company wants storage capacity to increase automatically when the database approaches its storage limit.
 > → **RDS Storage Auto Scaling**
 
-> A company has a standard RDS database with highly variable compute demand and wants the database compute capacity itself to automatically scale up and down based on workload.
+> A standard RDS database has highly variable compute demand and the company wants the database compute capacity itself to automatically scale up and down based on workload.
 > → **Aurora Serverless v2**
 
 > A company has an unpredictable workload with long low-usage periods and occasional database traffic spikes. It wants to avoid keeping fixed database compute capacity.
@@ -1020,7 +1144,7 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > → **Manual snapshot**
 
 > An existing RDS database is unencrypted and the company now requires encryption at rest.
-> → **Snapshot → encrypted snapshot copy → restore encrypted DB**
+> → **Snapshot → encrypted snapshot copy → restore**
 
 > An application must connect to RDS using a temporary authentication token instead of storing a permanent database password.
 > → **IAM Database Authentication**
@@ -1035,15 +1159,15 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > → **AWS Secrets Manager**
 
 > A company wants to encrypt all in-flight connections between EC2 web servers and an RDS for SQL Server database.
-> → **Enable SSL/TLS; for all connections set `rds.force_ssl = 1`**
+> → **SSL/TLS; set `rds.force_ssl = 1`**
 
-> A company wants all RDS for SQL Server connections to use SSL/TLS and the application/client must trust the RDS certificate.
-> → **Set `rds.force_ssl = 1` + configure the client/application with the RDS CA certificate**
-
-> A company wants to force all Aurora PostgreSQL connections to use SSL/TLS.
+> A company wants all RDS for SQL Server connections to use SSL/TLS.
 > → **`rds.force_ssl = 1`**
 
-> A company wants to force all Aurora MySQL connections to use encrypted transport.
+> A company wants all Aurora PostgreSQL connections to use SSL/TLS.
+> → **`rds.force_ssl = 1`**
+
+> A company wants all Aurora MySQL connections to use encrypted transport.
 > → **`require_secure_transport = ON`**
 
 > A client application must verify the Aurora/RDS server certificate during the TLS connection.
@@ -1076,7 +1200,7 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > A database workload requires OS-level access and custom server configuration that standard managed RDS does not allow.
 > → **EC2 / RDS Custom**
 
-> A company wants to migrate a SQL Server application to Aurora PostgreSQL while minimizing application code modifications.
+> A company uses SQL Server and wants to migrate to Aurora PostgreSQL while minimizing application code modifications.
 > → **Babelfish**
 
 > A company needs to convert SQL Server database schemas and database objects before moving them to PostgreSQL.
@@ -1119,7 +1243,7 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > → **Aurora Read Replica Auto Scaling**
 
 > A company has an Aurora Serverless workload and also needs more read capacity.
-> → **Aurora Serverless v2 + Aurora readers can be used together**
+> → **Serverless v2 + Aurora readers can be used together**
 
 > A company runs Aurora in one Region and needs cross-Region disaster recovery, very low replication lag, and read access from another Region.
 > → **Aurora Global Database**
@@ -1152,7 +1276,13 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > → **Amazon Timestream**
 
 > An Aurora cluster needs highly available storage across Availability Zones.
-> → **Aurora automatically replicates storage across 3 Availability Zones**
+> → **Aurora storage uses six copies across 3 AZs**
+
+> An application wants passwordless IAM-based authentication to a DocumentDB database.
+> → **DocumentDB IAM authentication, but only for an instance-based cluster version 5.0**
+
+> A DocumentDB question says IAM authentication is impossible in all cases.
+> → **Check the version/cluster type; that rule is outdated for current DocumentDB 5.0 instance-based clusters**
 
 ---
 
@@ -1176,20 +1306,24 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 | Existing unencrypted RDS → encrypted       | **Snapshot → encrypted copy → restore**                                     |
 | Encrypt DB traffic                         | **SSL/TLS**                                                                 |
 | Force RDS SQL Server SSL                   | **`rds.force_ssl = 1`**                                                     |
+| Force RDS PostgreSQL SSL                   | **`rds.force_ssl = 1`**                                                     |
 | Force Aurora PostgreSQL SSL                | **`rds.force_ssl = 1`**                                                     |
-| Force Aurora MySQL TLS                     | **`require_secure_transport = ON`**                                         |
+| Force RDS/Aurora MySQL TLS                 | **`require_secure_transport = ON`**                                         |
 | Client verifies DB certificate             | **Trust/import RDS CA certificate**                                         |
-| Temporary DB auth token                    | **IAM Database Authentication**                                             |
-| IAM DB token lifetime                      | **15 minutes**                                                              |
+| Temporary RDS DB auth token                | **IAM Database Authentication**                                             |
+| RDS IAM token lifetime                     | **15 minutes**                                                              |
 | MySQL IAM authentication                   | **`AWSAuthenticationPlugin`**                                               |
-| Allow IAM identity to connect              | **`rds-db:connect`**                                                        |
+| Allow RDS IAM identity to connect          | **`rds-db:connect`**                                                        |
 | Store/rotate DB passwords                  | **Secrets Manager**                                                         |
-| Oracle → RDS Oracle                        | **AWS Database Migration Service (DMS)**                                    |
+| DocumentDB IAM authentication              | **Instance-based cluster version 5.0 + `MONGODB-AWS`**                      |
+| DocumentDB traditional auth                | **SCRAM + username/password**                                               |
+| RDS Oracle → RDS Oracle                    | **AWS Database Migration Service (DMS)**                                    |
 | Oracle → different engine                  | **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)** |
 | Oracle backup/recovery                     | **Oracle Recovery Manager (RMAN)**                                          |
 | Oracle AZ HA                               | **RDS Multi-AZ**                                                            |
 | Existing Oracle license                    | **Bring Your Own License (BYOL)**                                           |
 | OS-level DB control                        | **EC2 / RDS Custom**                                                        |
+| RDS Custom engines                         | **Oracle / SQL Server**                                                     |
 | SQL Server → Aurora PostgreSQL             | **Babelfish**                                                               |
 | SQL Server schema conversion               | **AWS Schema Conversion Tool (SCT)**                                        |
 | Database data migration                    | **AWS Database Migration Service (DMS)**                                    |
@@ -1208,8 +1342,19 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 | Scale OUT/IN number of readers             | **Aurora Read Replica Auto Scaling**                                        |
 | Serverless + additional read capacity      | **Serverless v2 + Aurora readers**                                          |
 | Aurora cross-Region DR                     | **Aurora Global Database**                                                  |
+| Aurora Global Database secondary Regions   | **Up to 10 secondary Regions**                                              |
 | Quick Aurora copy                          | **Aurora Cloning**                                                          |
 | Rewind Aurora MySQL                        | **Aurora Backtrack**                                                        |
+| Aurora Backtrack max window                | **72 hours**                                                                |
+| Aurora storage                             | **6 copies across 3 AZs**                                                   |
+| Aurora newer max storage                   | **Up to 256 TiB on supported versions**                                     |
+| Aurora Serverless max capacity             | **Up to 256 ACUs on supported versions**                                    |
+| Aurora Serverless scale-to-zero            | **0 ACU on supported versions with auto-pause**                             |
+| RDS engines                                | **Db2, MySQL, PostgreSQL, MariaDB, Oracle, SQL Server**                     |
+| RDS IAM DB auth engines                    | **MariaDB, MySQL, PostgreSQL**                                              |
+| Aurora IAM DB auth engines                 | **Aurora MySQL, Aurora PostgreSQL**                                         |
 | Multi-Region NoSQL                         | **DynamoDB Global Tables**                                                  |
 | Time-series database                       | **Amazon Timestream**                                                       |
-| Aurora distributed storage                 | **Synchronous Replicated across 3 AZs**                                                 |
+| Data warehouse                             | **Amazon Redshift**                                                         |
+| Relational database                        | **RDS / Aurora**                                                            |
+| NoSQL database                             | **DynamoDB**                                                                |
