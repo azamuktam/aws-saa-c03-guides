@@ -1212,4 +1212,4 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 | Rewind Aurora MySQL                        | **Aurora Backtrack**                                                        |
 | Multi-Region NoSQL                         | **DynamoDB Global Tables**                                                  |
 | Time-series database                       | **Amazon Timestream**                                                       |
-| Aurora distributed storage                 | **Replicated across 3 AZs**                                                 |
+| Aurora distributed storage                 | **Synchronous Replicated across 3 AZs**                                                 |
