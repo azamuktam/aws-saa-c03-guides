@@ -64,6 +64,42 @@ NoSQL
 
 ---
 
+# Provisioned RDS vs Aurora Serverless v2
+
+Standard **RDS DB instances use provisioned compute capacity**.
+
+You choose a DB instance class, such as:
+
+```text
+db.t4g.small
+db.m7g.large
+```
+
+The compute capacity remains allocated until you resize, stop, or otherwise modify the deployment.
+
+**Aurora Serverless v2** can automatically adjust database compute capacity based on workload using **Aurora Capacity Units (ACUs)**.
+
+```text
+RDS
+→ Provisioned DB instance capacity
+
+Aurora Serverless v2
+→ Dynamic compute capacity
+→ ACUs increase/decrease with workload
+```
+
+### Exam shortcut
+
+> Fixed / provisioned relational database → **RDS**
+
+> Unpredictable or spiky Aurora workload → **Aurora Serverless v2**
+
+> Minimize capacity during low usage → **Aurora Serverless v2**
+
+This does **not** mean RDS cannot scale at all. RDS can use features such as **storage auto scaling**, Read Replicas, and manual instance resizing. The key distinction is that standard RDS does not automatically scale its DB compute capacity up and down like Aurora Serverless v2.
+
+---
+
 # Multi-AZ vs Read Replicas
 
 **Multi-AZ** = **Multiple Availability Zones**.
@@ -989,6 +1025,16 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 > An RDS database is growing unpredictably and the company wants storage capacity to increase automatically when the database approaches its storage limit.
 > → **RDS Storage Auto Scaling**
 
+> A company has a standard RDS database with highly variable compute demand and wants the database compute capacity itself to automatically scale up and down based on workload.
+> → **Aurora Serverless v2**
+> **Note:** Standard RDS DB compute is provisioned; Aurora Serverless v2 provides dynamic compute scaling.
+
+> A company has an unpredictable workload with long low-usage periods and occasional database traffic spikes. It wants to avoid keeping fixed database compute capacity.
+> → **Aurora Serverless v2**
+
+> A company needs a relational database but there is no requirement for automatic database compute scaling.
+> → **RDS or Aurora**
+
 > A company accidentally deleted or changed data at 14:30 and needs to restore the database to its state at 14:25.
 > → **Automated backups / Point-in-Time Recovery (PITR)**
 
@@ -1125,52 +1171,54 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 
 # Pocket card
 
-| Keyword                                   | Answer                                                                      |
-| ----------------------------------------- | --------------------------------------------------------------------------- |
-| AZ failure                                | **Multi-AZ**                                                                |
-| Automatic regional failover               | **Multi-AZ**                                                                |
-| Scale reads                               | **Read Replica**                                                            |
-| Cross-Region RDS DR                       | **Cross-Region Read Replica**                                               |
-| Aurora cross-Region DR                    | **Aurora Global Database**                                                  |
-| Very low RPO + fast cross-Region recovery | **Aurora Global Database**                                                  |
-| Lambda + too many DB connections          | **RDS Proxy**                                                               |
-| Point-in-time restore                     | **Automated backup / PITR**                                                 |
-| Long-term backup                          | **Manual snapshot**                                                         |
-| Existing unencrypted RDS → encrypted      | **Snapshot → encrypted copy → restore**                                     |
-| Encrypt RDS SQL Server in transit         | **SSL/TLS**                                                                 |
-| Force SQL Server connections to SSL       | **`rds.force_ssl = 1`**                                                     |
-| Client trusts RDS certificate             | **Import RDS CA certificate + enable SSL/TLS**                              |
-| Temporary DB auth token                   | **IAM Database Authentication**                                             |
-| IAM DB token lifetime                     | **15 minutes**                                                              |
-| MySQL IAM authentication                  | **`AWSAuthenticationPlugin`**                                               |
-| Allow IAM identity to connect             | **`rds-db:connect`**                                                        |
-| Store/rotate DB passwords                 | **Secrets Manager**                                                         |
-| Oracle → RDS Oracle                       | **AWS Database Migration Service (DMS)**                                    |
-| Oracle → different engine                 | **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)** |
-| Oracle backup/recovery                    | **Oracle Recovery Manager (RMAN)**                                          |
-| Oracle AZ HA                              | **RDS Multi-AZ**                                                            |
-| Existing Oracle license                   | **Bring Your Own License (BYOL)**                                           |
-| OS-level DB control                       | **EC2 / RDS Custom**                                                        |
-| SQL Server → Aurora PostgreSQL            | **Babelfish**                                                               |
-| SQL Server schema conversion              | **AWS Schema Conversion Tool (SCT)**                                        |
-| Database data migration                   | **AWS Database Migration Service (DMS)**                                    |
-| Aurora current writer                     | **Writer/Cluster endpoint**                                                 |
-| Aurora read balancing                     | **Reader endpoint**                                                         |
-| One Aurora instance                       | **Instance endpoint**                                                       |
-| Different Aurora instance groups          | **Custom endpoint**                                                         |
-| Aurora failure + Replica exists           | **Promote Replica**                                                         |
-| Aurora failure + no Replica               | **Recreate primary instance**                                               |
-| Spiky/unpredictable Aurora workload       | **Aurora Serverless v2**                                                    |
-| Writer needs more CPU/memory              | **Aurora Serverless v2**                                                    |
-| Scale Aurora compute with ACUs            | **Aurora Serverless v2**                                                    |
-| Read-heavy workload                       | **Aurora Read Replicas**                                                    |
-| Automatically add/remove readers          | **Aurora Replica Auto Scaling**                                             |
-| Scale UP/DOWN existing DB compute         | **Aurora Serverless v2**                                                    |
-| Scale OUT/IN number of readers            | **Aurora Read Replica Auto Scaling**                                        |
-| Serverless + additional read capacity     | **Serverless v2 + Aurora readers**                                          |
-| Aurora cross-Region DR                    | **Aurora Global Database**                                                  |
-| Quick Aurora copy                         | **Aurora Cloning**                                                          |
-| Rewind Aurora MySQL                       | **Aurora Backtrack**                                                        |
-| Multi-Region NoSQL                        | **DynamoDB Global Tables**                                                  |
-| Time-series database                      | **Amazon Timestream**                                                       |
-| Aurora distributed storage                | **Replicated across 3 AZs**                                                 |
+| Keyword                               | Answer                                                                      |
+| ------------------------------------- | --------------------------------------------------------------------------- |
+| AZ failure                            | **Multi-AZ**                                                                |
+| Automatic regional failover           | **Multi-AZ**                                                                |
+| Standard RDS compute                  | **Provisioned DB instance**                                                 |
+| Spiky Aurora compute workload         | **Aurora Serverless v2**                                                    |
+| Dynamic database compute              | **Aurora Serverless v2 / ACUs**                                             |
+| Scale reads                           | **Read Replica**                                                            |
+| Cross-Region RDS DR                   | **Cross-Region Read Replica**                                               |
+| Aurora cross-Region DR                | **Aurora Global Database**                                                  |
+| Lambda + too many DB connections      | **RDS Proxy**                                                               |
+| Point-in-time restore                 | **Automated backup / PITR**                                                 |
+| Long-term backup                      | **Manual snapshot**                                                         |
+| Existing unencrypted RDS → encrypted  | **Snapshot → encrypted copy → restore**                                     |
+| Encrypt RDS SQL Server in transit     | **SSL/TLS**                                                                 |
+| Force SQL Server connections to SSL   | **`rds.force_ssl = 1`**                                                     |
+| Client trusts RDS certificate         | **Import RDS CA certificate + enable SSL/TLS**                              |
+| Temporary DB auth token               | **IAM Database Authentication**                                             |
+| IAM DB token lifetime                 | **15 minutes**                                                              |
+| MySQL IAM authentication              | **`AWSAuthenticationPlugin`**                                               |
+| Allow IAM identity to connect         | **`rds-db:connect`**                                                        |
+| Store/rotate DB passwords             | **Secrets Manager**                                                         |
+| Oracle → RDS Oracle                   | **AWS Database Migration Service (DMS)**                                    |
+| Oracle → different engine             | **AWS Schema Conversion Tool (SCT) + AWS Database Migration Service (DMS)** |
+| Oracle backup/recovery                | **Oracle Recovery Manager (RMAN)**                                          |
+| Oracle AZ HA                          | **RDS Multi-AZ**                                                            |
+| Existing Oracle license               | **Bring Your Own License (BYOL)**                                           |
+| OS-level DB control                   | **EC2 / RDS Custom**                                                        |
+| SQL Server → Aurora PostgreSQL        | **Babelfish**                                                               |
+| SQL Server schema conversion          | **AWS Schema Conversion Tool (SCT)**                                        |
+| Database data migration               | **AWS Database Migration Service (DMS)**                                    |
+| Aurora current writer                 | **Writer/Cluster endpoint**                                                 |
+| Aurora read balancing                 | **Reader endpoint**                                                         |
+| One Aurora instance                   | **Instance endpoint**                                                       |
+| Different Aurora instance groups      | **Custom endpoint**                                                         |
+| Aurora failure + Replica exists       | **Promote Replica**                                                         |
+| Aurora failure + no Replica           | **Recreate primary instance**                                               |
+| Spiky/unpredictable Aurora workload   | **Aurora Serverless v2**                                                    |
+| Writer needs more CPU/memory          | **Aurora Serverless v2**                                                    |
+| Scale Aurora compute with ACUs        | **Aurora Serverless v2**                                                    |
+| Read-heavy workload                   | **Aurora Read Replicas**                                                    |
+| Automatically add/remove readers      | **Aurora Replica Auto Scaling**                                             |
+| Scale UP/DOWN existing DB compute     | **Aurora Serverless v2**                                                    |
+| Scale OUT/IN number of readers        | **Aurora Read Replica Auto Scaling**                                        |
+| Serverless + additional read capacity | **Serverless v2 + Aurora readers**                                          |
+| Aurora cross-Region DR                | **Aurora Global Database**                                                  |
+| Quick Aurora copy                     | **Aurora Cloning**                                                          |
+| Rewind Aurora MySQL                   | **Aurora Backtrack**                                                        |
+| Multi-Region NoSQL                    | **DynamoDB Global Tables**                                                  |
+| Time-series database                  | **Amazon Timestream**                                                       |
+| Aurora distributed storage            | **Replicated across 3 AZs**                                                 |
