@@ -23,6 +23,9 @@ Store table/schema metadata
 Transform CSV → Parquet
 → Glue ETL
 
+Visual / drag-and-drop Glue ETL jobs
+→ Glue Studio
+
 Athena query performance on large S3 data
 → Parquet / ORC
 
@@ -31,6 +34,9 @@ Prevent Glue from reprocessing previously processed data
 
 Data lake + fine-grained permissions
 → Lake Formation
+
+Aurora/JDBC → S3 data lake with predefined ingestion workflow
+→ Lake Formation Blueprint
 
 Salesforce → S3
 → AppFlow
@@ -145,6 +151,58 @@ Athena / EMR / other analytics
 
 ---
 
+# Lake Formation Blueprints & Workflows
+
+**Lake Formation Blueprint = predefined ingestion recipe.**
+
+A blueprint can create a **workflow** containing Glue jobs, crawlers, and triggers to ingest data into the S3 data lake.
+
+For a relational database such as **Aurora MySQL**, the **incremental database blueprint** can load data from a JDBC source into S3.
+
+```text
+Aurora MySQL
+     ↓
+Lake Formation Blueprint
+     ↓
+Workflow
+     ↓
+Glue jobs / crawler / triggers
+     ↓
+S3 data lake
+```
+
+The workflow copies the **actual data** into S3; the Glue Data Catalog stores metadata about the resulting tables.
+
+### Incremental database blueprint
+
+The first run loads the selected data and establishes bookmarks.
+
+Later runs use the bookmarks to identify **new rows**.
+
+```text
+First run
+→ existing data → S3
+
+Later runs
+→ new rows → S3
+```
+
+This is best when data is primarily **append-only** and existing rows are not continually updated.
+
+### Blueprint vs workflow
+
+```text
+Blueprint
+= recipe/template
+
+Workflow
+= actual generated process
+```
+
+> **Aurora/JDBC → S3 data lake with minimal ingestion orchestration → Lake Formation Blueprint**
+
+---
+
 # Lake Formation Tag-Based Access Control (LF-TBAC)
 
 **LF-TBAC = use tags to control access to many data resources.**
@@ -234,6 +292,8 @@ Glue can:
 * track previously processed data with **job bookmarks**
 
 It is especially useful when the requirement is **serverless ETL with low operational overhead**, especially for larger data-processing workloads.
+
+**Glue Studio** → visual / drag-and-drop interface for creating Glue ETL jobs.
 
 ### Main Glue components
 
@@ -726,6 +786,7 @@ If the question specifically says that **previously processed data keeps getting
 | **Glue Crawler**      | Discover schema           | Automatically discover schema             |
 | **Glue Data Catalog** | Store metadata            | Tables / schema / metadata                |
 | **Glue ETL**          | Transform data            | CSV → Parquet / ETL                       |
+| **Glue Studio**       | Visual ETL job creation   | Drag-and-drop ETL                         |
 | **Glue Job Bookmark** | Track processing progress | Prevent reprocessing previously read data |
 
 ### Quick memory
@@ -739,6 +800,9 @@ Store
 
 Transform
 → ETL
+
+Visual ETL
+→ Glue Studio
 
 Remember previous processing
 → Job Bookmark
@@ -965,14 +1029,35 @@ Job Bookmark
 tracks incremental processing
 ```
 
+For a relational source such as Aurora:
+
+```text
+Aurora / JDBC
+      ↓
+Lake Formation Blueprint
+      ↓
+Generated workflow
+      ↓
+Glue jobs + crawler + triggers
+      ↓
+S3 data lake
+      ↓
+Lake Formation permissions
+      ↓
+Athena / QuickSight
+```
+
 The roles remain different:
 
 ```text
 AppFlow
 = bring data from SaaS
 
+Lake Formation Blueprint
+= predefined ingestion workflow
+
 S3
-= store the data
+= store the actual data
 
 Glue Crawler
 = discover schema
@@ -1018,6 +1103,12 @@ Lake Formation
 
 ---
 
+> **"Create Glue ETL jobs using a visual interface instead of building the job entirely in code."**
+
+→ **Glue Studio**
+
+---
+
 > **"Athena queries are slow because a large amount of JSON data is stored in S3."**
 
 → **Transform the data into Apache Parquet (or another columnar format such as ORC)**
@@ -1045,6 +1136,24 @@ Lake Formation
 > **"A company stores its raw analytics data in S3 and wants to control which users can access specific tables, rows, or columns."**
 
 → **Lake Formation**
+
+---
+
+> **"Aurora/JDBC data must be ingested into an S3 data lake with minimal custom orchestration."**
+
+→ **Lake Formation Blueprint / Workflow**
+
+---
+
+> **"Aurora data should be incrementally loaded into the data lake."**
+
+→ **Lake Formation Incremental Database Blueprint**
+
+---
+
+> **"A company wants Aurora data in S3 and column-level access for marketing users, then wants to query it from QuickSight."**
+
+→ **Lake Formation Blueprint → S3 → Lake Formation Data Filter → Athena → QuickSight**
 
 ---
 
@@ -1166,30 +1275,51 @@ If the question asks for the **most operationally efficient** way to prevent rep
 
 ---
 
+## Blueprint vs Glue Data Catalog
+
+Do not confuse ingestion with metadata.
+
+```text
+Lake Formation Blueprint / Workflow
+→ copies/ingests actual data into S3
+
+Glue Data Catalog
+→ stores metadata about that data
+```
+
+---
+
 # Pocket Card
 
-| Keyword                                          | Answer                            |
-| ------------------------------------------------ | --------------------------------- |
-| Serverless ETL / data catalog                    | **AWS Glue**                      |
-| Discover schema                                  | **Glue Crawler**                  |
-| Automatically discover S3 file schema            | **Glue Crawler**                  |
-| Store metadata                                   | **Glue Data Catalog**             |
-| Store table/schema definitions                   | **Glue Data Catalog**             |
-| Transform data                                   | **Glue ETL**                      |
-| CSV → Parquet                                    | **Glue ETL**                      |
-| Athena + large JSON dataset                      | **Parquet / ORC**                 |
-| Reduce Athena data scanned                       | **Parquet / ORC**                 |
-| Glue reprocesses old data                        | **Glue Job Bookmark**             |
-| Incremental Glue ETL processing                  | **Glue Job Bookmark**             |
-| Data lake + fine-grained permissions             | **Lake Formation**                |
-| Data lake + many datasets + scalable permissions | **Lake Formation LF-TBAC**        |
-| S3 = actual data in the data lake                | **Amazon S3**                     |
-| Lake Formation = data lake access                | **AWS Lake Formation**            |
-| Lake Formation data access                       | **`lakeformation:GetDataAccess`** |
-| Table/row/column permissions                     | **Lake Formation**                |
-| Cross-account fine-grained access                | **Lake Formation LF-TBAC**        |
-| SaaS → S3                                        | **AppFlow**                       |
-| SaaS → Redshift                                  | **AppFlow**                       |
-| Find/subscribe to third-party datasets           | **AWS Data Exchange**             |
-| Bulk operation on existing S3 objects            | **S3 Batch Operations**           |
-| Millions/billions of existing objects            | **S3 Batch Operations**           |
+| Keyword                                          | Answer                             |
+| ------------------------------------------------ | ---------------------------------- |
+| Serverless ETL / data catalog                    | **AWS Glue**                       |
+| Discover schema                                  | **Glue Crawler**                   |
+| Automatically discover S3 file schema            | **Glue Crawler**                   |
+| Store metadata                                   | **Glue Data Catalog**              |
+| Store table/schema definitions                   | **Glue Data Catalog**              |
+| Transform data                                   | **Glue ETL**                       |
+| CSV → Parquet                                    | **Glue ETL**                       |
+| Visual / drag-and-drop ETL                       | **Glue Studio**                    |
+| Athena + large JSON dataset                      | **Parquet / ORC**                  |
+| Reduce Athena data scanned                       | **Parquet / ORC**                  |
+| Glue reprocesses old data                        | **Glue Job Bookmark**              |
+| Incremental Glue ETL processing                  | **Glue Job Bookmark**              |
+| Data lake + fine-grained permissions             | **Lake Formation**                 |
+| Data lake + many datasets + scalable permissions | **Lake Formation LF-TBAC**         |
+| S3 = actual data in the data lake                | **Amazon S3**                      |
+| Lake Formation = data lake access                | **AWS Lake Formation**             |
+| Lake Formation data access                       | **`lakeformation:GetDataAccess`**  |
+| Table/row/column permissions                     | **Lake Formation**                 |
+| Cross-account fine-grained access                | **Lake Formation LF-TBAC**         |
+| Aurora/JDBC → S3 data lake                       | **Lake Formation Blueprint**       |
+| Predefined ingestion recipe                      | **Lake Formation Blueprint**       |
+| Blueprint → actual process                       | **Lake Formation Workflow**        |
+| Incremental Aurora/JDBC ingestion                | **Incremental Database Blueprint** |
+| Blueprint actual data destination                | **S3**                             |
+| Blueprint metadata                               | **Glue Data Catalog**              |
+| SaaS → S3                                        | **AppFlow**                        |
+| SaaS → Redshift                                  | **AppFlow**                        |
+| Find/subscribe to third-party datasets           | **AWS Data Exchange**              |
+| Bulk operation on existing S3 objects            | **S3 Batch Operations**            |
+| Millions/billions of existing objects            | **S3 Batch Operations**            |
