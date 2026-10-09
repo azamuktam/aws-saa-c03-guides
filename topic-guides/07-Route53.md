@@ -474,13 +474,27 @@ Geoproximity → Geography + BIAS
 
 # Multi-Value Answer routing
 
-Returns multiple healthy records; Route 53 can return up to **8 healthy records**.
+Returns **multiple healthy records** in a single DNS response.
 
-Useful for simple DNS-level distribution.
+* Route 53 can return up to **8 healthy records**.
+* Order is **random** each query.
+* The **client** typically uses the first IP — this is client-dependent, not guaranteed.
+* Attach a **health check** to each record; unhealthy records are **removed** from the response.
+* If **all** records are healthy → returns all of them (up to 8), random order.
+* If **some** are unhealthy → returns only the healthy ones.
+* **Not a true load balancer** — it's DNS-level, approximate distribution, not connection-level balancing.
 
-Not a replacement for ELB.
+```text
+Both healthy
+     ↓
+Route 53 returns BOTH records (random order)
+     ↓
+Client picks one (usually the first)
+```
 
 > Several healthy IP addresses → **Multi-Value Answer**
+
+> Multi-Value Answer ≠ ELB — it distributes via DNS, not at the connection level.
 
 ---
 
@@ -754,6 +768,7 @@ This avoids waiting for normal DNS TTL behavior when switching endpoints.
 | User location                    | **Geolocation**                                  |
 | Geographic bias                  | **Geoproximity**                                 |
 | Multiple healthy IPs             | **Multi-Value Answer**                           |
+| Multi-Value Answer behavior      | **Returns up to 8 healthy records, random order** |
 | Private health check             | **CloudWatch alarm-based health check**          |
 | Combine health checks            | **Calculated health check**                      |
 | Faster DNS changes               | **Lower TTL**                                    |
