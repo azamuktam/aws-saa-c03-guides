@@ -266,6 +266,134 @@ Fargate can therefore be used with EKS as well as ECS.
 
 ---
 
+# AWS Load Balancer Controller (EKS ingress)
+
+This is how you expose applications running in EKS to the internet or to other services.
+
+The **AWS Load Balancer Controller** is the modern, AWS-recommended way to route traffic into an EKS cluster.
+
+It is a **controller (pod) that runs inside the EKS cluster** and watches Kubernetes resources. When it sees them, it **calls AWS APIs to automatically provision load balancers** for you.
+
+```text
+Kubernetes / EKS world            AWS world
+─────────────────────            ─────────
+Ingress resource        ──►      ALB
+Service (type LoadBalancer) ─►   NLB
+        ▲
+        │
+AWS Load Balancer Controller
+(runs as pods INSIDE EKS)
+```
+
+### Key idea
+
+> The ALB/NLB is **not inside the cluster** — it lives in your VPC. The controller **provisions and manages it automatically** based on Kubernetes resources.
+
+---
+
+## What it creates
+
+| Kubernetes resource              | AWS resource created |
+| -------------------------------- | -------------------- |
+| **Ingress**                      | **ALB**              |
+| **Service (type LoadBalancer)**  | **NLB**              |
+
+So the controller is the **bridge**:
+
+```text
+Ingress       → ALB
+Service       → NLB
+```
+
+---
+
+## Why it matters: path-based routing
+
+An **Application Load Balancer (ALB)** supports **HTTP/HTTPS path-based routing** natively.
+
+```text
+Internet
+   │
+   ▼
+┌─────────────────┐
+│      ALB        │  ← provisioned in your VPC by the controller
+└─────────────────┘
+   │        │
+ /orders   /users
+   │        │
+   ▼        ▼
+[order pods] [user pods]
+```
+
+Example Ingress:
+
+```yaml
+rules:
+- http:
+    paths:
+    - path: /orders
+      backend: order-service
+    - path: /users
+      backend: user-service
+```
+
+The controller reads this and **creates the ALB, listeners, target groups, and routing rules** for you.
+
+---
+
+## Why not the alternatives (least setup)
+
+| Approach                          | Setup effort |
+| --------------------------------- | ------------ |
+| **ALB + AWS Load Balancer Controller** | **Least** — install controller once, write Ingress YAML, ALB auto-created |
+| NLB + AWS Load Balancer Controller | NLB is Layer 4, no native path routing |
+| NGINX Ingress controller          | You deploy/manage NGINX pods + a LB |
+| Lambda proxy                      | Custom proxy code to maintain |
+
+### Key takeaway
+
+> For **HTTP path-based routing into EKS with least setup**, use an **ALB provisioned by the AWS Load Balancer Controller**.
+
+---
+
+## Exam triggers
+
+> "Route requests to EKS services based on URL paths with least setup."
+
+→ **ALB via the AWS Load Balancer Controller**
+
+> "Automatically create an ALB from a Kubernetes Ingress."
+
+→ **AWS Load Balancer Controller**
+
+> "Expose a Kubernetes Service with an NLB."
+
+→ **AWS Load Balancer Controller**
+
+### Easy memory
+
+```text
+Ingress  → ALB  → path-based HTTP routing
+Service  → NLB  → TCP/UDP load balancing
+Controller = pod in EKS that creates them
+```
+
+---
+
+## Topic note
+
+The **AWS Load Balancer Controller is an EKS topic** (EKS ingress), even though the ALB it creates belongs to the Elastic Load Balancing world.
+
+```text
+Pure ALB question (no Kubernetes)
+→ ELB topic
+
+Ingress / EKS / controller creating ALB
+→ EKS ingress topic
+```
+
+---
+
 # EKS and Kubernetes terminology
 
 You do not need to memorize the entire Kubernetes architecture for basic SAA questions.
@@ -701,7 +829,23 @@ If not, ECS is the AWS-native container orchestration option.
 
 ---
 
-### 5. Scale Pods based on demand
+### 5. Route traffic into EKS by URL path
+
+> "Route requests to EKS services based on URL paths with the least setup."
+
+**Answer: ALB via the AWS Load Balancer Controller**
+
+---
+
+### 6. Automatically create a load balancer from Kubernetes
+
+> "Automatically create an ALB from a Kubernetes Ingress resource."
+
+**Answer: AWS Load Balancer Controller**
+
+---
+
+### 7. Scale Pods based on demand
 
 > "The application needs more Pods when traffic or CPU utilization increases."
 
@@ -709,7 +853,7 @@ If not, ECS is the AWS-native container orchestration option.
 
 ---
 
-### 6. Scale EKS infrastructure
+### 8. Scale EKS infrastructure
 
 > "Pods cannot be scheduled because there is not enough node capacity."
 
@@ -721,7 +865,7 @@ For least operational overhead and flexible node provisioning:
 
 ---
 
-### 7. IAM user/role needs cluster access
+### 9. IAM user/role needs cluster access
 
 > "A developer needs to use `kubectl` against an EKS cluster."
 
@@ -733,7 +877,7 @@ Older questions may use:
 
 ---
 
-### 8. Pod needs AWS service access
+### 10. Pod needs AWS service access
 
 > "A Kubernetes Pod needs permission to read from S3."
 
@@ -743,7 +887,7 @@ Know **IRSA** as the older/alternative approach.
 
 ---
 
-### 9. Kubernetes RBAC
+### 11. Kubernetes RBAC
 
 > "An IAM role should only be allowed to read Pods in a specific namespace."
 
@@ -767,7 +911,7 @@ RoleBinding
 
 ---
 
-### 10. Kubernetes API-data encryption
+### 12. Kubernetes API-data encryption
 
 > "The company wants to encrypt Kubernetes API data using AWS KMS."
 
@@ -788,6 +932,10 @@ RoleBinding
 | **Kubernetes manifests/tools**             | EKS                                 |
 | **Kubernetes + serverless compute**        | EKS + Fargate                       |
 | **Kubernetes + EC2 control**               | EKS on EC2                          |
+| **Ingress → ALB**                          | AWS Load Balancer Controller        |
+| **Service → NLB**                          | AWS Load Balancer Controller        |
+| **Path-based routing into EKS**            | ALB via AWS Load Balancer Controller|
+| **Controller that creates load balancers** | AWS Load Balancer Controller        |
 | **Metrics Server**                         | Provides CPU/memory metrics         |
 | **More Pods**                              | HPA                                 |
 | **Change Pod CPU/memory**                  | VPA                                 |
