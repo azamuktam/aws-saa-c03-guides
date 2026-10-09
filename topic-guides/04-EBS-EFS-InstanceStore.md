@@ -2,192 +2,96 @@
 
 ## The idea
 
-AWS provides several storage options for applications running on EC2. The main choices in this section are:
-
-* **EBS** → persistent **block storage** attached to EC2
-* **EFS** → shared **file storage** that many Linux-based clients can use at the same time
-* **Instance Store** → very fast **local storage** physically attached to the EC2 host, but temporary
+* **Amazon Elastic Block Store (EBS)** → persistent block storage attached to EC2.
+* **Amazon Elastic File System (EFS)** → shared file storage accessible by multiple Linux-based clients.
+* **Instance Store** → very fast, temporary local storage physically attached to the EC2 host.
 
 ---
 
 # EBS — Elastic Block Store
 
-Amazon EBS provides persistent **block storage** for EC2.
-
-An EBS volume behaves like a disk attached to an EC2 instance. The operating system can format it with a filesystem and use it for:
-
-* operating system disks
-* databases
-* application files
-* logs
-* persistent application data
+Amazon EBS provides persistent block storage for EC2. Typical uses include operating system disks, databases, application files, logs, and persistent data.
 
 ## Core EBS rules
 
-### 1. An EBS volume belongs to one Availability Zone
+### 1. An EBS volume belongs to one Availability Zone (AZ)
 
-An EBS volume exists in a specific Availability Zone.
-
-```text
-Region
-│
-├── AZ-A
-│   └── EBS Volume
-│
-└── AZ-B
-```
-
-You cannot directly attach the AZ-A volume to an EC2 instance in AZ-B.
-
-To move the data to another AZ:
+An EBS volume cannot be directly attached to an EC2 instance in another AZ.
 
 ```text
-EBS Volume
-   ↓
+EBS volume
+    ↓
 Snapshot
-   ↓
-Restore snapshot in another AZ
-   ↓
+    ↓
+Restore in destination AZ
+    ↓
 New EBS volume
 ```
 
-The same basic idea applies when moving EBS data between Regions, with the additional step of copying the snapshot to the destination Region.
+For cross-Region migration, copy the snapshot to the destination Region before restoring it.
 
----
+### 2. EBS is persistent
 
-## 2. EBS is persistent
+EBS data survives when an EC2 instance is stopped. Survival after termination depends on `DeleteOnTermination`.
 
-EBS data normally survives when an EC2 instance is stopped.
+| Volume                | Default setting              | Survives termination? |
+| --------------------- | ---------------------------- | --------------------- |
+| Root EBS volume       | `DeleteOnTermination = true` | No                    |
+| Additional EBS volume | Generally `false`            | Yes                   |
 
-Whether the volume survives **instance termination** depends on its `DeleteOnTermination` setting.
+**Exam clue:** The root volume must survive termination → set `DeleteOnTermination = false`.
 
-### Root volume
+## EBS volume attachment
 
-For a root EBS volume created when the instance is launched:
-
-```text
-DeleteOnTermination = true
-```
-
-by default.
-
-Therefore:
-
-```text
-EC2 terminated
-      ↓
-Root EBS volume deleted
-```
-
-### Additional EBS volumes
-
-Additional volumes generally default to:
-
-```text
-DeleteOnTermination = false
-```
-
-Therefore they normally survive instance termination.
-
-### Exam clue
-
-> "The root EBS volume must remain after the EC2 instance is terminated."
-
-→ Set:
-
-```text
-DeleteOnTermination = false
-```
-
----
-
-# EBS volume attachment
-
-Normally, an EBS volume is attached to **one EC2 instance at a time**.
-
-There is an important exception:
+Normally, an EBS volume attaches to one EC2 instance at a time.
 
 ### EBS Multi-Attach
 
-Supported **io1 and io2** volumes can use Multi-Attach.
+Supported `io1` and `io2` volumes can attach to **up to 16 supported Nitro-based EC2 instances in the same AZ**. The application must be designed to coordinate shared block storage.
 
-A Multi-Attach volume can be attached to **up to 16 supported EC2 instances in the same Availability Zone**.
+| Feature               | EBS Multi-Attach | EFS         |
+| --------------------- | ---------------- | ----------- |
+| Shared resource       | Block device     | File system |
+| Multi-instance access | Yes              | Yes         |
+| Multi-AZ access       | No; same AZ only | Yes         |
 
-This is designed for applications that are specifically designed to coordinate shared block storage.
+Only `io1` and `io2` support Multi-Attach. `gp3`, `st1`, `sc1`, and Magnetic (`standard`) do not.
 
-It is **not** a normal shared filesystem.
+**Exam clue:** Multiple EC2 instances need the same block volume in one AZ, and the application is cluster-aware → `io1/io2` Multi-Attach.
 
-```text
-        io2 Multi-Attach
-              │
-      ┌───────┼───────┐
-      ↓       ↓       ↓
-     EC2     EC2     EC2
-```
+### Elastic Volumes
 
-Do not confuse this with:
+Elastic Volumes can increase volume size, change volume type, and adjust supported performance settings. **An existing EBS volume cannot be shrunk.**
 
-* **EBS Multi-Attach** → shared **block device**
-* **EFS** → shared **file system**
+**Increase/grow → Yes | Shrink → No**
 
-### Important Multi-Attach traps
+### Modify EBS volumes and EC2 instance attributes
 
-**Only `io1` and `io2` support EBS Multi-Attach.**
+Do not confuse APIs that modify an EBS volume with APIs that modify the EC2 instance.
 
-```text
-gp3    → ❌ Multi-Attach
-st1    → ❌
-sc1    → ❌
-standard/Magnetic → ❌
-io1    → ✅
-io2    → ✅
-```
+| API                        | What it modifies             | Example                                                                                                          |
+| -------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `ModifyVolume`             | EBS volume configuration     | Change supported volume type, size, or IOPS; reduce provisioned IOPS on an `io2` volume within its allowed range |
+| `ModifyInstanceAttribute`  | EC2 instance attributes      | Change the EBS-optimized (`ebsOptimized`) setting, subject to instance-type support                              |
+| CloudWatch `GetMetricData` | Retrieves monitoring metrics | Analyze actual IOPS and throughput usage                                                                         |
 
-Multi-Attach does **not** provide multi-AZ resiliency because all attached instances must be in the **same AZ**.
+**Exam trap:** `ModifyInstanceAttribute` is incorrect when the requirement is to change the provisioned IOPS of an individual EBS volume. Use `ModifyVolume`.
 
-So:
-
-> **"gp3 with Multi-Attach provides multi-AZ resiliency."**
-
-→ **Wrong**
-
-The correct concept is:
-
-> **io1/io2 Multi-Attach → multiple EC2 instances in the same AZ**
-
-### Exam clue
-
-> "Several EC2 instances must access the same block volume in the same AZ, and the application is cluster-aware."
-
-→ **io1/io2 Multi-Attach**
-
-### Small Elastic Volumes note
-
-**Elastic Volumes** can increase the EBS volume size, change the volume type, and adjust supported performance settings, but **cannot shrink an existing EBS volume**.
-
-> **Increase/grow → ✅ | Shrink → ❌**
+**Can `ModifyVolume` be used while EC2 is running?** Often yes. Supported modifications can be made to an attached, in-use volume without stopping the instance or detaching the volume, subject to applicable limitations. After increasing volume size, extend the filesystem to use the additional capacity. Wait for the previous modification to reach `completed` before starting another modification on the same volume.
 
 ---
 
-# New EBS volume: format and mount it
+## Create and mount a new EBS data volume
 
-A newly created EBS data volume is just a block device. Linux does not automatically turn it into a usable mounted filesystem.
-
-Typical steps are:
+A newly attached EBS data volume is a block device; Linux does not automatically format or mount it.
 
 ```text
-Create EBS volume
-      ↓
-Attach to EC2
-      ↓
-Format filesystem
-      ↓
-Mount filesystem
-      ↓
-Add to /etc/fstab if it should mount automatically after reboot
+Create volume → Attach to EC2 → Format → Mount
+                                      ↓
+                        Add to /etc/fstab for automatic mounting
 ```
 
-For example:
+Example:
 
 ```bash
 mkfs -t xfs /dev/nvme1n1
@@ -197,649 +101,293 @@ mount /dev/nvme1n1 /data
 
 The exact device name depends on the instance and operating system.
 
-### Exam clue
-
-> "A newly attached EBS volume is not available under the expected directory."
-
-Think:
-
-**Format it, mount it, and configure `/etc/fstab` if persistent mounting is required.**
+**Exam clue:** An attached volume is missing from the expected directory → format and mount it; configure `/etc/fstab` if automatic mounting after reboot is required.
 
 ---
 
 # EBS performance: IOPS vs Throughput
 
-This is one of the most important EBS concepts.
+* **IOPS (Input/Output Operations Per Second):** Number of read/write operations per second. Important for databases, transactional systems, and small random operations.
+* **Throughput:** Amount of data transferred per second, usually MB/s or GB/s. Important for large sequential workloads, log processing, ETL, streaming, and big-data processing.
 
-## IOPS
+| Workload requirement          | Think           |
+| ----------------------------- | --------------- |
+| Many small/random operations  | High IOPS       |
+| Large sequential reads/writes | High throughput |
 
-**IOPS = Input/Output Operations Per Second**
-
-IOPS measures how many individual read/write operations the storage can handle.
-
-Think about workloads that perform many relatively small random operations:
-
-* databases
-* transactional systems
-* random reads/writes
-
-Typical keyword:
-
-> **high IOPS**
-
----
-
-## Throughput
-
-Throughput measures how much data can be transferred per second, usually in **MB/s or GB/s**.
-
-Throughput matters for workloads that process large amounts of data sequentially:
-
-* log processing
-* ETL
-* large file processing
-* streaming
-* big-data workloads
-
-Typical keyword:
-
-> **high throughput**
-
-### Simple distinction
-
-```text
-Database
-→ many small/random operations
-→ IOPS
-
-Large files
-→ large sequential reads/writes
-→ Throughput
-```
-
----
-
-# EBS volume types
-
-The important exam categories are:
+## EBS volume types
 
 ### SSD
 
-Used for:
+Used for random I/O, databases, boot volumes, and latency-sensitive workloads.
 
-* random I/O
-* databases
-* boot volumes
-* latency-sensitive workloads
-
-Main options:
-
-* **gp3**
-* **io1**
-* **io2**
+* `gp3` — general-purpose SSD.
+* `io1` / `io2` — provisioned IOPS SSD.
 
 ### HDD
 
-Used primarily for:
+Used primarily for large sequential workloads and throughput-oriented processing.
 
-* large sequential workloads
-* throughput-oriented workloads
+* `st1` — Throughput-Optimized HDD.
+* `sc1` — Cold HDD.
 
-Main options:
+**Important:** `st1` and `sc1` cannot be used as root/boot volumes.
 
-* **st1**
-* **sc1**
+### Magnetic (`standard`)
 
-Important:
+Magnetic is a previous-generation EBS volume type for small datasets accessed infrequently when performance is not the primary concern.
 
-> **st1 and sc1 cannot be used as root/boot volumes.**
+For current EBS choices, `sc1` is the low-cost HDD option for infrequently accessed data.
 
-### Previous-generation Magnetic
+| Term                  | Meaning                                                   |
+| --------------------- | --------------------------------------------------------- |
+| Magnetic (`standard`) | Previous-generation EBS; legacy terminology               |
+| `sc1`                 | Current Cold HDD for low-cost, infrequently accessed data |
 
-There is also:
+**Exam traps:**
 
-* **Magnetic (`standard`)**
-
-It is a **previous-generation EBS volume type** designed for small datasets where data is accessed infrequently and performance is not the primary concern.
-
-For modern workloads, `sc1` is the current EBS choice for **infrequently accessed data where minimizing storage cost is important**.
-
-### Exam trap
-
-Some older practice questions describe:
-
-> **Magnetic = lowest-cost EBS storage for infrequently accessed data**
-
-That is legacy terminology associated with the `standard` / Magnetic volume type.
-
-For current EBS thinking:
-
-```text
-Current low-cost infrequently accessed HDD
-→ sc1
-
-Legacy / previous-generation infrequent-access EBS
-→ Magnetic (standard)
-```
-
-Do not confuse the two.
+* `Spot` is not an EBS volume type. Spot is an EC2 purchasing option.
+* `SR-IOV` is not an EBS volume type. It is an I/O virtualization technology.
 
 ---
 
 # General Purpose SSD — gp3
 
-**gp3** is the general-purpose SSD option and is the normal default choice for many workloads.
-
-It provides:
+`gp3` is the general-purpose SSD option and a common default choice.
 
 * **3,000 baseline IOPS**
 * **125 MB/s baseline throughput**
-* IOPS and throughput can be provisioned **independently of volume size**
-* up to **80,000 IOPS**
-
-This last point is very important.
+* IOPS and throughput can be provisioned independently of volume size.
+* Supports up to **80,000 IOPS**.
 
 ### Example
 
-Suppose an application needs:
+A workload needs 10,000 IOPS and 100 GB of storage.
 
-```text
-10,000 IOPS
-100 GB storage
-```
-
-With gp3, you do not need to increase the volume size just to obtain more IOPS.
-
-You can keep:
+With `gp3`, you can configure:
 
 ```text
 100 GB
 10,000 IOPS
 ```
 
-because performance can be provisioned independently.
+You do not need to increase storage capacity just to obtain more IOPS.
 
-### Exam clue
+**Exam clue:** More IOPS without increasing storage capacity → `gp3`.
 
-> "The application needs more IOPS without increasing storage capacity."
+## gp2 vs gp3
 
-→ **gp3**
+`gp2` ties IOPS to volume size and also supports burst behavior.
 
----
+* `gp2`: baseline of **3 IOPS per GiB**, subject to volume-size and burst rules.
+* `gp3`: baseline of 3,000 IOPS; IOPS and throughput can be configured independently of size.
 
-# gp2 vs gp3
+| Feature                        | gp2            | gp3                       |
+| ------------------------------ | -------------- | ------------------------- |
+| Baseline IOPS model            | Tied to size   | 3,000 baseline            |
+| IOPS independent of size       | No             | Yes                       |
+| Throughput independent of size | No             | Yes                       |
+| General-purpose SSD choice     | Previous model | Common recommended choice |
 
-`gp2` uses a different model.
+**Exam clue:** A company uses `gp2` and needs more performance without paying for unnecessary storage → migrate to `gp3`.
 
-### gp2
-
-IOPS is tied to the size of the volume:
-
-```text
-3 IOPS per GiB
-```
-
-with additional burst behavior.
-
-Therefore, increasing the volume size is one way to increase IOPS.
-
-### gp3
-
-IOPS and throughput are independent of volume size.
-
-|                                         | gp2          | gp3            |
-| --------------------------------------- | ------------ | -------------- |
-| Baseline IOPS model                     | tied to size | 3,000 baseline |
-| IOPS independent of size                | ❌            | ✅              |
-| Throughput independent of size          | ❌            | ✅              |
-| Typical recommended general-purpose SSD | older        | **gp3**        |
-
-### Exam pattern
-
-> "The company uses gp2 and wants more performance without paying for unnecessary storage."
-
-→ **Migrate to gp3**
-
-Do not interpret "gp2 appears in the question" as an automatic answer. The important clue is **needing independent performance configuration or better price/performance**.
+Do not choose `gp3` merely because the question mentions `gp2`; look for independent performance configuration or better price/performance.
 
 ---
 
 # Provisioned IOPS SSD — io1 / io2
 
-Use **io1 or io2** when the workload requires **high, predictable IOPS and consistently low latency**, especially when the workload is more demanding than a general-purpose SSD is intended for.
+Use `io1` or `io2` when workloads require high, predictable IOPS and consistently low latency, especially for demanding databases and transactional applications.
 
 Typical workloads:
 
-* high-performance relational databases
-* demanding transactional applications
-* high-performance NoSQL databases
-* applications with strict I/O requirements
+* High-performance relational databases.
+* High-performance NoSQL databases.
+* Demanding transactional applications.
+* Applications with strict I/O requirements.
 
-### Key exam wording
+| Requirement                                             | Choice        |
+| ------------------------------------------------------- | ------------- |
+| Normal database or general-purpose workload             | `gp3`         |
+| High, predictable IOPS                                  | `io1` / `io2` |
+| I/O-intensive database with strict latency requirements | `io1` / `io2` |
 
-> **"Consistent and low-latency performance"**
+**Exam clues:**
 
-→ Think **Provisioned IOPS**
+* “Consistent, low-latency performance” → Provisioned IOPS.
+* “Highly I/O-intensive database” → `io1` / `io2`.
 
-> **"I/O-intensive database"**
+Do not automatically choose Provisioned IOPS just because the workload is a database. Match the choice to the actual performance requirements.
 
-→ Think **io1/io2**
+## io2 Block Express
 
-The important distinction is:
+**Amazon EBS io2 Block Express** supports up to **256,000 IOPS** and provides very low latency.
 
-```text
-General-purpose SSD
-→ gp3
-
-Provisioned, predictable IOPS
-→ io1/io2
-```
-
-### Exam clue
-
-> "The application requires consistent and low-latency I/O performance and is highly I/O intensive."
-
-→ **io1/io2**
-
-### gp3 vs Provisioned IOPS
-
-Do not automatically choose `io1/io2` simply because the question says "database".
-
-Use the workload requirements:
-
-```text
-Normal database / general-purpose
-→ gp3
-
-Very high / predictable IOPS
-→ io1/io2
-```
-
----
-
-# io2 Block Express
-
-For extremely high-performance workloads, **io2 Block Express** supports up to:
-
-**256,000 IOPS**
-
-and provides very low latency.
-
-### Exam clue
-
-> "256,000 IOPS"
-> "sub-millisecond latency"
-
-→ **io2 Block Express**
+**Exam clues:** “256,000 IOPS” or “sub-millisecond latency” → `io2 Block Express`.
 
 ---
 
 # Throughput-Optimized HDD — st1
 
-Use **st1** for large sequential workloads where throughput matters more than random IOPS.
+Use `st1` for large sequential workloads where throughput matters more than random IOPS.
 
-Typical examples:
+Typical workloads include:
 
-* log processing
-* big-data workloads
-* ETL
-* large sequential datasets
+* Log processing.
+* Big-data workloads.
+* ETL.
+* Large sequential datasets.
 
-### Exam clue
-
-> "Large sequential reads/writes and high throughput at lower cost."
-
-→ **st1**
-
----
+**Exam clue:** Large sequential reads/writes and high throughput at lower cost → `st1`.
 
 # Cold HDD — sc1
 
-Use **sc1** for data that is accessed infrequently and where minimizing storage cost is the priority.
+Use `sc1` for infrequently accessed data when minimizing storage cost is the priority.
 
-### Exam clue
-
-> "Infrequently accessed data stored on EBS at the lowest cost."
-
-→ **sc1**
-
----
+**Exam clue:** Infrequently accessed data on low-cost current-generation EBS HDD storage → `sc1`.
 
 # Magnetic — standard
 
-**Magnetic (`standard`)** is a previous-generation EBS volume type.
+Magnetic (`standard`) is a previous-generation EBS volume type for small datasets, infrequent access, and workloads where performance is not the primary concern. Its performance is much lower and less consistent than that of modern SSD types.
 
-It is suited for:
+**Legacy exam wording:** “Magnetic provides the lowest cost per GB and is suitable for infrequently accessed data.”
 
-* small datasets
-* infrequently accessed data
-* workloads where performance is not the primary concern
-
-It offers much lower and less consistent performance than modern SSD volume types.
-
-### Important exam wording
-
-A legacy question may describe:
-
-> "Magnetic volumes provide the lowest cost per gigabyte and are ideal for infrequently accessed data."
-
-This is the kind of wording used in older EBS questions.
-
-The key recognition is:
-
-```text
-Magnetic
-= standard
-= previous-generation
-= infrequent access
-= performance not primary concern
-```
-
-Do not confuse it with:
-
-```text
-sc1
-= current Cold HDD
-= infrequent access
-= low-cost current-generation EBS
-```
-
-### Exam trap
-
-> **"Spot volume"**
-
-→ There is **no EBS volume type called Spot**.
-
-Spot is an EC2 purchasing option, not an EBS storage type.
-
-> **"SR-IOV volume"**
-
-→ There is **no EBS volume type called SR-IOV**.
-
-SR-IOV is a virtualization/I/O technology, not an EBS volume type.
+Recognize this as **Magnetic (`standard`)**, not `sc1`.
 
 ---
 
 # EBS decision guide
 
-```text
-What does the workload need?
-
-          ┌─────────────────────────┐
-          │ Random I/O / database?  │
-          └────────────┬────────────┘
-                       │ Yes
-                       ↓
-                     SSD
-                  ┌────┴────┐
-                  ↓         ↓
-             General     Provisioned
-            purpose       IOPS?
-                  ↓         ↓
-                 gp3     io1/io2
-                            │
-                            ↓
-                    Extreme performance?
-                            │
-                            ↓
-                     io2 Block Express
-
-
-Large sequential workload?
-          │
-          ↓
-         HDD
-       ┌───┴───┐
-       ↓       ↓
-   Frequent   Infrequent
-    access      access
-       ↓         ↓
-      st1        sc1
-
-
-Legacy / previous-generation
-infrequent-access workload
-          ↓
-   Magnetic / standard
-```
-
-### Modern performance shortcut
-
-```text
-General-purpose SSD
-→ gp3
-
-Provisioned, predictable low latency
-→ io1/io2
-
-Extreme IOPS / 256,000
-→ io2 Block Express
-```
+| Workload requirement                           | EBS choice            |
+| ---------------------------------------------- | --------------------- |
+| General-purpose SSD                            | `gp3`                 |
+| IOPS independent of volume size                | `gp3`                 |
+| High, predictable IOPS                         | `io1` / `io2`         |
+| Up to 256,000 IOPS, extreme performance        | `io2 Block Express`   |
+| Large sequential workload, throughput priority | `st1`                 |
+| Infrequently accessed, low-cost current HDD    | `sc1`                 |
+| Legacy Magnetic volume requirement             | Magnetic (`standard`) |
 
 ---
 
 # EBS snapshots
 
-An EBS snapshot is a point-in-time backup of an EBS volume.
+An EBS snapshot is a point-in-time backup of an EBS volume. Snapshots are stored in AWS-managed storage and are **incremental after the first snapshot**.
 
-Snapshots are stored in AWS-managed storage and are **incremental after the first snapshot**.
-
-This means AWS stores only the blocks that changed since the previous snapshot.
-
-### Example
+AWS stores the blocks that changed since the previous snapshot rather than making each snapshot a completely independent full copy.
 
 ```text
 Day 1 → Snapshot A
-Day 2 → Snapshot B
-Day 3 → Snapshot C
+Day 2 → Snapshot B (changed blocks)
+Day 3 → Snapshot C (changed blocks)
 ```
-
-Snapshots B and C only need to account for changed blocks rather than copying the entire volume as a completely new backup each time.
-
----
 
 ## Using an EBS volume while a snapshot is in progress
 
-An EBS volume **can still be used while its snapshot is being created**.
-
-You can continue to:
-
-* read from the volume
-* write to the volume
-* use the EC2 instance normally
-* perform normal volume operations
-
-A snapshot does **not lock the EBS volume**.
+An EBS volume remains available while its snapshot is created. The volume can continue to be read from and written to, and the EC2 instance can continue normal operations.
 
 ```text
-EC2
- ↓
-EBS Volume
- ├── Read ✅
- ├── Write ✅
- └── Snapshot in progress ✅
+EC2 → EBS volume
+        ├── Read ✅
+        ├── Write ✅
+        └── Snapshot in progress ✅
 ```
 
-### Important exam trap
+**Exam trap:** “Can the EBS volume be used while the snapshot is in progress?” → **Yes.** A snapshot does not lock the volume or make it read-only.
 
-> **"Can the EBS volume be used while the snapshot is in progress?"**
+## Cross-Region EBS backup
 
-→ **Yes**
-
-It is **not read-only** and does **not** have to wait for the snapshot to finish.
-
-### Simple mental model
-
-```text
-Snapshot
-= backup being created
-
-EBS volume
-= remains available
-```
-
-So:
-
-> **EBS snapshot in progress ≠ EBS volume locked**
-
----
-
-# Cross-Region EBS backup
-
-To protect EBS data in another Region:
+For disaster recovery in another Region:
 
 ```text
 EBS volume
     ↓
-Snapshot
+Create snapshot
     ↓
-Copy snapshot to another Region
+Copy snapshot to destination Region
     ↓
-Restore volume there if needed
+Restore volume there when needed
 ```
 
-### Exam clue
+**Exam clue:** Back up EBS data to another AWS Region → create a snapshot and copy it to the destination Region.
 
-> "Back up EBS data to another AWS Region for disaster recovery."
+## Snapshot Archive
 
-→ **Create a snapshot and copy it to the destination Region.**
+**EBS Snapshot Archive** is intended for snapshots that are rarely accessed. It substantially reduces storage cost but has a slower restore process.
 
----
+**Exam clue:** Snapshots are rarely restored, and lower backup storage cost matters more than fast recovery → Snapshot Archive.
 
-# Snapshot Archive
+## Recycle Bin
 
-The **EBS Snapshot Archive** tier is intended for snapshots that are rarely accessed.
+**Amazon EBS Recycle Bin** protects supported resources, including EBS snapshots, against accidental deletion. Retention rules keep deleted snapshots recoverable for a specified period.
 
-It reduces storage cost substantially but has a much slower restore process.
+**Exam clue:** Protect accidentally deleted EBS snapshots → Recycle Bin.
 
-Exam clue:
+## Fast Snapshot Restore
 
-> "Snapshots are rarely restored and minimizing backup storage cost is more important than fast recovery."
-
-→ **Snapshot Archive**
-
----
-
-# Recycle Bin
-
-Amazon EBS **Recycle Bin** helps protect against accidental deletion of supported resources such as EBS snapshots.
-
-You configure retention rules so that deleted snapshots remain recoverable for a specified period.
-
-### Exam clue
-
-> "Protect accidentally deleted EBS snapshots."
-
-→ **Recycle Bin**
-
----
-
-# Fast Snapshot Restore
-
-Normally, data restored from an EBS snapshot is loaded on demand.
-
-This can cause initial reads to be slower while blocks are restored.
+Normally, data restored from an EBS snapshot is loaded on demand, potentially slowing initial reads while blocks are initialized.
 
 **Fast Snapshot Restore (FSR)** pre-initializes the restored volume so that it can provide full performance immediately.
 
-Trade-off:
+Trade-off: Faster recovery and immediate performance, but additional cost.
 
-> Faster recovery and immediate performance, but additional cost.
+**Exam clue:** A restored EBS volume must provide full performance immediately, without the initial read penalty → Fast Snapshot Restore.
 
-### Exam clue
+## Data Lifecycle Manager — DLM
 
-> "A restored EBS volume must provide full performance immediately with no initial read penalty."
+**Amazon Data Lifecycle Manager (DLM)** automates EBS snapshot lifecycle operations, including creation, retention, deletion, and selected cross-Region snapshot-copy workflows.
 
-→ **Fast Snapshot Restore**
-
----
-
-# Data Lifecycle Manager — DLM
-
-**Amazon Data Lifecycle Manager (DLM)** automates EBS snapshot lifecycle operations.
-
-It can automate:
-
-* snapshot creation
-* retention
-* deletion
-* lifecycle policies
-* selected cross-Region snapshot-copy workflows
-
-A common pattern is:
+Example:
 
 ```text
-Every day
-   ↓
-Create snapshot
-   ↓
-Keep last 7
-   ↓
+Create a snapshot daily
+        ↓
+Keep the last 7
+        ↓
 Delete older snapshots
 ```
 
-### Exam clue
+**Exam clue:** Automatically create, retain, and delete EBS snapshots on a schedule → Amazon DLM.
 
-> "Automatically create and retain EBS snapshots on a schedule."
-
-→ **Amazon DLM**
-
-DLM is especially useful when the requirement is specifically about **EBS snapshot lifecycle management**.
-
-For broader centralized backup management across many AWS services, consider **AWS Backup**.
+For broader centralized backup management across multiple AWS services, consider **AWS Backup**.
 
 ---
 
-# EBS encryption (KMS)
+# EBS encryption — AWS KMS
 
-Enable EBS encryption when creating the volume.
+EBS encryption protects data at rest, data in transit between EC2 and EBS, and snapshots.
 
-Encrypted EBS volumes create encrypted snapshots, and encrypted snapshots can be used to create encrypted volumes.
-
-Encryption protects:
-
-* **Data at rest** on the EBS volume
-* **Data in transit between the EC2 instance and EBS volume**
-* **EBS snapshots**, which are automatically encrypted when created from an encrypted volume
-* **Volumes created from encrypted snapshots**, which are automatically encrypted
-
-### Exam rules
-
-| Scenario                                        | Result                    |
-| ----------------------------------------------- | ------------------------- |
-| Encrypted EBS volume                            | ✅ Data at rest encrypted  |
-| Data moving between EC2 and EBS                 | ✅ Encrypted               |
-| Snapshot of encrypted EBS volume                | ✅ Automatically encrypted |
-| Volume created from encrypted snapshot          | ✅ Automatically encrypted |
-| "Only data in the volume is encrypted"          | ❌                         |
-| "Snapshot is not automatically encrypted"       | ❌                         |
-| "Volume from encrypted snapshot is unencrypted" | ❌                         |
+| Scenario                                                               | Result                    |
+| ---------------------------------------------------------------------- | ------------------------- |
+| Encrypted EBS volume                                                   | Data at rest is encrypted |
+| Data moving between EC2 and EBS                                        | Encrypted                 |
+| Snapshot of an encrypted volume                                        | Automatically encrypted   |
+| Volume created from an encrypted snapshot                              | Automatically encrypted   |
+| Claim that only data in the volume is encrypted                        | Incorrect                 |
+| Claim that a snapshot of an encrypted volume is unencrypted            | Incorrect                 |
+| Claim that a volume restored from an encrypted snapshot is unencrypted | Incorrect                 |
 
 ## EBS Encryption by Default
 
-**EBS Encryption by Default** is a **Region-level account setting** that automatically encrypts new EBS volumes created in that Region.
+**EBS Encryption by Default** is a **Region-level account setting** that automatically encrypts new EBS volumes in that Region.
 
-It also causes a new EBS volume restored from an **unencrypted snapshot** to be encrypted automatically.
+A new EBS volume restored from an unencrypted snapshot is also automatically encrypted when the setting applies.
 
 ```text
-EBS Encryption by Default
-        ↓
-      Region
-        ↓
-New EBS volumes
-        ↓
-Automatically encrypted
+Enable EBS Encryption by Default
+               ↓
+          AWS Region
+               ↓
+       New EBS volumes
+               ↓
+      Automatically encrypted
 ```
 
-> **Encryption by Default = Region-level setting**
+It does not automatically encrypt existing unencrypted EBS volumes or snapshots.
 
-It applies to **new** resources; existing unencrypted EBS volumes and snapshots are not automatically encrypted.
+## Encrypt an existing unencrypted EBS volume
 
-## Existing unencrypted volume
-
-You cannot simply toggle an existing unencrypted EBS volume into an encrypted volume in place.
-
-The normal process is:
+You cannot simply toggle an existing unencrypted volume to encrypted in place. Use:
 
 ```text
 Unencrypted EBS volume
@@ -853,25 +401,15 @@ Create encrypted EBS volume
 Attach new volume
 ```
 
-### Exam clue
-
-> "Encrypt an existing unencrypted EBS volume."
-
-→ **Snapshot → copy with encryption → create new encrypted volume**
+**Exam clue:** Encrypt an existing unencrypted EBS volume → snapshot → copy with encryption → create a new encrypted volume.
 
 ---
 
 # EFS — Elastic File System
 
-Amazon EFS is a managed **file system** designed primarily for Linux-based workloads.
+Amazon EFS is a managed, scalable, POSIX-compliant **file system** that primarily serves Linux-based workloads through NFSv4.
 
-**POSIX-compliant storage → EFS** is a POSIX-compliant file system (NFSv4).
-
-Scalable for HPC → EFS scales automatically with workload.
-
-It uses the **NFS protocol** and allows multiple clients to access the same files at the same time.
-
-This makes it fundamentally different from EBS.
+It grows and shrinks automatically as files are added or removed, and supports simultaneous access by multiple clients.
 
 ```text
              EFS
@@ -881,551 +419,367 @@ This makes it fundamentally different from EBS.
      EC2     EC2     EC2
 ```
 
-All clients can work with the same files.
-
----
+All clients can access the same shared files.
 
 ## EFS vs EBS
 
-| Feature                  | EBS                            | EFS                                      |
-| ------------------------ | ------------------------------ | ---------------------------------------- |
-| Type                     | Block storage                  | File storage                             |
-| Shared by many instances | Normally no                    | Yes                                      |
-| Multi-AZ                 | No, volume is AZ-specific      | Yes                                      |
-| Typical protocol         | Block device                   | NFS                                      |
-| Typical use              | OS, database, application disk | Shared files                             |
-| Capacity management      | Provision volume size          | Automatically grows/shrinks              |
-| Typical clients          | EC2                            | Multiple EC2 instances / compute clients |
+| Feature                  | EBS                             | EFS                                        |
+| ------------------------ | ------------------------------- | ------------------------------------------ |
+| Storage type             | Block                           | File                                       |
+| Shared by many instances | Normally no                     | Yes                                        |
+| Multi-AZ                 | Volume is AZ-specific           | Yes                                        |
+| Access model             | Block device                    | NFS file system                            |
+| Typical uses             | OS, databases, application disk | Shared files                               |
+| Capacity management      | Provision volume size           | Grows/shrinks automatically                |
+| Typical clients          | EC2                             | Multiple EC2 instances and compute clients |
 
----
+## EFS use cases
 
-# EFS is for shared files
+* User uploads.
+* Shared application files.
+* Content management systems.
+* WordPress content.
+* Shared configuration and data across Linux instances.
+* Applications behind an Auto Scaling Group (ASG) that require shared files.
 
-Typical use cases:
+**Exam clue:** Multiple EC2 instances in different AZs must access the same files → EFS.
 
-* user uploads
-* shared application files
-* content management systems
-* WordPress content
-* shared configuration/data across Linux instances
-* applications behind an Auto Scaling Group that need common files
+## EFS and Windows
 
-### Exam clue
+EFS is not the standard choice for native Windows file-sharing requirements involving SMB or Active Directory.
 
-> "Multiple EC2 instances in different AZs need access to the same files."
+**Amazon FSx for Windows File Server** is the appropriate choice for Windows file shares requiring:
 
-→ **EFS**
+* Server Message Block (SMB).
+* Windows file-sharing features.
+* Active Directory integration.
 
----
+**Exam clue:** Windows + SMB + Active Directory → FSx for Windows File Server.
 
-# EFS and Windows
+## EFS storage and cost
 
-EFS is not the normal choice for native Windows file-sharing requirements.
+* EFS automatically grows and shrinks as data changes; you do not pre-provision a fixed capacity as with EBS.
+* EFS generally costs more per GB than EBS, but does not charge for unused provisioned capacity in the same way.
+* EFS lifecycle management can move less frequently accessed files into lower-cost storage classes.
 
-For Windows workloads requiring:
+## EFS performance modes
 
-* SMB
-* Windows file shares
-* Active Directory integration
+| Mode            | Behavior                                                                                       |
+| --------------- | ---------------------------------------------------------------------------------------------- |
+| General Purpose | Default and recommended for most workloads; prioritizes lower latency                          |
+| Max I/O         | Designed for very high concurrency and aggregate throughput where higher latency is acceptable |
 
-think:
+**Exam clue:** Thousands of concurrent clients, maximum aggregate throughput more important than latency → Max I/O.
 
-**FSx for Windows File Server**
+For most applications, choose General Purpose.
 
-### Exam clue
+## EFS throughput modes
 
-> "Windows + SMB + Active Directory"
+| Mode        | Behavior                                                                                         |
+| ----------- | ------------------------------------------------------------------------------------------------ |
+| Elastic     | Automatically scales throughput with workload demand; a modern default choice for many workloads |
+| Provisioned | Explicitly configures throughput independently of stored data size                               |
+| Bursting    | Throughput depends on stored data and the EFS bursting model                                     |
 
-→ **FSx for Windows File Server**
+**Exam clue:** Automatically adapts throughput to workload demand → Elastic throughput.
 
-Do not choose EFS for this requirement.
+## EFS lifecycle management
 
----
-
-# EFS storage and cost
-
-EFS automatically grows and shrinks as files are added or removed.
-
-You do not need to pre-provision a fixed storage capacity like an EBS volume.
-
-EFS generally costs more per GB than EBS, but you do not pay for unused provisioned capacity in the same way.
-
-EFS also provides lifecycle management so less frequently accessed files can move to lower-cost storage classes.
-
----
-
-# EFS performance modes
-
-EFS provides two performance modes:
-
-### General Purpose
-
-The default and recommended choice for most workloads.
-
-### Max I/O
-
-Designed for workloads with very high concurrency where the application can tolerate higher latency.
-
-Exam clue:
-
-> "Thousands of concurrent clients and maximum aggregate throughput is more important than latency."
-
-→ **Max I/O**
-
-For most applications, choose **General Purpose**.
-
----
-
-# EFS throughput modes
-
-EFS supports multiple throughput modes.
-
-### Elastic
-
-Automatically scales throughput with workload demand.
-
-This is the modern default choice for many workloads.
-
-### Provisioned
-
-Allows you to explicitly configure throughput independently of storage size.
-
-Useful when the required throughput is known and should not depend on the amount of data stored.
-
-### Bursting
-
-Throughput is tied to the amount of data stored and can burst according to the EFS model.
-
-For exam questions, focus mainly on recognizing:
-
-> **Elastic = automatically adapts to workload**
-
----
-
-# EFS lifecycle management
-
-EFS can automatically move less frequently accessed files to lower-cost storage classes.
-
-Typical lifecycle pattern:
+EFS can move less frequently accessed files into lower-cost storage classes.
 
 ```text
-Frequently accessed
-        ↓
-EFS Standard
-
-Less frequently accessed
-        ↓
-EFS IA
-
-Very cold data
-        ↓
-EFS Archive
+Frequently accessed → EFS Standard
+Less frequently accessed → EFS IA
+Very cold data → EFS Archive
 ```
 
-### Exam clue
-
-> "Reduce the cost of files that have not been accessed for a long time."
-
-→ **EFS lifecycle management**
+**Exam clue:** Reduce costs for files that have not been accessed for a long time → EFS lifecycle management.
 
 ---
 
 # Instance Store
 
-Instance Store provides **local storage physically attached to the EC2 host**.
+Instance Store provides local storage physically attached to the EC2 host.
 
-Because the storage is local:
-
-* latency is very low
-* I/O performance can be extremely high
-* there is no network hop like EBS
-
-The major problem is:
-
-> **Instance Store is ephemeral.**
-
-You should use it only when the data can be recreated, discarded, or recovered from another source.
-
----
+* Very low latency.
+* Potentially extremely high I/O performance.
+* No network hop like network-attached EBS.
+* **Ephemeral:** data must be reproducible, disposable, or recoverable elsewhere.
 
 ## Instance Store data persistence
 
-Instance Store data survives an **EC2 reboot**.
+Instance Store data survives an EC2 **reboot**, but not a stop, hibernate, or termination.
 
-It does **not** survive:
+| EC2 action | Instance Store data |
+| ---------- | ------------------- |
+| Reboot     | Survives            |
+| Stop       | Lost                |
+| Hibernate  | Lost                |
+| Terminate  | Lost                |
 
-* stop
-* hibernate
-* terminate
+**Exam clue:** Temporary cache, scratch space, or data replicated elsewhere → Instance Store.
 
-So:
+## When Instance Store is appropriate
 
-```text
-Reboot
-→ same running host
-→ instance-store data survives
+* Temporary files.
+* Scratch space.
+* Caching.
+* Intermediate processing data.
+* Data replicated by the application.
+* High-speed local processing.
 
-Stop
-→ instance-store data lost
+For example, a Cassandra cluster can replicate data across multiple nodes. Losing one node's Instance Store data does not necessarily lose the application's data because other replicas exist.
 
-Terminate
-→ instance-store data lost
+## EBS vs Instance Store
 
-Hibernate
-→ instance-store data lost
-```
+| Feature                         | EBS                            | Instance Store                       |
+| ------------------------------- | ------------------------------ | ------------------------------------ |
+| Location                        | Network-attached AWS storage   | Physically local to host             |
+| Persistent                      | Yes                            | No                                   |
+| Survives stop                   | Yes                            | No                                   |
+| Survives reboot                 | Yes                            | Yes                                  |
+| EBS snapshots supported         | Yes                            | No                                   |
+| Can detach and attach elsewhere | Yes, subject to AZ             | No                                   |
+| Very high local IOPS            | Depends on volume and instance | Excellent                            |
+| Typical use                     | OS, databases, persistent data | Cache, scratch, temporary processing |
 
-### Exam clue
+**Exam clues:**
 
-> "Temporary cache, scratch space, or data replicated elsewhere."
+* “Fastest possible temporary storage” → Instance Store.
+* “High IOPS and data must persist” → EBS, typically `io2` for extreme IOPS.
 
-→ **Instance Store**
-
----
-
-# When Instance Store is a good choice
-
-Examples:
-
-* temporary files
-* scratch space
-* caching
-* intermediate processing data
-* data that is replicated by the application
-* high-speed local processing
-
-For example, a Cassandra cluster may replicate data across multiple nodes. Losing one node's instance-store data does not necessarily mean losing the application's data because replicas exist elsewhere.
+Do not choose Instance Store solely for its performance if the data must survive an EC2 stop.
 
 ---
 
-# EBS vs Instance Store
+# Main storage comparison
 
-| Feature                         | EBS                                        | Instance Store                       |
-| ------------------------------- | ------------------------------------------ | ------------------------------------ |
-| Storage location                | Network-attached AWS storage               | Physically local to host             |
-| Persistent                      | Yes                                        | No                                   |
-| Survives stop                   | Yes                                        | No                                   |
-| Survives reboot                 | Yes                                        | Yes                                  |
-| Can snapshot with EBS snapshots | Yes                                        | No                                   |
-| Can detach and attach elsewhere | Yes, subject to AZ                         | No                                   |
-| Very high local IOPS            | Lower than local NVMe in some cases        | Excellent                            |
-| Typical use                     | OS, databases, persistent application data | Cache, scratch, temporary processing |
-
-### Exam clue
-
-> "Fastest possible temporary storage."
-
-→ **Instance Store**
-
-> "High IOPS storage and data must persist."
-
-→ **EBS**, usually **io2** when extremely high IOPS are required.
-
-Do not choose Instance Store just because the question says "highest IOPS" if it also says **the data must persist**.
-
----
-
-# The main storage comparison
-
-| Storage             | Best for                                         |
-| ------------------- | ------------------------------------------------ |
-| **EBS**             | Persistent block storage attached to EC2         |
-| **EFS**             | Shared files across multiple Linux-based clients |
-| **Instance Store**  | Very fast temporary local storage                |
-| **FSx for Windows** | Windows/SMB/Active Directory file shares         |
-| **FSx for Lustre**  | High-performance parallel file systems           |
-| **S3**              | Object storage and large-scale durable data      |
+| Storage                         | Best for                                         |
+| ------------------------------- | ------------------------------------------------ |
+| **EBS**                         | Persistent block storage attached to EC2         |
+| **EFS**                         | Shared files across multiple Linux-based clients |
+| **Instance Store**              | Very fast temporary local storage                |
+| **FSx for Windows File Server** | Windows/SMB/Active Directory file shares         |
+| **FSx for Lustre**              | High-performance parallel file systems           |
+| **Amazon S3**                   | Object storage and large-scale durable data      |
 
 ---
 
 # Question patterns
 
-> **"Database needs 12,000 IOPS and does not require extreme I/O performance."**
+> **“Database needs 12,000 IOPS and does not require extreme I/O performance.”**
 
-→ **gp3**
+→ `gp3`, provided its configured performance meets the requirements.
 
----
+> **“The application needs more IOPS without increasing storage capacity.”**
 
-> **"The application needs more IOPS without increasing storage capacity."**
+→ `gp3`.
 
-→ **gp3**
+> **“The application needs consistent, low-latency performance for an I/O-intensive relational or NoSQL database.”**
 
----
+→ `io1` or `io2`.
 
-> **"The application requires consistent and low-latency performance for an I/O-intensive relational or NoSQL database."**
+> **“Database requires very high, predictable IOPS.”**
 
-→ **io1 or io2**
+→ `io1/io2`.
 
----
+> **“Application requires 256,000 IOPS and extremely low latency.”**
 
-> **"Database requires very high, predictable IOPS."**
+→ `io2 Block Express`.
 
-→ **io1/io2**
+> **“Large sequential processing of logs; throughput is the priority.”**
 
----
+→ `st1`.
 
-> **"Application requires 256,000 IOPS and extremely low latency."**
+> **“Data is rarely accessed and storage cost should be minimized.”**
 
-→ **io2 Block Express**
+→ `sc1`.
 
----
+> **“A legacy application uses Magnetic EBS for a small, infrequently accessed dataset where performance is not important.”**
 
-> **"Large sequential processing of logs, throughput is the priority."**
+→ Magnetic (`standard`).
 
-→ **st1**
+> **“An older question says Magnetic provides the lowest cost per GB for infrequently accessed data.”**
 
----
+→ Recognize Magnetic (`standard`) as a previous-generation EBS volume type. Do not confuse it with `sc1`, the current Cold HDD option.
 
-> **"Data is rarely accessed and storage cost should be minimized."**
+> **“The company uses gp2 and wants more performance without paying for unnecessary storage.”**
 
-→ **sc1**
+→ Migrate to `gp3`.
 
----
+> **“Multiple EC2 instances in different AZs need access to the same files.”**
 
-> **"A legacy application uses Magnetic EBS for a small, infrequently accessed dataset where performance is not important."**
+→ EFS.
 
-→ **Magnetic (`standard`)**
+> **“Multiple EC2 instances in the same AZ need access to the same block volume.”**
 
----
+→ `io1/io2` Multi-Attach.
 
-> **"An older question says Magnetic provides the lowest cost per GB and is suitable for infrequently accessed data."**
+> **“Up to 16 supported EC2 instances need simultaneous read/write access to the same block volume in one AZ.”**
 
-→ Recognize **Magnetic (`standard`) as a previous-generation EBS volume type**.
+→ `io1/io2` Multi-Attach.
 
-Do not confuse it with **sc1**, which is the current Cold HDD option for infrequently accessed, low-cost EBS storage.
+> **“gp3 Multi-Attach provides multi-AZ resiliency.”**
 
----
+→ Incorrect. `gp3` does not support Multi-Attach, and Multi-Attach is limited to the same AZ.
 
-> **"The company uses gp2 and wants more performance without paying for unnecessary storage."**
+> **“A storage option called Spot provides the lowest EBS cost per GB.”**
 
-→ **Migrate to gp3**
+→ Incorrect. Spot is an EC2 purchasing option, not an EBS volume type.
 
----
+> **“SR-IOV volume is suitable for boot volumes and small databases.”**
 
-> **"Multiple EC2 instances in different AZs must access the same files."**
+→ Incorrect. SR-IOV is not an EBS volume type.
 
-→ **EFS**
+> **“Windows servers need an SMB file share integrated with Active Directory.”**
 
----
+→ FSx for Windows File Server.
 
-> **"Multiple EC2 instances in the same AZ must access the same block volume."**
+> **“The application needs very fast temporary local storage.”**
 
-→ **io1/io2 Multi-Attach**
+→ Instance Store.
 
----
+> **“The application needs fast storage, and data must survive an EC2 stop.”**
 
-> **"Up to 16 supported EC2 instances need simultaneous read/write access to the same block volume in one AZ."**
+→ EBS.
 
-→ **io1/io2 Multi-Attach**
+> **“The root volume must survive EC2 termination.”**
 
----
+→ Set `DeleteOnTermination = false`.
 
-> **"gp3 Multi-Attach provides multi-AZ resiliency."**
+> **“An EBS volume must be moved to another AZ.”**
 
-→ **Wrong**
+→ Snapshot → restore in the destination AZ.
 
-`gp3` does not support Multi-Attach, and Multi-Attach itself is limited to instances in the **same AZ**.
+> **“An EBS backup must be copied to another AWS Region.”**
 
----
+→ Copy the EBS snapshot to the destination Region.
 
-> **"A storage option called Spot provides the lowest EBS cost per GB."**
+> **“EBS volume configuration needs to change, including provisioned IOPS.”**
 
-→ **Wrong**
+→ Use `ModifyVolume`, not `ModifyInstanceAttribute`.
 
-There is no **Spot EBS volume type**.
+> **“The EC2 instance needs its EBS-optimized attribute changed.”**
 
-Spot is an EC2 purchasing model.
+→ `ModifyInstanceAttribute`, subject to instance-type support.
 
----
+> **“Determine actual IOPS and throughput usage from CloudWatch metrics.”**
 
-> **"SR-IOV volume is suitable for boot volumes and small databases."**
+→ CloudWatch `GetMetricData`.
 
-→ **Wrong**
+> **“All new EBS volumes, including volumes restored from unencrypted snapshots, must automatically be encrypted.”**
 
-SR-IOV is not an EBS volume type.
+→ Enable EBS Encryption by Default for the Region.
 
----
+> **“Encrypt an existing unencrypted EBS volume.”**
 
-> **"Windows servers need an SMB file share integrated with Active Directory."**
+→ Snapshot → copy with encryption → create a new encrypted volume.
 
-→ **FSx for Windows File Server**
+> **“An encrypted EBS volume must protect data at rest and while moving between EC2 and EBS.”**
 
----
+→ EBS encryption.
 
-> **"Application needs very fast temporary local storage."**
+> **“A snapshot is created from an encrypted EBS volume.”**
 
-→ **Instance Store**
+→ The snapshot is automatically encrypted.
 
----
+> **“Create a volume from an encrypted EBS snapshot.”**
 
-> **"Application needs very fast storage and the data must survive an EC2 stop."**
+→ The new volume is automatically encrypted.
 
-→ **EBS**
+> **“Automatically create and retain EBS snapshots on a schedule.”**
 
----
+→ Amazon Data Lifecycle Manager (DLM).
 
-> **"The root volume must survive EC2 termination."**
+> **“Protect accidentally deleted EBS snapshots.”**
 
-→ **Set `DeleteOnTermination = false`**
+→ EBS Recycle Bin.
 
----
+> **“A restored EBS volume must provide full performance immediately.”**
 
-> **"An EBS volume must be moved to another AZ."**
+→ Fast Snapshot Restore.
 
-→ **Snapshot → restore in the destination AZ**
+> **“Multiple Linux instances in different AZs need access to the same shared file system.”**
 
----
+→ EFS.
 
-> **"A backup must be copied to another AWS Region."**
+> **“Linux instances need a POSIX-compliant shared file system across AZs.”**
 
-→ **Copy the EBS snapshot to the destination Region**
+→ EFS.
 
----
+> **“Windows + SMB + Active Directory.”**
 
-> **"EBS encryption type."**
+→ FSx for Windows File Server.
 
-→ **KMS by default**
+> **“Thousands of EFS clients; maximum aggregate performance matters more than latency.”**
 
----
+→ EFS Max I/O performance mode.
 
-> **"All new EBS volumes, including volumes restored from unencrypted snapshots, must automatically be encrypted."**
+> **“Reduce EFS cost for files that are rarely accessed.”**
 
-→ **Enable EBS Encryption by Default for the AWS Region**
+→ EFS lifecycle management → IA / Archive.
 
----
+> **“Data can be recreated, and the application needs the highest local storage performance.”**
 
-> **"Automatically create EBS snapshots on a schedule and delete old ones."**
-
-→ **Amazon Data Lifecycle Manager (DLM)**
-
----
-
-> **"Protect against accidental deletion of EBS snapshots."**
-
-→ **EBS Recycle Bin**
-
----
-
-> **"A restored EBS volume must have full performance immediately."**
-
-→ **Fast Snapshot Restore**
-
----
-
-> **"Encrypt an existing unencrypted EBS volume."**
-
-→ **Snapshot → copy with encryption → create encrypted volume**
-
----
-
-> **"An encrypted EBS volume must protect data both at rest and while moving between EC2 and EBS."**
-
-→ **EBS encryption**
-
----
-
-> **"A snapshot is created from an encrypted EBS volume."**
-
-→ **The snapshot is automatically encrypted**
-
----
-
-> **"Create a volume from an encrypted EBS snapshot."**
-
-→ **The new volume is automatically encrypted**
-
----
-
-> **"Multiple Linux instances in different AZs need access to the same shared file system."**
-
-→ **EFS**
-
----
-
-> **"Windows + SMB + AD."**
-
-→ **FSx for Windows File Server**
-
----
-
-> **"Thousands of EFS clients; maximum aggregate performance is more important than latency."**
-
-→ **EFS Max I/O performance mode**
-
----
-
-> **"Reduce EFS cost for files that are rarely accessed."**
-
-→ **EFS lifecycle management → IA / Archive**
-
----
-
-> **"A company needs a POSIX-compliant, multi-AZ shared file system for thousands of EC2 instances."**
-
-→ **EFS**
-
-> **"Data can be recreated and the application needs the highest local storage performance."**
-
-→ **Instance Store**
+→ Instance Store.
 
 ---
 
 # Pocket card
 
-| Keyword                                                           | Answer                                     |
-| ----------------------------------------------------------------- | ------------------------------------------ |
-| persistent block storage                                          | **EBS**                                    |
-| shared file system                                                | **EFS**                                    |
-| temporary local storage                                           | **Instance Store**                         |
-| random I/O / database                                             | **SSD**                                    |
-| large sequential workload / throughput                            | **HDD**                                    |
-| general-purpose SSD                                               | **gp3**                                    |
-| gp3 independent IOPS/throughput                                   | **Yes**                                    |
-| gp3 baseline IOPS                                                 | **3,000**                                  |
-| gp3 baseline throughput                                           | **125 MB/s**                               |
-| gp3 maximum IOPS                                                  | **80,000**                                 |
-| provisioned / predictable IOPS                                    | **io1/io2**                                |
-| 256,000 IOPS / extremely high performance                         | **io2 Block Express**                      |
-| frequent sequential access                                        | **st1**                                    |
-| infrequent / cheapest current HDD storage                         | **sc1**                                    |
-| legacy / previous-generation infrequent storage                   | **Magnetic (`standard`)**                  |
-| gp2 → better performance flexibility                              | **gp3**                                    |
-| same block volume attached to multiple instances                  | **io1/io2 Multi-Attach**                   |
-| Multi-Attach limit                                                | **up to 16 instances, same AZ**            |
-| gp3 Multi-Attach                                                  | **No**                                     |
-| Multi-Attach multi-AZ                                             | **No — same AZ only**                      |
-| Elastic Volumes shrink existing EBS volume                        | **No**                                     |
-| root volume survives termination                                  | **DeleteOnTermination = false**            |
-| new EBS data volume                                               | **format + mount**                         |
-| EBS volume usable during snapshot                                 | **Yes — read/write continues**             |
-| EBS snapshot does not lock volume                                 | **Volume remains available**               |
-| move EBS to another AZ                                            | **snapshot → restore**                     |
-| cross-Region EBS DR                                               | **snapshot → copy to Region → restore**    |
-| cheaper rarely restored snapshots                                 | **Snapshot Archive**                       |
-| recover accidentally deleted snapshots                            | **Recycle Bin**                            |
-| immediate full performance after snapshot restore                 | **Fast Snapshot Restore**                  |
-| automate EBS snapshot lifecycle                                   | **DLM**                                    |
-| EBS Encryption by Default                                         | **Automatically encrypts new EBS volumes** |
-| EBS Encryption by Default scope                                   | **Region-level**                           |
-| unencrypted snapshot → new volume with default encryption enabled | **Automatically encrypted**                |
-| existing unencrypted EBS resources                                | **Not automatically encrypted**            |
-| encrypt existing unencrypted EBS                                  | **snapshot → encrypted copy → new volume** |
-| EBS data in transit                                               | **encrypted**                              |
-| encrypted EBS snapshot                                            | **automatically encrypted**                |
-| volume from encrypted snapshot                                    | **automatically encrypted**                |
-| shared files across Linux instances                               | **EFS**                                    |
-| shared files across AZs                                           | **EFS**                                    |
-| Linux NFS file system                                             | **EFS**                                    |
-| Windows + SMB + AD                                                | **FSx for Windows File Server**            |
-| HPC parallel file system                                          | **FSx for Lustre**                         |
-| EFS maximum concurrency                                           | **Max I/O**                                |
-| automatic EFS throughput scaling                                  | **Elastic throughput**                     |
-| cold EFS files                                                    | **IA / Archive lifecycle**                 |
-| fastest temporary EC2 storage                                     | **Instance Store**                         |
-| instance store + reboot                                           | **data survives**                          |
-| instance store + stop                                             | **data lost**                              |
-| instance store + terminate                                        | **data lost**                              |
-| instance store + hibernate                                        | **data lost**                              |
-| high IOPS + persistence required                                  | **EBS, typically io2 for extreme IOPS**    |
-| fake EBS type: Spot                                               | **Not an EBS volume type**                 |
-| fake EBS type: SR-IOV                                             | **Not an EBS volume type**                 |
+| Keyword                                               | Answer                                                    |
+| ----------------------------------------------------- | --------------------------------------------------------- |
+| Persistent block storage                              | **EBS**                                                   |
+| Shared file system                                    | **EFS**                                                   |
+| Temporary local storage                               | **Instance Store**                                        |
+| Random I/O / database                                 | **SSD**                                                   |
+| Large sequential workload / throughput                | **HDD**                                                   |
+| General-purpose SSD                                   | **gp3**                                                   |
+| gp3 baseline IOPS                                     | **3,000**                                                 |
+| gp3 baseline throughput                               | **125 MB/s**                                              |
+| gp3 maximum IOPS                                      | **80,000**                                                |
+| gp3 IOPS/throughput independent of size               | **Yes**                                                   |
+| Provisioned, predictable IOPS                         | **io1/io2**                                               |
+| Extreme performance / 256,000 IOPS                    | **io2 Block Express**                                     |
+| Frequent sequential processing                        | **st1**                                                   |
+| Infrequent-access, low-cost current HDD               | **sc1**                                                   |
+| Legacy, previous-generation infrequent-access storage | **Magnetic (`standard`)**                                 |
+| gp2 → more flexible performance                       | **gp3**                                                   |
+| Same block volume attached to multiple instances      | **io1/io2 Multi-Attach**                                  |
+| Multi-Attach limit                                    | **Up to 16 supported Nitro-based instances, same AZ**     |
+| gp3 Multi-Attach                                      | **No**                                                    |
+| Multi-Attach multi-AZ                                 | **No — same AZ only**                                     |
+| Shrink an existing EBS volume                         | **Not supported**                                         |
+| Modify individual volume IOPS                         | **`ModifyVolume`**                                        |
+| Modify EC2 instance attributes                        | **`ModifyInstanceAttribute`**                             |
+| Retrieve CloudWatch metrics                           | **`GetMetricData`**                                       |
+| Change supported EBS configuration while in use       | **Often possible with `ModifyVolume`; check limitations** |
+| Root volume survives termination                      | **`DeleteOnTermination = false`**                         |
+| New EBS data volume                                   | **Format + mount**                                        |
+| Volume usable during snapshot                         | **Yes — reads/writes continue**                           |
+| Move EBS to another AZ                                | **Snapshot → restore**                                    |
+| Cross-Region EBS disaster recovery                    | **Snapshot → copy to Region → restore**                   |
+| Cheaper rarely restored snapshots                     | **Snapshot Archive**                                      |
+| Recover accidentally deleted snapshots                | **Recycle Bin**                                           |
+| Immediate performance after snapshot restore          | **Fast Snapshot Restore**                                 |
+| Automate EBS snapshot lifecycle                       | **DLM**                                                   |
+| EBS Encryption by Default                             | **Automatically encrypts new EBS volumes**                |
+| EBS Encryption by Default scope                       | **Region-level**                                          |
+| Existing unencrypted EBS resources                    | **Not automatically encrypted**                           |
+| Encrypt existing unencrypted EBS volume               | **Snapshot → encrypted copy → new volume**                |
+| Encrypted EBS data in transit                         | **Yes**                                                   |
+| Snapshot of encrypted volume                          | **Automatically encrypted**                               |
+| Volume created from encrypted snapshot                | **Automatically encrypted**                               |
+| Shared files across Linux instances/AZs               | **EFS**                                                   |
+| Linux NFS / POSIX file system                         | **EFS**                                                   |
+| Windows + SMB + Active Directory                      | **FSx for Windows File Server**                           |
+| HPC parallel file system                              | **FSx for Lustre**                                        |
+| EFS maximum-concurrency performance mode              | **Max I/O**                                               |
+| Automatic EFS throughput scaling                      | **Elastic throughput**                                    |
+| Cold EFS files                                        | **IA / Archive lifecycle**                                |
+| Fastest temporary EC2 storage                         | **Instance Store**                                        |
+| Instance Store + reboot                               | **Data survives**                                         |
+| Instance Store + stop/hibernate/terminate             | **Data lost**                                             |
+| High IOPS + persistence                               | **EBS; typically io2 for extreme IOPS**                   |
+| Fake EBS type: Spot                                   | **Not an EBS volume type**                                |
+| Fake EBS type: SR-IOV                                 | **Not an EBS volume type**                                |
