@@ -36,6 +36,89 @@ Signal phrase: "set up / automate a **governed, secure multi-account environment
 
 **RAM (Resource Access Manager)** — share actual **resources** across accounts without duplicating them: **VPC subnets** (multiple accounts launching into one shared VPC), **Transit Gateways**, **Route 53 Resolver rules**, License Manager configs. "Avoid building the same networking in every account" → RAM.
 
+---
+
+## Control Tower drift notifications
+
+Control Tower doesn't just *set up* your multi-account environment — it also **watches it for changes** and can **alert you** when the structure drifts from what's expected.
+
+### What is "drift" in Control Tower?
+
+**Drift** = when the **actual state** of your AWS Organization differs from the **expected state** defined by Control Tower.
+
+```text
+Expected state (Control Tower baseline)
+              │
+              │  someone changes it manually
+              ▼
+Actual state (drifted)
+              │
+              ▼
+   Control Tower detects drift
+```
+
+Common causes of drift:
+
+- An **OU or account is moved** out of its expected OU
+- An account is **removed** from an OU
+- The **OU hierarchy is changed** manually outside Control Tower
+- A **guardrail** is removed or modified
+
+### Account drift notifications
+
+Control Tower can send **drift notifications** when it detects these changes.
+
+| Feature | Details |
+|---|---|
+| **Detection** | Control Tower continuously monitors OU/account structure |
+| **Notification delivery** | **Amazon SNS** topic |
+| **Subscription** | Stakeholders subscribe to the SNS topic (email, SMS, Lambda, etc.) |
+| **Setup overhead** | Built-in — no custom code or rules |
+
+```text
+OU hierarchy / account change
+              ↓
+   Control Tower detects drift
+              ↓
+   SNS topic publishes notification
+              ↓
+   Stakeholders subscribed → alerted
+```
+
+### Why this matters for the exam
+
+The trigger phrase:
+
+> **"Monitor changes to the OU hierarchy and allow stakeholders to subscribe to related alerts, with least administrative overhead."**
+
+→ **Control Tower + account drift notifications**
+
+Because:
+
+- Control Tower **automatically monitors** the OU structure
+- Notifications flow through **SNS**, which stakeholders can **subscribe** to
+- It's a **managed, built-in** feature → **least overhead**
+
+### Drift type comparison (important distinction)
+
+| Type of drift | What it monitors | Tool |
+|---|---|---|
+| **Control Tower account drift** | **OU hierarchy / account structure** changes | **Control Tower** ✅ |
+| **AWS Config drift** | Resource configuration compliance | AWS Config rules |
+| **CloudFormation StackSet drift** | Stack resources differ from template | CloudFormation |
+
+Only **Control Tower drift notifications** monitor **OU hierarchy changes** and provide **subscribable alerts** with minimal setup.
+
+### Exam traps
+
+| Distractor | Why it's wrong |
+|---|---|
+| **Control Tower + AWS Config aggregated rules** | Config rules evaluate **resource compliance**, not **OU hierarchy changes** |
+| **Service Catalog + CloudTrail org trail** | Service Catalog creates resources, not accounts; CloudTrail logs but doesn't monitor OU structure or send subscribable alerts |
+| **CloudFormation StackSets + drift detection** | StackSet drift is about **stack resources**, not OU hierarchy |
+
+---
+
 ## Question patterns
 
 > *"Prevent all accounts in the organization from launching resources outside approved regions"* → **SCP on the root/OU** (org-wide ceiling = SCP)
@@ -54,6 +137,12 @@ Signal phrase: "set up / automate a **governed, secure multi-account environment
 
 > *"Guardrail that flags noncompliant resources but doesn't block creation"* → **Detective guardrail** (Config rule; preventive = SCP = block)
 
+> *"Monitor changes to the OU hierarchy and let stakeholders subscribe to alerts, with least overhead"* → **Control Tower account drift notifications**
+
+> *"Detect when an account is moved out of its expected OU"* → **Control Tower drift detection**
+
+---
+
 ## Pocket card
 
 | Keyword | Answer |
@@ -68,5 +157,9 @@ Signal phrase: "set up / automate a **governed, secure multi-account environment
 | Detective guardrail | Config rule (flags) |
 | Share subnets / TGW / resolver rules | RAM |
 | Admin denied in member account | Check the SCP |
+| Monitor OU hierarchy changes + alerts | Control Tower drift notifications |
+| Delivers Control Tower drift alerts | Amazon SNS |
+| Detects account moved out of OU | Control Tower drift |
+| OU structure drift vs resource drift | Control Tower vs AWS Config |
 
 Governance says which accounts may do what — the next layer down is letting teams safely launch only pre-approved infrastructure, which is Service Catalog's job.
