@@ -150,6 +150,14 @@ Aurora Serverless v2 capacity is version-dependent. Current supported versions c
 
 This does **not** mean RDS cannot scale at all. RDS can use features such as **storage auto scaling**, Read Replicas, and manual instance resizing. The key distinction is that standard RDS does not automatically scale its DB compute capacity up and down like Aurora Serverless v2.
 
+> **Small note — ACU to memory mapping:** 1 ACU ≈ 2 GiB memory. So a range of **1–8 ACUs ≈ 2–16 GiB**. When a question gives an observed memory range (e.g., 2–16 GiB) and asks for serverless scaling, match the ACU range accordingly.
+
+```text
+Aurora Serverless v2 (1–8 ACUs)
+        ↓
+Scales with demand, matches 2–16 GiB ✅
+```
+
 ---
 
 # Multi-AZ vs Read Replicas
@@ -904,6 +912,14 @@ Traffic drops
 
 Current supported versions can range up to **256 ACUs**, and some versions can auto-pause down to **0 ACUs**.
 
+> **Small note — ACU to memory mapping:** 1 ACU ≈ 2 GiB memory. So **1–8 ACUs ≈ 2–16 GiB**. When a question gives an observed memory range (e.g., 2–16 GiB) and asks for serverless scaling, match the ACU range accordingly.
+
+```text
+Aurora Serverless v2 (1–8 ACUs)
+        ↓
+Scales with demand, matches 2–16 GiB ✅
+```
+
 > Unpredictable/intermittent Aurora workload → **Aurora Serverless v2**
 
 ---
@@ -1342,6 +1358,7 @@ This is why Aurora can have highly durable storage even when only one DB instanc
 | Standard RDS compute                       | **Provisioned DB instance**                                                 |
 | Spiky Aurora compute workload              | **Aurora Serverless v2**                                                    |
 | Dynamic database compute                   | **Aurora Serverless v2 / ACUs**                                             |
+| ACU to memory mapping                      | **1 ACU ≈ 2 GiB (1–8 ACUs ≈ 2–16 GiB)**                                     |
 | RDS storage growing                        | **RDS Storage Auto Scaling**                                                |
 | RDS storage auto scaling ≠ compute scaling | **Important distinction**                                                   |
 | RDS/Aurora database placement              | **DB subnet group**                                                         |
