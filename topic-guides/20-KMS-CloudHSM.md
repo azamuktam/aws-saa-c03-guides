@@ -297,6 +297,96 @@ This is different from AWS-generated key material.
 
 ---
 
+# KMS key deletion protection
+
+KMS deletion is deliberately hard to do by accident. There is **no single "delete" button** — deletion always goes through a **scheduled, cancellable process**.
+
+## DeleteKey vs ScheduleKeyDeletion
+
+| Operation | What it does |
+|---|---|
+| **`ScheduleKeyDeletion`** | The normal API call to delete a KMS key. Puts the key into **PendingDeletion** with a waiting period of **7–30 days**. |
+| **`DeleteKey`** | The **underlying CloudTrail event name** you monitor for. In practice, when someone "deletes" a key, it appears as a scheduled deletion action. |
+| **`CancelKeyDeletion`** | Cancels a pending deletion **during the waiting period** and returns the key to a **Disabled** state. This is the "undo" action. |
+
+```text
+ScheduleKeyDeletion
+        ↓
+Key enters PendingDeletion (7–30 days)
+        ↓
+   ┌────┴────┐
+   ↓         ↓
+CancelKey    Waiting period ends
+Deletion         ↓
+   ↓         Key permanently deleted
+Key becomes
+Disabled
+(reversible)
+```
+
+## KMS key states
+
+| State | Meaning | Reversible? |
+|---|---|---|
+| **Enabled** | Key works normally | — |
+| **Disabled** | Key cannot perform crypto operations | ✅ Yes (re-enable) |
+| **PendingDeletion** | Scheduled for deletion, waiting period active | ✅ Yes (CancelKeyDeletion) |
+| **PendingImport** | Key has no material; awaiting import | ✅ Yes (import) |
+| **Unavailable** | Key temporarily not usable (e.g., custom key store issue) | Depends on cause |
+
+Key point:
+
+> **Disabling and PendingDeletion both stop the key from working — but both are reversible.**
+
+## Preventing accidental deletion (exam pattern)
+
+The classic scenario:
+
+> "Protect KMS keys from accidental deletion **and** alert admins via email, with minimal operational overhead."
+
+Best answer:
+
+```text
+Amazon EventBridge rule  → detects DeleteKey / ScheduleKeyDeletion events
+        ↓
+   ┌────┴─────────────────────────┐
+   ↓                              ↓
+SNS topic notifies          Systems Manager Automation
+administrators by email     runbook runs CancelKeyDeletion
+                            (undoes the pending deletion)
+```
+
+Why this is best:
+
+* **EventBridge** detects the deletion attempt.
+* **Systems Manager Automation** (`AWSConfigRemediation-CancelKeyDeletion` runbook) automatically cancels the deletion — no custom Lambda code.
+* **SNS** emails administrators.
+* This is an **AWS Prescriptive Guidance pattern** with a ready-made CloudFormation template → **minimal operational overhead**.
+
+### Distractors to recognize
+
+| Distractor | Why it's wrong |
+|---|---|
+| **CloudTrail → CloudWatch Logs → metric filter → SNS** | Only **alerts**; does **not prevent** deletion. |
+| **AWS Config rule to "reverse" deletion** | AWS Config evaluates compliance; it does not reverse KMS API actions. |
+| **Custom Lambda to block deletion** | Works, but **more operational overhead** than the built-in SSM runbook. |
+
+### Exam signal
+
+> "Prevent accidental KMS key deletion AND alert admins with least overhead."
+
+→ **EventBridge + Systems Manager Automation (CancelKeyDeletion) + SNS**
+
+> "Immediately stop a key from being used."
+
+→ **Disable** (not delete)
+
+> "Permanently remove a key."
+
+→ **ScheduleKeyDeletion (7–30 day waiting period)**
+
+---
+
 # Multi-Region KMS keys
 
 A multi-Region key is a related set of KMS keys in different AWS Regions that share:
@@ -573,6 +663,12 @@ Zeroization
 
 > **Permanently delete a KMS key** → **Schedule deletion, 7–30 days**
 
+> **Prevent accidental KMS key deletion + alert admins (least overhead)** → **EventBridge + Systems Manager Automation (CancelKeyDeletion) + SNS**
+
+> **Undo a pending KMS key deletion** → **CancelKeyDeletion (key returns to Disabled)**
+
+> **Monitor for KMS key deletion attempts** → **EventBridge rule on `DeleteKey` / `ScheduleKeyDeletion`**
+
 > **Multi-Region application needs related KMS keys** → **Multi-Region KMS key**
 
 > **SSE-KMS causes excessive KMS requests/costs** → **S3 Bucket Key**
@@ -605,6 +701,12 @@ Zeroization
 | Generate data-encryption key                | **`GenerateDataKey`**             |
 | Stop KMS key immediately                    | **Disable**                       |
 | Permanently remove KMS key                  | **Schedule deletion, 7–30 days**  |
+| Delete a KMS key (API call)                 | **`ScheduleKeyDeletion`**         |
+| CloudTrail event for KMS deletion           | **`DeleteKey`**                   |
+| Undo a pending KMS deletion                 | **`CancelKeyDeletion`**           |
+| Key state after cancelling deletion         | **Disabled**                      |
+| Key state during deletion waiting period    | **PendingDeletion**               |
+| Prevent accidental KMS deletion + alert     | **EventBridge + SSM + SNS**       |
 | Customer-managed symmetric key rotation     | **Automatic rotation**            |
 | Multi-Region KMS                            | **Multi-Region key**              |
 | Reduce SSE-KMS requests/cost                | **S3 Bucket Key**                 |
