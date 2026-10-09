@@ -175,7 +175,7 @@ Common examples:
 
 ---
 
-# 2. Asynchronous invocation
+## 2. Asynchronous invocation
 
 The event source sends the event to Lambda and **does not wait for the function to finish**.
 
@@ -252,7 +252,7 @@ Asynchronous Lambda invocation
 
 ---
 
-# 3. Event Source Mapping
+## 3. Event Source Mapping
 
 For some sources, Lambda **pulls records from the source** rather than the source directly invoking Lambda.
 
@@ -364,6 +364,17 @@ Typical symptom:
 > **"The API normally responds quickly, but occasionally has latency spikes after periods of inactivity."**
 
 → **Cold start**
+
+---
+
+## Lambda SnapStart
+
+**Lambda SnapStart** reduces cold-start latency by taking a snapshot of a pre-initialized execution environment and restoring from that snapshot instead of initializing from scratch.
+
+* Supported managed runtimes: **Java 11+**, **Python 3.12+**, **.NET 8+**.
+* Not supported for Node.js, Ruby, OS-only runtimes, or arbitrary custom container base images without required hooks.
+* Java managed runtimes: no additional SnapStart cost; other supported runtimes may have SnapStart pricing.
+* Exam signal: cold-start latency with a supported runtime → consider **SnapStart**; for any runtime/pre-warmed execution environments → **Provisioned Concurrency**.
 
 ---
 
@@ -583,6 +594,8 @@ Function B → uses Layer
 Function C → uses Layer
 ```
 
+> **Small info:** Lambda Layers are versioned. A function can use up to **5 layers**. The total unzipped size of the function code plus all layers must stay within the **250 MB** ZIP limit. Layer content is extracted under **/opt** in the Lambda execution environment.
+
 ### Signal
 
 > **Shared libraries/dependencies → Lambda Layers**
@@ -728,7 +741,10 @@ Simple header / URL manipulation
 > → **S3 event notification → Lambda**
 
 > **"API is normally fast but has latency spikes after idle periods."**
-> → **Provisioned Concurrency**
+> → **Provisioned Concurrency** (or **SnapStart** if using a supported runtime such as Java/Python/.NET)
+
+> **"Java/Python/.NET Lambda has cold-start latency spikes."**
+> → **Lambda SnapStart** if supported; otherwise **Provisioned Concurrency**
 
 > **"Lambda scaling overwhelms a legacy database that supports only 50 concurrent connections."**
 > → **Reserved Concurrency** to cap Lambda concurrency; **RDS Proxy** can additionally manage database connections.
@@ -787,7 +803,8 @@ Simple header / URL manipulation
 | Job > 15 minutes                           | **Not Lambda → Batch / Fargate**           |
 | Workflow divided into <15-min Lambda steps | **Step Functions**                         |
 | CPU-bound slow function                    | **Increase memory**                        |
-| Cold-start latency                         | **Provisioned Concurrency**                |
+| Cold-start latency (any runtime)           | **Provisioned Concurrency**                |
+| Cold-start latency on supported runtime    | **SnapStart** (Java/Python/.NET)           |
 | Protect downstream / cap invocations       | **Reserved Concurrency**                   |
 | Lambda + RDS connection pressure           | **RDS Proxy**                              |
 | Lambda in VPC needs Internet               | **NAT Gateway / appropriate VPC endpoint** |
@@ -808,143 +825,3 @@ Simple header / URL manipulation
 | `/tmp` storage                             | **Up to 10 GB**                            |
 | ZIP deployment package                     | **50 MB zipped / 250 MB unzipped**         |
 | Container image                            | **10 GB**                                  |
-
----
-
-# Final memory
-
-```text
-Lambda
-= SERVERLESS COMPUTE
-= EVENT-DRIVEN CODE
-```
-
-```text
-15 MINUTES
-= MAX LAMBDA EXECUTION TIME
-
-MORE MEMORY
-= MORE CPU
-
-CPU-BOUND SLOW
-→ INCREASE MEMORY
-```
-
-```text
-SYNCHRONOUS
-= CALLER WAITS
-
-ASYNCHRONOUS
-= EVENT PUSHED TO LAMBDA
-
-EVENT SOURCE MAPPING
-= LAMBDA PULLS FROM SQS / KINESIS / DDB STREAMS
-```
-
-```text
-S3 / SNS / EventBridge
-→ ASYNC PUSH
-
-SQS / Kinesis / DDB Streams
-→ EVENT SOURCE MAPPING
-```
-
-```text
-PROVISIONED CONCURRENCY
-= PRE-WARM
-= REDUCE COLD STARTS
-
-RESERVED CONCURRENCY
-= CAP
-= LIMIT CONCURRENT EXECUTIONS
-```
-
-```text
-LAMBDA + RDS
-→ RDS PROXY
-
-LAMBDA IN VPC + INTERNET
-→ NAT GATEWAY / VPC ENDPOINT
-```
-
-```text
-EXECUTION ROLE
-= LAMBDA PERMISSIONS
-
-LAYERS
-= SHARED DEPENDENCIES
-
-ENVIRONMENT VARIABLES
-= CONFIGURATION
-
-CONTAINER IMAGE
-= LARGE PACKAGE / UP TO 10 GB
-```
-
-```text
-EVENTBRIDGE SCHEDULE
-→ SERVERLESS CRON
-```
-
-```text
-LAMBDA FUNCTION URL
-= SIMPLE HTTP(S) ENDPOINT
-= WEBHOOK → LAMBDA
-
-API GATEWAY
-= FULL API MANAGEMENT
-```
-
-```text
-LAMBDA@EDGE
-= COMPLEX EDGE LOGIC
-= NETWORK CALLS
-
-CLOUDFRONT FUNCTIONS
-= LIGHTWEIGHT EDGE LOGIC
-= NO NETWORK CALLS
-= SUB-MILLISECOND
-```
-
-## Key exam distinctions
-
-```text
-Lambda
-= Serverless compute
-
-Batch
-= Long-running batch jobs
-
-Fargate
-= Serverless containers
-
-Step Functions
-= Orchestrate multiple steps
-
-Provisioned Concurrency
-= Avoid cold starts
-
-Reserved Concurrency
-= Limit concurrency
-
-RDS Proxy
-= Manage Lambda → RDS connections
-
-Event Source Mapping
-= Lambda pulls from queues/streams
-
-DLQ / Failure Destination
-= Handle failed async events
-
-Lambda Function URL
-= Simple webhook / direct HTTP endpoint
-
-API Gateway
-= Full-featured API
-
-Lambda@Edge
-= Complex edge logic
-
-CloudFront Functions
-= Lightweight edge logic
-```
