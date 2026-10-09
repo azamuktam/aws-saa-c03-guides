@@ -2,58 +2,76 @@
 
 ## The idea
 
-Your mobile app has a million *customers* — not employees, customers. They need to sign up, log in, maybe with Google or Facebook, and then... upload photos to S3. Two very different problems just walked in: **"who are you?"** and **"what AWS stuff may you touch?"** Amazon Cognito answers both, with two deliberately different pieces.
+**Amazon Cognito** manages customer authentication and access to AWS resources through two separate components:
 
-Here's the analogy that carries the whole section: think of an office building. At the front desk there's a **login box** — you prove who you are and get a **visitor badge** (that's the **User Pool**, and the badge is a **JWT token**). But the badge alone doesn't open doors. You take it to the **exchange desk**, which swaps your badge for a **physical keycard** that actually opens specific rooms (that's the **Identity Pool**, and the keycard is a set of **temporary AWS credentials**).
+* **User Pools** manage user accounts, sign-up, sign-in, password resets, and authentication.
+* **Identity Pools** exchange identity tokens for temporary AWS credentials, allowing applications to access AWS resources directly.
 
-Jargon check before we dive in:
-- **JWT** = JSON Web Token — a signed blob of text proving "this user authenticated, here's who they are."
-- **STS** = AWS Security Token Service — the service that mints short-lived AWS credentials.
-- **IdP** = Identity Provider — anything that vouches for identity (Google, Facebook, a corporate SAML server).
+Key terms:
+
+* **JWT (JSON Web Token)** — a signed token containing claims about an authenticated user.
+* **STS (AWS Security Token Service)** — issues temporary AWS credentials.
+* **IdP (Identity Provider)** — a service that authenticates users, such as Google, Facebook, or a corporate SAML provider.
 
 ### The core distinction (THE thing to know)
 
-| | **User Pools** | **Identity Pools** |
-|---|---|---|
-| Question answered | **AUTHENTICATION** — *who are you?* | **AUTHORIZATION for AWS** — *what AWS resources may you touch?* |
-| What it is | A **user directory**: sign-up, sign-in, password resets | A **credential exchange desk** |
-| What it returns | **JWT tokens** | **Temporary AWS credentials** (via **STS**) |
-| Extras | **Hosted UI** (pre-built login pages), **MFA**, **social login** (Google/Facebook/Apple), **SAML** enterprise IdPs | **Guest / unauthenticated access**, fine-grained per-user IAM permissions |
-| Plugs into | **API Gateway** and **ALB** as an **authorizer** | S3, DynamoDB, any AWS API — directly from the app |
+|                   | **User Pools**                                                                                                           | **Identity Pools**                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| Question answered | **AUTHENTICATION** — who are you?                                                                                        | **AWS resource access** — what AWS resources may you access?              |
+| What it is        | User directory: sign-up, sign-in, password resets                                                                        | Exchanges identity tokens for AWS credentials                             |
+| What it returns   | **JWT tokens**                                                                                                           | **Temporary AWS credentials** (via **STS**)                               |
+| Extras            | **Hosted UI** (pre-built login pages), **MFA**, **social login** (Google/Facebook/Apple), **SAML** enterprise federation | **Guest / unauthenticated access**, fine-grained per-user IAM permissions |
+| Plugs into        | **API Gateway** and **Application Load Balancer (ALB)** for authentication                                               | S3, DynamoDB, and other AWS APIs — directly from the app                  |
 
-THE trap: the exam says *"users need to access S3 directly from the mobile app"* and offers "Cognito User Pools" as a tempting answer. A JWT can't call S3 — **only AWS credentials can**. Direct AWS resource access → **Identity Pools**.
+**Exam trap:** If users need to access S3 directly from a mobile app, **Cognito User Pools** alone are insufficient. A JWT cannot authenticate directly to S3; direct AWS API access requires AWS credentials. Choose **Identity Pools** to obtain temporary credentials.
 
-### The classic flow (draw this in your head)
+### Key takeaway
 
-```
+| Requirement                                                       | Best service                                                                   |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Authenticate users (sign-up/sign-in)                              | **Cognito User Pool**                                                          |
+| Authenticate REST API requests using Cognito                      | **Amazon API Gateway Cognito User Pool authorizer**                            |
+| Grant application users direct AWS resource access (S3, DynamoDB) | **Cognito Identity Pool** — not needed for API-only access through API Gateway |
+| Enable social login (Google, Facebook, Apple)                     | **Cognito User Pool**                                                          |
+| Add MFA to customer logins                                        | **Cognito User Pool**                                                          |
+| Allow unauthenticated guests limited AWS access                   | **Cognito Identity Pool**                                                      |
+| Restrict each user to their own S3 prefix                         | **Cognito Identity Pool + IAM policy variables**                               |
+| Federate enterprise customers through a corporate SAML provider   | **Cognito User Pool with SAML federation**                                     |
+| Give employees SSO access to multiple AWS accounts                | **AWS IAM Identity Center**, not Cognito                                       |
+
+**Key distinction:** An API Gateway authorizer validates a user's token to control API access. An Identity Pool provides temporary AWS credentials for direct access to AWS services. These solve different problems.
+
+### The classic flow
+
+```text
  User logs in (email / Google / SAML)
         │
         ▼
- ┌─────────────┐   JWT token   ┌───────────────┐   swap via STS   ┌──────────────────┐
- │  User Pool   │ ────────────▶ │ Identity Pool │ ───────────────▶ │ Temp AWS creds    │
- │ (login box)  │               │ (exchange desk)│                  │ (access key etc.) │
- └─────────────┘               └───────────────┘                  └──────────────────┘
-                                                                          │
-                                                                          ▼
-                                                        App calls S3 / DynamoDB DIRECTLY
+ ┌─────────────┐   JWT token   ┌───────────────┐   exchange via STS   ┌──────────────────┐
+ │  User Pool   │ ────────────▶ │ Identity Pool │ ───────────────────▶ │ Temporary AWS    │
+ │              │               │               │                      │ credentials       │
+ └─────────────┘               └───────────────┘                      └──────────────────┘
+                                                                               │
+                                                                               ▼
+                                                        App calls S3 / DynamoDB directly
 ```
 
-Note the Identity Pool is generous about what it accepts: tokens from a **User Pool**, from **social providers** directly, or from **SAML** — it's an exchange desk for *any* recognized badge.
+Identity Pools can accept tokens from a **User Pool**, supported **social identity providers**, or **SAML** providers, depending on the configured federation setup.
 
 ### The clever bits worth exam points
 
-- **Authorizers**: a **Cognito User Pool authorizer on API Gateway** validates the JWT before your backend ever runs — "authenticate API users without writing auth code" → User Pool authorizer. ALB can also authenticate through Cognito before forwarding requests.
-- **Guest access**: Identity Pools support **unauthenticated identities** — "let users browse content *before* signing up" → Identity Pool guest access.
-- **Per-user permissions with policy variables**: an IAM policy attached via the Identity Pool can use `${cognito-identity.amazonaws.com:sub}` so each user can only reach `s3://bucket/${their-own-id}/*`. **"Each user accesses only their own folder"** → Identity Pool + **IAM policy variables**. One policy, a million users, zero per-user setup.
+* **Authorizers:** A **Cognito User Pool authorizer on API Gateway** validates JWTs before requests reach the backend. If the requirement is to authenticate API users without writing custom authentication code, choose a User Pool authorizer. An **Application Load Balancer (ALB)** can also authenticate users through Cognito before forwarding requests.
+* **Guest access:** Identity Pools support **unauthenticated identities**. To let users access limited content before signing up, use Identity Pool guest access and restrict the associated IAM permissions.
+* **Per-user permissions with policy variables:** An IAM policy used with an Identity Pool can include `${cognito-identity.amazonaws.com:sub}` to restrict each user to their own S3 prefix, such as `s3://bucket/${their-own-id}/*`. **"Each user accesses only their own folder"** → Identity Pool + **IAM policy variables**. One policy can enforce per-user access without creating a separate policy for every user.
 
 ### Cognito vs IAM Identity Center — don't mix up the audiences
 
-THE trap: *"employees need single sign-on to AWS accounts"* → that's your **workforce**, and the answer is **IAM Identity Center** (the successor to AWS SSO), *not* Cognito. The rule:
+**Exam trap:** *"Employees need single sign-on to AWS accounts"* → choose **AWS IAM Identity Center**, the successor to AWS Single Sign-On (AWS SSO), not Cognito.
 
-- **Customers of your app** (millions of external users) → **Cognito**
-- **Employees / workforce** signing into AWS accounts and business apps → **IAM Identity Center**
+* **Customers of your application** (external users) → **Cognito**
+* **Employees / workforce** signing into AWS accounts and business applications → **IAM Identity Center**
 
-If the humans in the question get a paycheck from the company, Cognito is the wrong answer.
+For workforce access to AWS accounts, choose IAM Identity Center rather than Cognito.
 
 ## Question patterns
 
@@ -69,24 +87,24 @@ If the humans in the question get a paycheck from the company, Cognito is the wr
 
 > *"Company employees need SSO access to multiple AWS accounts"* → **IAM Identity Center, NOT Cognito** (workforce = Identity Center; customers = Cognito).
 
-> *"Enterprise customers must log into your SaaS app with their corporate SAML identity provider"* → **User Pools with SAML federation** (still authentication — still the login box).
+> *"Enterprise customers must log into your SaaS app with their corporate SAML identity provider"* → **User Pools with SAML federation** (authentication through a federated identity provider).
 
-> *"Add MFA to your application's customer logins"* → **User Pools** (MFA lives where authentication lives).
+> *"Add MFA to your application's customer logins"* → **User Pools** (MFA is configured for authentication).
 
 ## Pocket card
 
-| Keyword | Answer |
-|---|---|
-| Sign-up / sign-in / user directory | User Pools |
-| JWT tokens | User Pools |
-| Social login (Google/Facebook/Apple), SAML | User Pools (federation) |
-| Hosted UI, MFA | User Pools |
-| API Gateway / ALB authorizer | User Pool authorizer |
-| Temporary AWS credentials for app users | Identity Pools (via STS) |
-| Direct app access to S3/DynamoDB | Identity Pools |
-| Guest / unauthenticated access | Identity Pools |
-| Each user only their own folder | Identity Pool + IAM policy variables |
-| Employees SSO to AWS accounts | IAM Identity Center (never Cognito) |
-| Memory hook | User Pool = login box (JWT); Identity Pool = exchange desk (creds) |
+| Keyword                                    | Answer                                                                        |
+| ------------------------------------------ | ----------------------------------------------------------------------------- |
+| Sign-up / sign-in / user directory         | User Pools                                                                    |
+| JWT tokens                                 | User Pools                                                                    |
+| Social login (Google/Facebook/Apple), SAML | User Pools (federation)                                                       |
+| Hosted UI, MFA                             | User Pools                                                                    |
+| API Gateway / ALB authorizer               | User Pool authorizer                                                          |
+| Temporary AWS credentials for app users    | Identity Pools (via STS)                                                      |
+| Direct app access to S3/DynamoDB           | Identity Pools                                                                |
+| Guest / unauthenticated access             | Identity Pools                                                                |
+| Each user only their own folder            | Identity Pool + IAM policy variables                                          |
+| Employees SSO to AWS accounts              | IAM Identity Center (never Cognito)                                           |
+| Core distinction                           | User Pool = authentication and JWT; Identity Pool = temporary AWS credentials |
 
-Cognito handles your app's *customers* — but when the identities live in a corporate Active Directory, you're in the next section's territory: Directory Services.
+Cognito handles customer identities. When identities are managed in a corporate Microsoft Active Directory environment, consider **AWS Directory Service** and its supported directory integration options.
